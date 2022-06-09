@@ -2,7 +2,10 @@
 name = "bluest"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Alex Moon"]
+description = "Work in progress"
+documentation = "https://docs.rs/bluest"
+repository = "https://github.com/alexmoon/bluest/"
+license = "BSD-2-Clause OR Apache-2.0"
 
 [dependencies]
