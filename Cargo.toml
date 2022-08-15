@@ -9,3 +9,28 @@ repository = "https://github.com/alexmoon/bluest/"
 license = "BSD-2-Clause OR Apache-2.0"
 
 [dependencies]
+displaydoc = "0.2.3"
+enumflags2 = "0.7.5"
+futures-core = "0.3.23"
+num_enum = "0.5.7"
+scopeguard = "1.1.0"
+smallvec = { version = "1.9.0", features = ["union"] }
+tokio = { version = "1.20.1", features = ["rt", "sync"] }
+tokio-stream = { version = "0.1.9", features = ["sync"] }
+tracing = "0.1.36"
+uuid = "1.1.1"
+
+[dev-dependencies]
+tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
+tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = "0.37.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+bluer = "0.15.0"
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+objc = "0.2.7"
+objc_id = "0.1.1"
+objc-foundation = "0.1.1"
