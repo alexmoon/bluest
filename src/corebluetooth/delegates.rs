@@ -12,7 +12,7 @@ use objc_id::{Id, ShareId, Shared};
 use std::{os::raw::c_void, sync::Once};
 use tracing::debug;
 
-use crate::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
+use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
 
 #[derive(Clone)]
 pub enum CentralEvent {

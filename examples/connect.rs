@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bluest::{session::Session, uuid::BluetoothUuidExt};
+use bluest::{BluetoothUuidExt, Session};
 use tokio_stream::StreamExt;
 use tracing::{info, metadata::LevelFilter};
 use uuid::Uuid;

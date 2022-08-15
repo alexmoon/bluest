@@ -1,4 +1,5 @@
-use crate::adapter::Adapter;
+use super::adapter::Adapter;
+
 use crate::Result;
 
 pub struct Session {

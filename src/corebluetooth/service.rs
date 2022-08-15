@@ -3,11 +3,12 @@ use objc_id::ShareId;
 use smallvec::SmallVec;
 use uuid::Uuid;
 
-use crate::delegates::PeripheralEvent;
+use super::delegates::PeripheralEvent;
+use super::types::CBUUID;
+use super::{characteristic::Characteristic, types::CBService};
+
 use crate::error::ErrorKind;
-use crate::types::CBUUID;
 use crate::Result;
-use crate::{characteristic::Characteristic, types::CBService};
 
 #[derive(Debug)]
 pub struct Service {

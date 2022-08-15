@@ -7,10 +7,11 @@ use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
-use crate::delegates::PeripheralEvent;
+use super::delegates::PeripheralEvent;
+use super::types::{CBCharacteristicWriteType, CBUUID};
+use super::{descriptor::Descriptor, types::CBCharacteristic};
+
 use crate::error::ErrorKind;
-use crate::types::{CBCharacteristicWriteType, CBUUID};
-use crate::{descriptor::Descriptor, types::CBCharacteristic};
 use crate::{Error, Result};
 
 #[bitflags]

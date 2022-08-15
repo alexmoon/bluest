@@ -14,11 +14,9 @@ use objc_foundation::{
 use objc_id::{Id, ShareId};
 use uuid::Uuid;
 
-use crate::{
-    delegates::{CentralDelegate, PeripheralDelegate},
-    error::ErrorKind,
-    uuid::BluetoothUuidExt,
-};
+use super::delegates::{CentralDelegate, PeripheralDelegate};
+
+use crate::{btuuid::BluetoothUuidExt, error::ErrorKind};
 
 #[allow(non_camel_case_types)]
 pub type id = *mut Object;

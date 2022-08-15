@@ -5,10 +5,11 @@ use objc_id::ShareId;
 use smallvec::SmallVec;
 use uuid::Uuid;
 
-use crate::delegates::{self, PeripheralDelegate, PeripheralEvent};
+use super::delegates::{self, PeripheralDelegate, PeripheralEvent};
+use super::service::Service;
+use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
+
 use crate::error::ErrorKind;
-use crate::service::Service;
-use crate::types::{CBPeripheral, CBPeripheralState, CBUUID};
 use crate::Result;
 
 pub struct Device {

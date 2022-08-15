@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bluest::session::Session;
+use bluest::Session;
 use tokio_stream::StreamExt;
 use tracing::{info, metadata::LevelFilter};
 

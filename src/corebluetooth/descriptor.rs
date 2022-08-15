@@ -4,9 +4,10 @@ use objc_id::ShareId;
 use smallvec::SmallVec;
 use uuid::Uuid;
 
-use crate::delegates::PeripheralEvent;
+use super::delegates::PeripheralEvent;
+use super::types::{CBDescriptor, NSUInteger};
+
 use crate::error::ErrorKind;
-use crate::types::{CBDescriptor, NSUInteger};
 use crate::Result;
 
 // Well-known descriptor UUIDs

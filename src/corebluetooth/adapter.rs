@@ -17,10 +17,11 @@ use tokio_stream::StreamExt;
 use tracing::{debug, error};
 use uuid::Uuid;
 
-use crate::delegates::{self, CentralDelegate};
-use crate::device::Device;
+use super::delegates::{self, CentralDelegate};
+use super::device::Device;
+use super::types::{dispatch_queue_create, dispatch_release, id_or_nil, nil, CBCentralManager, CBManagerState, CBUUID};
+
 use crate::error::ErrorKind;
-use crate::types::{dispatch_queue_create, dispatch_release, id_or_nil, nil, CBCentralManager, CBManagerState, CBUUID};
 use crate::Result;
 
 #[derive(Debug, Clone)]
