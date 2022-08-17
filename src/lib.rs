@@ -5,6 +5,8 @@ pub mod types;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod corebluetooth;
+#[cfg(target_os = "windows")]
+mod windows;
 
 // Dependency re-exports
 pub use smallvec;
