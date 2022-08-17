@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use futures_core::Stream;
+use futures::Stream;
 use objc::runtime::{BOOL, NO};
 use objc::{msg_send, sel, sel_impl};
 use objc_foundation::{
@@ -22,19 +22,7 @@ use super::device::Device;
 use super::types::{dispatch_queue_create, dispatch_release, id_or_nil, nil, CBCentralManager, CBManagerState, CBUUID};
 
 use crate::error::ErrorKind;
-use crate::Result;
-
-#[derive(Debug, Clone)]
-pub struct AdvertisementData {
-    pub local_name: Option<String>,
-    pub manufacturer_data: Option<SmallVec<[u8; 16]>>,
-    pub services: SmallVec<[Uuid; 1]>,
-    pub solicited_services: SmallVec<[Uuid; 1]>,
-    pub service_data: HashMap<Uuid, SmallVec<[u8; 16]>>,
-    pub tx_power_level: Option<i8>,
-    pub is_connectable: bool,
-    // flags, peripheral connection interval range, appearance, public address, random address, advertising interval, uri, le supported features
-}
+use crate::{AdvertisementData, DiscoveredDevice, Event, ManufacturerData, Result};
 
 impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
     fn from(adv_data: &NSDictionary<NSString, NSObject>) -> Self {
@@ -52,11 +40,17 @@ impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
 
         let manufacturer_data = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataManufacturerData"))
-            .map(|val| SmallVec::from_slice(unsafe { std::mem::transmute::<_, &NSData>(val).bytes() }));
+            .map(|val| unsafe { std::mem::transmute::<_, &NSData>(val).bytes() })
+            .and_then(|val| {
+                (val.len() >= 2).then(|| ManufacturerData {
+                    company_id: u16::from_le_bytes(val[0..2].try_into().unwrap()),
+                    data: SmallVec::from_slice(&val[2..]),
+                })
+            });
 
-        let tx_power_level: Option<i8> = adv_data
+        let tx_power_level: Option<i16> = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataTxPowerLevel"))
-            .map(|val| unsafe { msg_send![val, charValue] });
+            .map(|val| unsafe { msg_send![val, shortValue] });
 
         let service_data = if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataServiceData")) {
             unsafe {
@@ -106,23 +100,11 @@ impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
     }
 }
 
-pub struct DiscoveredDevice {
-    pub device: Device,
-    pub adv_data: AdvertisementData,
-    pub rssi: i8,
-}
-
 // impl AdapterInfo {
 //     pub fn name(&self) -> &str {}
 
 //     pub fn id(&self) -> &[u8] {}
 // }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Event {
-    Available,
-    Unavailable,
-}
 
 pub struct Adapter {
     central: Id<CBCentralManager>,
@@ -163,19 +145,19 @@ impl Adapter {
         })
     }
 
-    pub async fn wait_available(&self) {
+    pub async fn wait_available(&self) -> Result<()> {
         let events = self.events();
-        if self.central.state() == CBManagerState::PoweredOn {
-            return;
+        if self.central.state() != CBManagerState::PoweredOn {
+            let _ = events.skip_while(|x| *x != Event::Available).next().await;
         }
-        let _ = events.skip_while(|x| *x != Event::Available).next().await;
+        Ok(())
     }
 
     // pub async fn discover_devices(&self, services: Option<&[Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + '_> {}
 
     // pub async fn known_devices(&self, services: Option<&[Uuid]>)
 
-    pub async fn scan(&self, services: Option<&[Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + '_> {
+    pub async fn scan<'a>(&'a self, services: Option<&'a [Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + 'a> {
         unsafe {
             if self.central.state() != CBManagerState::PoweredOn {
                 Err(ErrorKind::AdapterUnavailable)?

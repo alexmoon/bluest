@@ -20,11 +20,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let session = Session::new().await?;
     let adapter = session.default_adapter().await.unwrap();
-    adapter.wait_available().await;
+    adapter.wait_available().await?;
 
     let discovered_device = {
         info!("starting scan");
-        let mut scan = adapter.scan(Some(&[Uuid::from_u16(0x181c)])).await?;
+        let services = &[Uuid::from_u16(0x181c)];
+        let mut scan = adapter.scan(Some(services)).await?;
         info!("scan started");
         scan.next().await.unwrap() // this will never timeout
     };

@@ -51,7 +51,7 @@ impl Device {
         self.peripheral.state() == CBPeripheralState::Connected
     }
 
-    pub async fn rssi(&self) -> Result<i8> {
+    pub async fn rssi(&self) -> Result<i16> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.read_rssi();
 

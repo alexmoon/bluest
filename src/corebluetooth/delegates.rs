@@ -34,7 +34,7 @@ pub enum CentralEvent {
     Discovered {
         peripheral: ShareId<CBPeripheral>,
         adv_data: ShareId<NSDictionary<NSString, NSObject>>,
-        rssi: i8,
+        rssi: i16,
     },
     StateChanged,
 }
@@ -107,7 +107,7 @@ pub enum PeripheralEvent {
         error: Option<ShareId<NSError>>,
     },
     ReadRssi {
-        rssi: i8,
+        rssi: i16,
         error: Option<ShareId<NSError>>,
     },
     NameUpdate,
@@ -145,9 +145,9 @@ macro_rules! delegate_method {
     (@value $param:ident: Option) => {
         (!$param.is_null()).then(|| ShareId::from_ptr($param as *mut _))
     };
-    (@value $param:ident: i8) => {
+    (@value $param:ident: i16) => {
         {
-            let n: i8 = msg_send![$param, charValue];
+            let n: i16 = msg_send![$param, shortValue];
             n
         }
     };
@@ -280,7 +280,6 @@ impl CentralDelegate {
     delegate_method!(did_connect<Connect>(central, peripheral: Object));
     delegate_method!(did_disconnect<Disconnect>(central, peripheral: Object, error: Option));
     delegate_method!(did_fail_to_connect<ConnectFailed>(central, peripheral: Object, error: Option));
-    // delegate_method!(did_discover_peripheral<Discovered>(central, peripheral: Object, adv_data: Object, rssi: f32));
     delegate_method!(did_update_state<StateChanged>(central));
 
     extern "C" fn did_discover_peripheral(
@@ -294,7 +293,7 @@ impl CentralDelegate {
         unsafe {
             let ptr = *this.get_ivar::<*mut c_void>("sender") as *mut tokio::sync::broadcast::Sender<CentralEvent>;
             if !ptr.is_null() {
-                let rssi: i8 = msg_send![rssi, charValue];
+                let rssi: i16 = msg_send![rssi, charValue];
                 let _ = (*ptr).send(CentralEvent::Discovered {
                     peripheral: ShareId::from_ptr(peripheral as *mut _),
                     adv_data: ShareId::from_ptr(adv_data as *mut _),
@@ -421,7 +420,7 @@ impl PeripheralDelegate {
     delegate_method!(did_write_value_for_descriptor<DescriptorValueWrite>(peripheral, descriptor: Object, error: Option));
     delegate_method!(is_ready_to_write_without_response<ReadyToWrite>(peripheral));
     delegate_method!(did_update_notification_state<NotificationStateUpdate>(peripheral, characteristic: Object, error: Option));
-    delegate_method!(did_read_rssi<ReadRssi>(peripheral, rssi: i8, error: Option));
+    delegate_method!(did_read_rssi<ReadRssi>(peripheral, rssi: i16, error: Option));
     delegate_method!(did_update_name<NameUpdate>(peripheral));
     delegate_method!(did_modify_services<ServicesChanged>(peripheral, invalidated_services: Vec));
     delegate_method!(did_open_l2cap_channel<L2CAPChannelOpened>(peripheral, channel: Object, error: Option));

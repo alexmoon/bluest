@@ -63,7 +63,7 @@ impl BluetoothUuidExt for Uuid {
     }
 
     fn as_bluetooth_bytes(&self) -> &[u8] {
-        let bytes = &*self.as_bytes();
+        let bytes = self.as_bytes();
         if self.is_u16_uuid() {
             &bytes[2..4]
         } else if self.is_u32_uuid() {

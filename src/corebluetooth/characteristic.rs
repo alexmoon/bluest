@@ -1,5 +1,5 @@
 use enumflags2::{bitflags, BitFlags};
-use futures_core::Stream;
+use futures::Stream;
 use objc_foundation::{INSArray, INSData, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use smallvec::SmallVec;
