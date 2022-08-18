@@ -34,11 +34,15 @@
 pub mod btuuid;
 pub mod error;
 
+#[cfg(target_os = "linux")]
+mod bluer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod corebluetooth;
 #[cfg(target_os = "windows")]
 mod windows;
 
+#[cfg(target_os = "linux")]
+use crate::bluer as sys;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use crate::corebluetooth as sys;
 #[cfg(target_os = "windows")]
