@@ -4,6 +4,7 @@ use futures::Stream;
 use smallvec::SmallVec;
 use tokio_stream::StreamExt;
 use tracing::error;
+use tracing::warn;
 use uuid::Uuid;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementDataSection;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
@@ -239,36 +240,46 @@ impl Adapter {
                 let _guard = &guard;
 
                 // Filter by result and services
-                if let Ok((addr, rssi, adv_data)) = res {
-                    if let Some(services) = &services {
-                        adv_data
-                            .services
-                            .iter()
-                            .any(|x| services.contains(x))
-                            .then(|| (addr, rssi, adv_data))
-                    } else {
-                        Some((addr, rssi, adv_data))
+                match res {
+                    Ok((addr, rssi, adv_data)) => {
+                        if let Some(services) = &services {
+                            adv_data
+                                .services
+                                .iter()
+                                .any(|x| services.contains(x))
+                                .then(|| (addr, rssi, adv_data))
+                        } else {
+                            Some((addr, rssi, adv_data))
+                        }
                     }
-                } else {
-                    None
+                    Err(err) => {
+                        warn!("Error extracting data from event: {:?}", err);
+                        None
+                    }
                 }
             })
             .then(|(addr, rssi, adv_data)| {
                 // Create the Device
                 Box::pin(async move {
-                    Device::new(addr.0, addr.1)
+                    Device::from_addr(addr.0, addr.1)
                         .await
                         .map(|device| DiscoveredDevice { device, rssi, adv_data })
                 })
             })
-            .filter_map(move |res| res.ok()))
+            .filter_map(move |res| match res {
+                Ok(dev) => Some(dev),
+                Err(err) => {
+                    warn!("Error creating device: {:?}", err);
+                    None
+                }
+            }))
     }
 
     pub async fn connect(&self, device: &Device) -> Result<()> {
-        Ok(())
+        device.connect().await
     }
 
     pub async fn disconnect(&self, device: &Device) -> Result<()> {
-        Ok(())
+        device.disconnect().await
     }
 }
