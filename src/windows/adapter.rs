@@ -173,9 +173,9 @@ fn to_service_data(
 
 impl Adapter {
     /// Creates the default adapter for the system
-    pub async fn default() -> Result<Self> {
-        let adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
-        Ok(Adapter { adapter })
+    pub async fn default() -> Option<Self> {
+        let adapter = BluetoothAdapter::GetDefaultAsync().ok()?.await.ok()?;
+        Some(Adapter { adapter })
     }
 
     /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.

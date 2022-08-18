@@ -167,11 +167,11 @@ impl CBUUID {
 }
 
 impl CBCentralManager {
-    pub fn with_delegate(delegate: Id<CentralDelegate>, queue: id) -> Id<CBCentralManager> {
+    pub fn with_delegate(delegate: Id<CentralDelegate>, queue: id) -> Option<Id<CBCentralManager>> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
             let obj: *mut Self = msg_send![obj, initWithDelegate: delegate queue: queue];
-            Id::from_retained_ptr(obj)
+            (!obj.is_null()).then(|| Id::from_retained_ptr(obj))
         }
     }
 

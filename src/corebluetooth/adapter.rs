@@ -111,17 +111,20 @@ pub struct Adapter {
 
 impl Adapter {
     /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Result<Self> {
+    pub async fn default() -> Option<Self> {
         let (sender, _) = tokio::sync::broadcast::channel(16);
-        let delegate = CentralDelegate::with_sender(sender.clone());
+        let delegate = CentralDelegate::with_sender(sender.clone())?;
         let central = unsafe {
             let queue = dispatch_queue_create(CStr::from_bytes_with_nul(b"BluetoothQueue\0").unwrap().as_ptr(), nil);
+            if queue.is_null() {
+                return None;
+            }
             let central = CBCentralManager::with_delegate(delegate, queue);
             dispatch_release(queue);
-            central
+            central?
         };
 
-        Ok(Adapter {
+        Some(Adapter {
             central,
             sender,
             scanning: AtomicBool::new(false),

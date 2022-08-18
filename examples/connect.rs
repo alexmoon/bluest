@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await?;
+    let adapter = Adapter::default().await.unwrap();
     adapter.wait_available().await?;
 
     let discovered_device = {

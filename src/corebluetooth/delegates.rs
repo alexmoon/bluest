@@ -254,11 +254,11 @@ impl ::std::fmt::Debug for PeripheralDelegate {
 }
 
 impl CentralDelegate {
-    pub fn with_sender(sender: tokio::sync::broadcast::Sender<CentralEvent>) -> Id<CentralDelegate> {
+    pub fn with_sender(sender: tokio::sync::broadcast::Sender<CentralEvent>) -> Option<Id<CentralDelegate>> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
             let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)) as *mut c_void];
-            Id::from_retained_ptr(obj)
+            (!obj.is_null()).then(|| Id::from_retained_ptr(obj))
         }
     }
 
