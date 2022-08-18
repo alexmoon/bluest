@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bluest::{BluetoothUuidExt, Session};
+use bluest::{Adapter, BluetoothUuidExt};
 use tokio_stream::StreamExt;
 use tracing::{info, metadata::LevelFilter};
 use uuid::Uuid;
@@ -18,8 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let session = Session::new().await?;
-    let adapter = session.default_adapter().await.unwrap();
+    let adapter = Adapter::default().await?;
     adapter.wait_available().await?;
 
     let discovered_device = {
@@ -30,7 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         scan.next().await.unwrap() // this will never timeout
     };
 
-    info!("{} {:?}", discovered_device.rssi, discovered_device.adv_data);
+    info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);
     adapter.connect(&discovered_device.device).await?; // this will never timeout
     info!("connected!");
     adapter.disconnect(&discovered_device.device).await?;

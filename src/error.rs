@@ -1,3 +1,7 @@
+//! Bluest errors
+
+use num_enum::TryFromPrimitive;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Error {
     pub kind: ErrorKind,
@@ -69,81 +73,83 @@ impl From<ErrorKind> for Error {
     }
 }
 
+/// Bluetooth Attribute Protocol error codes. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+pub enum AttErrorCode {
+    /// The operation completed successfully.
+    Success = 0x00,
+    /// The attribute handle given was not valid on this server.
+    InvalidHandle = 0x01,
+    /// The attribute cannot be read.
+    ReadNotPermitted = 0x02,
+    /// The attribute cannot be written.
+    WriteNotPermitted = 0x03,
+    /// The attribute PDU was invalid.
+    InvalidPdu = 0x04,
+    /// The attribute requires authentication before it can be read or written.
+    InsufficientAuthentication = 0x05,
+    /// Attribute server does not support the request received from the client.
+    RequestNotSupported = 0x06,
+    /// Offset specified was past the end of the attribute.
+    InvalidOffset = 0x07,
+    /// The attribute requires authorization before it can be read or written.
+    InsufficientAuthorization = 0x08,
+    /// Too many prepare writes have been queued.
+    PrepareQueueFull = 0x09,
+    /// No attribute found within the given attribute handle range.
+    AttributeNotFound = 0x0a,
+    /// The attribute cannot be read or written using the Read Blob Request.
+    AttributeNotLong = 0x0b,
+    /// The Encryption Key Size used for encrypting this link is insufficient.
+    InsufficientEncryptionKeySize = 0x0c,
+    /// The attribute value length is invalid for the operation.
+    InvalidAttributeValueLength = 0x0d,
+    /// The attribute request that was requested has encountered an error that was unlikely, and therefore could not
+    /// be completed as requested.
+    UnlikelyError = 0x0e,
+    /// The attribute requires encryption before it can be read or written.
+    InsufficientEncryption = 0x0f,
+    /// The attribute type is not a supported grouping attribute as defined by a higher layer specification.
+    UnsupportedGroupType = 0x10,
+    /// Insufficient Resources to complete the request.
+    InsufficientResources = 0x11,
+    /// The server requests the client to rediscover the database.
+    DatabaseOutOfSync = 0x12,
+    /// The attribute parameter value was not allowed.
+    ValueNotAllowed = 0x13,
+    /// Write Request Rejected
+    WriteRequestRejected = 0xfc,
+    /// Client Characteristic Configuration Descriptor Improperly Configured
+    CccdImproperlyConfigured = 0xfd,
+    /// Procedure Already in Progress
+    ProcedureAlreadyInProgress = 0xfe,
+    /// Out of Range
+    OutOfRange = 0xff,
+}
+
+/// Bluetooth Attribute Protocol error. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ATTError {
-    Success,
-    InvalidHandle,
-    ReadNotPermitted,
-    WriteNotPermitted,
-    InvalidPdu,
-    InsufficientAuthentication,
-    RequestNotSupported,
-    InvalidOffset,
-    InsufficientAuthorization,
-    PrepareQueueFull,
-    AttributeNotFound,
-    AttributeNotLong,
-    InsufficientEncryptionKeySize,
-    InvalidAttributeValueLength,
-    UnlikelyError,
-    InsufficientEncryption,
-    UnsupportedGroupType,
-    InsufficientResources,
-    DatabaseOutOfSync,
-    ValueNotAllowed,
+pub enum AttError {
+    /// Known error codes defined by the Bluetooth specification.
+    Known(AttErrorCode),
+    /// Application error code defined by a higher layer specification. Values range from 0x80-0x9f.
     Application(u8),
-    Common(u8),
+    /// Reserved or unknown error code.
     Reserved(u8),
 }
 
-impl From<u8> for ATTError {
+impl From<u8> for AttError {
     fn from(number: u8) -> Self {
-        const SUCCESS: u8 = 0x00;
-        const INVALID_HANDLE: u8 = 0x01;
-        const READ_NOT_PERMITTED: u8 = 0x02;
-        const WRITE_NOT_PERMITTED: u8 = 0x03;
-        const INVALID_PDU: u8 = 0x04;
-        const INSUFFICIENT_AUTHENTICATION: u8 = 0x05;
-        const REQUEST_NOT_SUPPORTED: u8 = 0x06;
-        const INVALID_OFFSET: u8 = 0x07;
-        const INSUFFICIENT_AUTHORIZATION: u8 = 0x08;
-        const PREPARE_QUEUE_FULL: u8 = 0x09;
-        const ATTRIBUTE_NOT_FOUND: u8 = 0x0A;
-        const ATTRIBUTE_NOT_LONG: u8 = 0x0B;
-        const INSUFFICIENT_ENCRYPTION_KEY_SIZE: u8 = 0x0C;
-        const INVALID_ATTRIBUTE_VALUE_LENGTH: u8 = 0x0D;
-        const UNLIKELY_ERROR: u8 = 0x0E;
-        const INSUFFICIENT_ENCRYPTION: u8 = 0x0F;
-        const UNSUPPORTED_GROUP_TYPE: u8 = 0x10;
-        const INSUFFICIENT_RESOURCES: u8 = 0x11;
-        const DATABASE_OUT_OF_SYNC: u8 = 0x12;
-        const VALUE_NOT_ALLOWED: u8 = 0x13;
-
-        #[deny(unreachable_patterns)]
-        match number {
-            SUCCESS => Self::Success,
-            INVALID_HANDLE => Self::InvalidHandle,
-            READ_NOT_PERMITTED => Self::ReadNotPermitted,
-            WRITE_NOT_PERMITTED => Self::WriteNotPermitted,
-            INVALID_PDU => Self::InvalidPdu,
-            INSUFFICIENT_AUTHENTICATION => Self::InsufficientAuthentication,
-            REQUEST_NOT_SUPPORTED => Self::RequestNotSupported,
-            INVALID_OFFSET => Self::InvalidOffset,
-            INSUFFICIENT_AUTHORIZATION => Self::InsufficientAuthorization,
-            PREPARE_QUEUE_FULL => Self::PrepareQueueFull,
-            ATTRIBUTE_NOT_FOUND => Self::AttributeNotFound,
-            ATTRIBUTE_NOT_LONG => Self::AttributeNotLong,
-            INSUFFICIENT_ENCRYPTION_KEY_SIZE => Self::InsufficientEncryptionKeySize,
-            INVALID_ATTRIBUTE_VALUE_LENGTH => Self::InvalidAttributeValueLength,
-            UNLIKELY_ERROR => Self::UnlikelyError,
-            INSUFFICIENT_ENCRYPTION => Self::InsufficientEncryption,
-            UNSUPPORTED_GROUP_TYPE => Self::UnsupportedGroupType,
-            INSUFFICIENT_RESOURCES => Self::InsufficientResources,
-            DATABASE_OUT_OF_SYNC => Self::DatabaseOutOfSync,
-            VALUE_NOT_ALLOWED => Self::ValueNotAllowed,
-            0x80..=0x9f => Self::Application(number),
-            0xe0..=0xff => Self::Common(number),
-            _ => Self::Reserved(number),
+        match AttErrorCode::try_from(number) {
+            Ok(code) => AttError::Known(code),
+            Err(_) => {
+                if (0x80..0xa0).contains(&number) {
+                    AttError::Application(number)
+                } else {
+                    AttError::Reserved(number)
+                }
+            }
         }
     }
 }

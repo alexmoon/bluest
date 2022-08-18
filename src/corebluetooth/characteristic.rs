@@ -1,4 +1,4 @@
-use enumflags2::{bitflags, BitFlags};
+use enumflags2::BitFlags;
 use futures::Stream;
 use objc_foundation::{INSArray, INSData, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
@@ -12,53 +12,47 @@ use super::types::{CBCharacteristicWriteType, CBUUID};
 use super::{descriptor::Descriptor, types::CBCharacteristic};
 
 use crate::error::ErrorKind;
-use crate::{Error, Result};
+use crate::{CharacteristicProperty, Error, Result};
 
-#[bitflags]
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Properties {
-    Broadcast = 0x01,
-    Read = 0x02,
-    WriteWithoutResponse = 0x04,
-    Write = 0x08,
-    Notify = 0x10,
-    Indicate = 0x20,
-    AuthenticatedSignedWrites = 0x40,
-    ExtendedProperties = 0x80,
-}
-
-#[bitflags]
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ExtendedProperties {
-    ReliableWrite = 0x0001,
-    WritableAuxiliaries = 0x0002,
-}
-
+/// A Bluetooth GATT characteristic
 pub struct Characteristic {
     characteristic: ShareId<CBCharacteristic>,
 }
 
 impl Characteristic {
-    pub(crate) fn new(characteristic: &CBCharacteristic) -> Self {
+    pub(super) fn new(characteristic: &CBCharacteristic) -> Self {
         Characteristic {
             characteristic: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
         }
     }
 
+    /// The [Uuid] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
         self.characteristic.uuid().to_uuid()
     }
 
-    pub fn properties(&self) -> BitFlags<Properties> {
-        BitFlags::from_bits(self.characteristic.properties() as u8).unwrap()
+    /// The properties of this this GATT characteristic.
+    ///
+    /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
+    /// characteristic.
+    pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
+        BitFlags::from_bits(self.characteristic.properties() as u32).unwrap_or_else(|x| x.truncate())
     }
 
-    pub fn value(&self) -> Option<SmallVec<[u8; 16]>> {
-        self.characteristic.value().map(|val| SmallVec::from_slice(val.bytes()))
+    /// The cached value of this characteristic
+    ///
+    /// If the value has not yet been read, this function may either return an error or perform a read of the value.
+    pub fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+        self.characteristic
+            .value()
+            .map(|val| SmallVec::from_slice(val.bytes()))
+            .ok_or_else(|| Error {
+                kind: ErrorKind::AdapterUnavailable,
+                message: String::new(),
+            })
     }
 
+    /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
         let peripheral = self.characteristic.service().peripheral();
 
@@ -76,7 +70,7 @@ impl Characteristic {
                 {
                     match error {
                         Some(err) => Err(&*err)?,
-                        None => return Ok(self.value().unwrap()),
+                        None => return self.value(),
                     }
                 }
                 Err(_err) => Err(ErrorKind::InternalError)?,
@@ -85,10 +79,13 @@ impl Characteristic {
         }
     }
 
+    /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         self.write_kind(value, CBCharacteristicWriteType::WithoutResponse).await
     }
 
+    /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
+    /// a successful write.
     pub async fn write_with_response(&self, value: &[u8]) -> Result<()> {
         self.write_kind(value, CBCharacteristicWriteType::WithResponse).await
     }
@@ -120,6 +117,9 @@ impl Characteristic {
         }
     }
 
+    /// Enables notification of value changes for this GATT characteristic.
+    ///
+    /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
         let guard = scopeguard::guard((), move |_| {
             let peripheral = self.characteristic.service().peripheral();
@@ -167,17 +167,18 @@ impl Characteristic {
         Ok(updates)
     }
 
-    pub fn is_notifying(&self) -> bool {
-        self.characteristic.is_notifying()
+    /// Is the device currently sending notifications for this characteristic?
+    pub async fn is_notifying(&self) -> Result<bool> {
+        Ok(self.characteristic.is_notifying())
     }
 
-    pub fn is_broadcasting(&self) -> bool {
-        self.characteristic.is_broadcasting()
-    }
-
-    pub async fn discover_descriptors(&self, descriptors: Option<&[Uuid]>) -> Result<SmallVec<[Descriptor; 2]>> {
-        let descriptors = descriptors.map(|x| {
-            let vec = x.iter().map(CBUUID::from_uuid).collect::<Vec<_>>();
+    /// Discover the descriptors associated with this service.
+    ///
+    /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
+    /// descriptors for this characteristic will be discovered.
+    pub async fn discover_descriptors(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Descriptor; 2]>> {
+        let uuids = uuid.map(|x| {
+            let vec = vec![CBUUID::from_uuid(x)];
             NSArray::from_vec(vec)
         });
 
@@ -187,7 +188,7 @@ impl Characteristic {
             .delegate()
             .and_then(|x| x.sender().map(|x| x.subscribe()))
             .ok_or(ErrorKind::InternalError)?;
-        peripheral.discover_descriptors(&self.characteristic, descriptors);
+        peripheral.discover_descriptors(&self.characteristic, uuids);
 
         loop {
             match receiver.recv().await {
@@ -207,6 +208,10 @@ impl Characteristic {
         Ok(self.descriptors().await)
     }
 
+    /// Get previously discovered descriptors.
+    ///
+    /// If no descriptors have been discovered yet, this function may either perform descriptor discovery or
+    /// return an empty set.
     pub async fn descriptors(&self) -> SmallVec<[Descriptor; 2]> {
         match self.characteristic.descriptors() {
             Some(s) => s.enumerator().map(Descriptor::new).collect(),

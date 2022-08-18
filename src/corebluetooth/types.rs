@@ -151,7 +151,7 @@ impl NSUUID {
 }
 
 impl CBUUID {
-    pub fn from_uuid(uuid: &Uuid) -> Id<Self> {
+    pub fn from_uuid(uuid: Uuid) -> Id<Self> {
         unsafe {
             let obj: *mut Self =
                 msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_owned())];
@@ -284,6 +284,7 @@ impl CBPeripheral {
         }
     }
 
+    #[allow(unused)]
     pub fn read_rssi(&self) {
         unsafe { msg_send![self, readRSSI] }
     }
@@ -362,6 +363,7 @@ impl CBCharacteristic {
         res != NO
     }
 
+    #[allow(unused)]
     pub fn is_broadcasting(&self) -> bool {
         let res: BOOL = unsafe { msg_send![self, isBroadcasting] };
         res != NO

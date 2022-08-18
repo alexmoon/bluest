@@ -13,13 +13,17 @@ use crate::{error::ErrorKind, Error, Result};
 
 use super::service::Service;
 
+/// A platform-specific device identifier.
+pub type DeviceId = BluetoothDeviceId;
+
+/// A Bluetooth LE device
 pub struct Device {
     device: BluetoothLEDevice,
     session: Mutex<Option<GattSession>>,
 }
 
 impl Device {
-    pub(crate) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
+    pub(super) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
         let device = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
         Ok(Device {
             device,
@@ -27,27 +31,41 @@ impl Device {
         })
     }
 
-    pub fn id(&self) -> Result<BluetoothDeviceId> {
-        self.device.BluetoothDeviceId().map_err(Into::into)
+    /// This device's unique identifier
+    pub fn id(&self) -> DeviceId {
+        self.device.BluetoothDeviceId().expect("error getting BluetoothDeviceId for BluetoothLEDevice")
     }
 
+    /// The local name for this device, if available
     pub async fn name(&self) -> Option<String> {
-        self.device.Name().ok().map(|x| x.to_string_lossy())
+        self.device
+            .Name()
+            .ok()
+            .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()))
     }
 
+    /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
         self.device.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
     }
 
+    /// Discover the primary services of this device.
+    ///
+    /// If a [Uuid] is provided, only services with that [Uuid] will be discovered. If `uuid` is `None` then all
+    /// services will be discovered.
     pub async fn discover_services(&self, service: Option<Uuid>) -> Result<SmallVec<[Service; 2]>> {
         self.get_services(service, BluetoothCacheMode::Uncached).await
     }
 
+    /// Get previously discovered services.
+    ///
+    /// If no services have been discovered yet, this function may either perform service discovery or return an empty
+    /// set.
     pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
         self.get_services(None, BluetoothCacheMode::Cached).await
     }
 
-    pub(crate) async fn get_services(
+    async fn get_services(
         &self,
         service: Option<Uuid>,
         cachemode: BluetoothCacheMode,
@@ -71,7 +89,7 @@ impl Device {
         }
     }
 
-    pub(crate) async fn connect(&self) -> Result<()> {
+    pub(super) async fn connect(&self) -> Result<()> {
         let mut guard = self.session.lock().await;
 
         if guard.is_none() {
@@ -83,7 +101,7 @@ impl Device {
         Ok(())
     }
 
-    pub(crate) async fn disconnect(&self) -> Result<()> {
+    pub(super) async fn disconnect(&self) -> Result<()> {
         let mut guard = self.session.lock().await;
 
         if let Some(session) = guard.take() {

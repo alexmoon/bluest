@@ -10,7 +10,7 @@ use objc::{
 use objc_foundation::{INSArray, NSArray, NSDictionary, NSObject, NSString};
 use objc_id::{Id, ShareId, Shared};
 use std::{os::raw::c_void, sync::Once};
-use tracing::debug;
+use tracing::{debug, error};
 
 use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
 
@@ -313,10 +313,17 @@ impl CentralDelegate {
         unsafe {
             let ptr = *this.get_ivar::<*mut c_void>("sender") as *mut tokio::sync::broadcast::Sender<CentralEvent>;
             if !ptr.is_null() {
-                let _ = (*ptr).send(CentralEvent::ConnectionEvent {
-                    peripheral: ShareId::from_ptr(peripheral as _),
-                    event: connection_event.try_into().unwrap(),
-                });
+                match connection_event.try_into() {
+                    Ok(event) => {
+                        let _ = (*ptr).send(CentralEvent::ConnectionEvent {
+                            peripheral: ShareId::from_ptr(peripheral as _),
+                            event,
+                        });
+                    }
+                    Err(err) => {
+                        error!("Invalid value for CBConnectionEvent: {}", err);
+                    }
+                }
             }
         }
     }

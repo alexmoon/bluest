@@ -8,17 +8,9 @@ use super::delegates::PeripheralEvent;
 use super::types::{CBDescriptor, NSUInteger};
 
 use crate::error::ErrorKind;
-use crate::Result;
+use crate::{Error, Result};
 
-// Well-known descriptor UUIDs
-// const CHARACTERISTIC_EXTENDED_PROPERTIES: Uuid = bluetooth_uuid_from_u16(0x2900); // u16
-// const CHARACTERISTIC_USER_DESCRIPTION: Uuid = bluetooth_uuid_from_u16(0x2901); // string
-// const CLIENT_CHARACTERISTIC_CONFIGURATION: Uuid = bluetooth_uuid_from_u16(0x2902); // u16
-// const SERVER_CHARACTERISTIC_CONFIGURATION: Uuid = bluetooth_uuid_from_u16(0x2903); // u16
-// const CHARACTERISTIC_PRESENTATION_FORMAT: Uuid = bluetooth_uuid_from_u16(0x2904); // { format: u8, exponent: u8, unit: u16, namespace: u8, description: u16 }
-// const CHARACTERISTIC_AGGREGATE_FORMAT: Uuid = bluetooth_uuid_from_u16(0x2905); // &[u8] ???
-// const L2CAPPSM_CHARACTERISTIC: Uuid = Uuid::from_u128(0xABDD3056_28FA_441D_A470_55A75A52553Au128); // u16
-
+/// A Bluetooth GATT descriptor
 pub struct Descriptor {
     descriptor: ShareId<CBDescriptor>,
 }
@@ -54,20 +46,28 @@ fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
 }
 
 impl Descriptor {
-    pub(crate) fn new(descriptor: &CBDescriptor) -> Self {
+    pub(super) fn new(descriptor: &CBDescriptor) -> Self {
         Descriptor {
             descriptor: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
         }
     }
 
+    /// The [Uuid] identifying the type of this GATT descriptor
     pub fn uuid(&self) -> Uuid {
         self.descriptor.uuid().to_uuid()
     }
 
-    pub fn value(&self) -> Option<SmallVec<[u8; 16]>> {
-        self.descriptor.value().map(|val| value_to_slice(&*val))
+    /// The cached value of this descriptor
+    ///
+    /// If the value has not yet been read, this function may either return an error or perform a read of the value.
+    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+        self.descriptor.value().map(|val| value_to_slice(&*val)).ok_or(Error {
+            kind: ErrorKind::AdapterUnavailable,
+            message: String::new(),
+        })
     }
 
+    /// Read the value of this descriptor from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
         let peripheral = self.descriptor.characteristic().service().peripheral();
 
@@ -83,7 +83,7 @@ impl Descriptor {
                 Ok(PeripheralEvent::DescriptorValueUpdate { descriptor, error }) if descriptor == self.descriptor => {
                     match error {
                         Some(err) => Err(&*err)?,
-                        None => return Ok(self.value().unwrap()),
+                        None => return self.value().await,
                     }
                 }
                 Err(_err) => Err(ErrorKind::InternalError)?,
@@ -92,6 +92,7 @@ impl Descriptor {
         }
     }
 
+    /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let peripheral = self.descriptor.characteristic().service().peripheral();
 

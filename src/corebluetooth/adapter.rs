@@ -22,7 +22,7 @@ use super::device::Device;
 use super::types::{dispatch_queue_create, dispatch_release, id_or_nil, nil, CBCentralManager, CBManagerState, CBUUID};
 
 use crate::error::ErrorKind;
-use crate::{AdvertisementData, DiscoveredDevice, Event, ManufacturerData, Result};
+use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, ManufacturerData, Result};
 
 impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
     fn from(adv_data: &NSDictionary<NSString, NSObject>) -> Self {
@@ -100,12 +100,9 @@ impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
     }
 }
 
-// impl AdapterInfo {
-//     pub fn name(&self) -> &str {}
-
-//     pub fn id(&self) -> &[u8] {}
-// }
-
+/// The system's Bluetooth adapter interface.
+///
+/// The default adapter for the system may be accessed with the [Adapter::default()] method.
 pub struct Adapter {
     central: Id<CBCentralManager>,
     sender: tokio::sync::broadcast::Sender<delegates::CentralEvent>,
@@ -113,7 +110,8 @@ pub struct Adapter {
 }
 
 impl Adapter {
-    pub(crate) fn new() -> Self {
+    /// Creates an interface to the default Bluetooth adapter for the system
+    pub async fn default() -> Result<Self> {
         let (sender, _) = tokio::sync::broadcast::channel(16);
         let delegate = CentralDelegate::with_sender(sender.clone());
         let central = unsafe {
@@ -123,32 +121,34 @@ impl Adapter {
             central
         };
 
-        Adapter {
+        Ok(Adapter {
             central,
             sender,
             scanning: AtomicBool::new(false),
-        }
+        })
     }
 
-    pub fn events(&self) -> impl Stream<Item = Event> + '_ {
+    /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
+    pub fn events(&self) -> impl Stream<Item = AdapterEvent> + '_ {
         let receiver = self.sender.subscribe();
         BroadcastStream::new(receiver).filter_map(|x| match x {
             Ok(delegates::CentralEvent::StateChanged) => {
                 let state = self.central.state();
                 debug!("Central state is now {:?}", state);
                 match state {
-                    CBManagerState::PoweredOn => Some(Event::Available),
-                    _ => Some(Event::Unavailable),
+                    CBManagerState::PoweredOn => Some(AdapterEvent::Available),
+                    _ => Some(AdapterEvent::Unavailable),
                 }
             }
             _ => None,
         })
     }
 
+    /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
         let events = self.events();
         if self.central.state() != CBManagerState::PoweredOn {
-            let _ = events.skip_while(|x| *x != Event::Available).next().await;
+            let _ = events.skip_while(|x| *x != AdapterEvent::Available).next().await;
         }
         Ok(())
     }
@@ -157,7 +157,15 @@ impl Adapter {
 
     // pub async fn known_devices(&self, services: Option<&[Uuid]>)
 
-    pub async fn scan<'a>(&'a self, services: Option<&'a [Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + 'a> {
+    /// Starts scanning for Bluetooth advertising packets.
+    ///
+    /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
+    /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
+    /// packets is a platform-specific implementation detail.
+    pub async fn scan<'a>(
+        &'a self,
+        services: Option<&'a [Uuid]>,
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         unsafe {
             if self.central.state() != CBManagerState::PoweredOn {
                 Err(ErrorKind::AdapterUnavailable)?
@@ -168,7 +176,7 @@ impl Adapter {
             }
 
             let services = services.map(|x| {
-                let vec = x.iter().map(CBUUID::from_uuid).collect::<Vec<_>>();
+                let vec = x.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
                 NSArray::from_vec(vec)
             });
 
@@ -186,10 +194,10 @@ impl Adapter {
                             peripheral,
                             adv_data,
                             rssi,
-                        }) => Some(DiscoveredDevice {
+                        }) => Some(AdvertisingDevice {
                             device: Device::new(peripheral),
                             adv_data: AdvertisementData::from(&*adv_data),
-                            rssi,
+                            rssi: Some(rssi),
                         }),
                         _ => None,
                     }
@@ -201,6 +209,7 @@ impl Adapter {
         }
     }
 
+    /// Connects to the [Device]
     pub async fn connect(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             Err(ErrorKind::AdapterUnavailable)?
@@ -229,6 +238,7 @@ impl Adapter {
         unreachable!()
     }
 
+    /// Disconnects from the [Device]
     pub async fn disconnect(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             Err(ErrorKind::AdapterUnavailable)?

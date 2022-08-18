@@ -12,6 +12,10 @@ use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
 use crate::error::ErrorKind;
 use crate::Result;
 
+/// A platform-specific device identifier.
+pub type DeviceId = Uuid;
+
+/// A Bluetooth LE device
 pub struct Device {
     pub(super) peripheral: ShareId<CBPeripheral>,
     sender: tokio::sync::broadcast::Sender<delegates::PeripheralEvent>,
@@ -24,7 +28,7 @@ impl std::fmt::Debug for Device {
 }
 
 impl Device {
-    pub(crate) fn new(peripheral: ShareId<CBPeripheral>) -> Self {
+    pub(super) fn new(peripheral: ShareId<CBPeripheral>) -> Self {
         let sender = peripheral
             .delegate()
             .and_then(|x| x.sender().cloned())
@@ -39,40 +43,33 @@ impl Device {
         Device { peripheral, sender }
     }
 
-    pub fn id(&self) -> Uuid {
+    /// This device's unique identifier
+    pub fn id(&self) -> DeviceId {
         self.peripheral.identifier().to_uuid()
     }
 
+    /// The local name for this device, if available
     pub async fn name(&self) -> Option<String> {
         self.peripheral.name().map(|x| x.as_str().to_owned())
     }
 
+    /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
         self.peripheral.state() == CBPeripheralState::Connected
     }
 
-    pub async fn rssi(&self) -> Result<i16> {
-        let mut receiver = self.sender.subscribe();
-        self.peripheral.read_rssi();
-
-        loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::ReadRssi { rssi, error: None }) => return Ok(rssi),
-                Ok(PeripheralEvent::ReadRssi { error: Some(err), .. }) => Err(&*err)?,
-                Err(_err) => Err(ErrorKind::InternalError)?,
-                _ => (),
-            }
-        }
-    }
-
-    pub async fn discover_services(&self, services: Option<&[Uuid]>) -> Result<SmallVec<[Service; 2]>> {
-        let services = services.map(|x| {
-            let vec = x.iter().map(CBUUID::from_uuid).collect::<Vec<_>>();
+    /// Discover the primary services of this device.
+    ///
+    /// If a [Uuid] is provided, only services with that [Uuid] will be discovered. If `uuid` is `None` then all
+    /// services will be discovered.
+    pub async fn discover_services(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Service; 2]>> {
+        let uuids = uuid.map(|x| {
+            let vec = vec![CBUUID::from_uuid(x)];
             NSArray::from_vec(vec)
         });
 
         let mut receiver = self.sender.subscribe();
-        self.peripheral.discover_services(services);
+        self.peripheral.discover_services(uuids);
 
         loop {
             match receiver.recv().await {
@@ -83,13 +80,17 @@ impl Device {
             }
         }
 
-        Ok(self.services().await)
+        self.services().await
     }
 
-    pub async fn services(&self) -> SmallVec<[Service; 2]> {
-        match self.peripheral.services() {
+    /// Get previously discovered services.
+    ///
+    /// If no services have been discovered yet, this function may either perform service discovery or return an empty
+    /// set.
+    pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
+        Ok(match self.peripheral.services() {
             Some(s) => s.enumerator().map(Service::new).collect(),
             None => SmallVec::new(),
-        }
+        })
     }
 }

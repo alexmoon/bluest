@@ -18,14 +18,17 @@ use windows::Foundation::Collections::IVector;
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
 
+use crate::AdapterEvent;
 use crate::AdvertisementData;
+use crate::AdvertisingDevice;
 use crate::BluetoothUuidExt;
 use crate::Device;
-use crate::DiscoveredDevice;
-use crate::Event;
 use crate::ManufacturerData;
 use crate::Result;
 
+/// The system's Bluetooth adapter interface.
+///
+/// The default adapter for the system may be created with the [Adapter::default()] method.
 pub struct Adapter {
     adapter: BluetoothAdapter,
 }
@@ -43,33 +46,48 @@ impl TryFrom<BluetoothLEManufacturerData> for ManufacturerData {
     }
 }
 
-impl TryFrom<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
-    type Error = windows::core::Error;
+impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
+    fn from(event_args: BluetoothLEAdvertisementReceivedEventArgs) -> Self {
+        let is_connectable = event_args.IsConnectable().unwrap_or(false);
+        let tx_power_level = event_args.TransmitPowerLevelInDBm().ok().and_then(|x| x.Value().ok());
+        let (local_name, manufacturer_data, services, solicited_services, service_data) =
+            if let Ok(adv) = event_args.Advertisement() {
+                let local_name = adv
+                    .LocalName()
+                    .ok()
+                    .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()));
+                let manufacturer_data = adv
+                    .ManufacturerData()
+                    .and_then(|x| x.GetAt(0))
+                    .and_then(|x| x.try_into())
+                    .ok();
 
-    fn try_from(event_args: BluetoothLEAdvertisementReceivedEventArgs) -> Result<Self, Self::Error> {
-        let is_connectable = event_args.IsConnectable()?;
-        let tx_power_level = event_args
-            .TransmitPowerLevelInDBm()
-            .ok()
-            .map(|x| x.Value())
-            .transpose()?;
-        let adv = event_args.Advertisement()?;
-        let local_name = adv.LocalName()?.to_string();
-        let local_name = (!local_name.is_empty()).then(|| local_name);
-        let manufacturer_data = adv.ManufacturerData()?;
-        let manufacturer_data = manufacturer_data.GetAt(0).ok().map(|x| x.try_into()).transpose()?;
+                let services = adv
+                    .ServiceUuids()
+                    .map(|x| x.into_iter().map(|x| Uuid::from_u128(x.to_u128())).collect())
+                    .unwrap_or_default();
 
-        let services = adv
-            .ServiceUuids()?
-            .into_iter()
-            .map(|x| Uuid::from_u128(x.to_u128()))
-            .collect();
+                let (solicited_services, service_data) = if let Ok(data_sections) = adv.DataSections() {
+                    (
+                        to_solicited_services(&data_sections).unwrap_or_default(),
+                        to_service_data(&data_sections).unwrap_or_default(),
+                    )
+                } else {
+                    (Default::default(), Default::default())
+                };
 
-        let data_sections = adv.DataSections()?;
-        let solicited_services = to_solicited_services(&data_sections)?;
-        let service_data = to_service_data(&data_sections)?;
+                (
+                    local_name,
+                    manufacturer_data,
+                    services,
+                    solicited_services,
+                    service_data,
+                )
+            } else {
+                (None, None, SmallVec::new(), SmallVec::new(), HashMap::new())
+            };
 
-        Ok(AdvertisementData {
+        AdvertisementData {
             local_name,
             manufacturer_data,
             services,
@@ -77,7 +95,7 @@ impl TryFrom<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
             is_connectable,
             solicited_services,
             service_data,
-        })
+        }
     }
 }
 
@@ -142,9 +160,9 @@ fn to_service_data(
             let buf = data.Data()?;
             let reader = DataReader::FromBuffer(&buf)?;
             if let Ok(uuid) = read_uuid(&reader, kind) {
-                let len = reader.UnconsumedBufferLength().unwrap() as usize;
+                let len = reader.UnconsumedBufferLength()? as usize;
                 let mut value = SmallVec::from_elem(0, len);
-                reader.ReadBytes(value.as_mut_slice()).unwrap();
+                reader.ReadBytes(value.as_mut_slice())?;
                 service_data.insert(uuid, value);
             }
         }
@@ -154,22 +172,24 @@ fn to_service_data(
 }
 
 impl Adapter {
-    pub(crate) async fn new() -> Result<Self> {
-        let adapter = BluetoothAdapter::GetDefaultAsync().unwrap().await?;
+    /// Creates the default adapter for the system
+    pub async fn default() -> Result<Self> {
+        let adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
         Ok(Adapter { adapter })
     }
 
-    pub async fn events(&self) -> Result<impl Stream<Item = Event> + '_> {
+    /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
+    pub async fn events(&self) -> Result<impl Stream<Item = AdapterEvent> + '_> {
         let (sender, receiver) = tokio::sync::mpsc::channel(16);
-        let radio = self.adapter.GetRadioAsync().unwrap().await?;
+        let radio = self.adapter.GetRadioAsync()?.await?;
         let token = radio.StateChanged(&TypedEventHandler::new(move |radio: &Option<Radio>, _| {
-            let radio = radio.as_ref().unwrap();
-            let state = radio.State().unwrap();
-            if state == RadioState::On {
-                sender.blocking_send(Event::Available).unwrap();
+            let radio = radio.as_ref().expect("radio is null in StateChanged event");
+            let state = radio.State().expect("radio state getter failed in StateChanged event");
+            let _ = sender.blocking_send(if state == RadioState::On {
+                AdapterEvent::Available
             } else {
-                sender.blocking_send(Event::Unavailable).unwrap();
-            }
+                AdapterEvent::Unavailable
+            });
 
             Ok(())
         }))?;
@@ -186,17 +206,26 @@ impl Adapter {
         }))
     }
 
+    /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
         let radio = self.adapter.GetRadioAsync()?.await?;
         let events = self.events().await?;
         let state = radio.State()?;
         if state != RadioState::On {
-            let _ = events.skip_while(|x| *x != Event::Available).next().await;
+            let _ = events.skip_while(|x| *x != AdapterEvent::Available).next().await;
         }
         Ok(())
     }
 
-    pub async fn scan<'a>(&'a self, services: Option<&'a [Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + 'a> {
+    /// Starts scanning for Bluetooth advertising packets.
+    ///
+    /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
+    /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
+    /// packets is a platform-specific implementation detail.
+    pub async fn scan<'a>(
+        &'a self,
+        services: Option<&'a [Uuid]>,
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         let watcher = BluetoothLEAdvertisementWatcher::new()?;
         watcher.SetAllowExtendedAdvertisements(true)?;
 
@@ -232,8 +261,8 @@ impl Adapter {
             .map(|event_args| -> windows::core::Result<_> {
                 // Parse relevant fields from event_args
                 let addr = (event_args.BluetoothAddress()?, event_args.BluetoothAddressType()?);
-                let rssi = event_args.RawSignalStrengthInDBm()?;
-                let adv_data = AdvertisementData::try_from(event_args)?;
+                let rssi = event_args.RawSignalStrengthInDBm().ok();
+                let adv_data = AdvertisementData::from(event_args);
                 Ok((addr, rssi, adv_data))
             })
             .filter_map(move |res| {
@@ -253,7 +282,7 @@ impl Adapter {
                         }
                     }
                     Err(err) => {
-                        warn!("Error extracting data from event: {:?}", err);
+                        warn!("Error getting bluetooth address from event: {:?}", err);
                         None
                     }
                 }
@@ -263,7 +292,7 @@ impl Adapter {
                 Box::pin(async move {
                     Device::from_addr(addr.0, addr.1)
                         .await
-                        .map(|device| DiscoveredDevice { device, rssi, adv_data })
+                        .map(|device| AdvertisingDevice { device, rssi, adv_data })
                 })
             })
             .filter_map(move |res| match res {
@@ -275,10 +304,12 @@ impl Adapter {
             }))
     }
 
+    /// Connects to the [Device]
     pub async fn connect(&self, device: &Device) -> Result<()> {
         device.connect().await
     }
 
+    /// Disconnects from [Device]
     pub async fn disconnect(&self, device: &Device) -> Result<()> {
         device.disconnect().await
     }

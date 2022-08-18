@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bluest::Session;
+use bluest::Adapter;
 use tokio_stream::StreamExt;
 use tracing::{info, metadata::LevelFilter};
 
@@ -17,15 +17,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let session = Session::new().await?;
-    let adapter = session.default_adapter().await.unwrap();
+    let adapter = Adapter::default().await?;
     adapter.wait_available().await?;
 
     info!("starting scan");
     let mut scan = adapter.scan(None).await?;
     info!("scan started");
     while let Some(discovered_device) = scan.next().await {
-        info!("{} {:?}", discovered_device.rssi, discovered_device.adv_data);
+        info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);
     }
 
     Ok(())
