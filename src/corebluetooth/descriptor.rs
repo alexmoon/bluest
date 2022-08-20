@@ -73,7 +73,8 @@ impl Descriptor {
 
     /// Read the value of this descriptor from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
-        let peripheral = self.inner.characteristic().service().peripheral();
+        let service = self.inner.characteristic().service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.read_descriptor_value(&self.inner);
 
@@ -84,6 +85,11 @@ impl Descriptor {
                     Some(err) => Err(Error::from_nserror(err))?,
                     None => return self.value().await,
                 },
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
+                }
                 _ => (),
             }
         }
@@ -91,7 +97,8 @@ impl Descriptor {
 
     /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let peripheral = self.inner.characteristic().service().peripheral();
+        let service = self.inner.characteristic().service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
         let data = INSData::from_vec(value.to_vec());
         peripheral.write_descriptor_value(&self.inner, &data);
@@ -103,6 +110,11 @@ impl Descriptor {
                         Some(err) => Err(Error::from_nserror(err))?,
                         None => return Ok(()),
                     }
+                }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
             }

@@ -24,7 +24,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut scan = adapter.scan(&[]).await?;
     info!("scan started");
     while let Some(discovered_device) = scan.next().await {
-        info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);
+        if discovered_device.adv_data.local_name.is_some() {
+            info!(
+                "{} ({}dBm): {:?}",
+                discovered_device.adv_data.local_name.as_ref().unwrap(),
+                discovered_device.rssi.unwrap(),
+                discovered_device.adv_data.services
+            );
+        }
     }
 
     Ok(())

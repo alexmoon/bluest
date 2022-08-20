@@ -480,7 +480,7 @@ impl CBService {
     }
 
     pub fn characteristics(&self) -> Option<ShareId<NSArray<CBCharacteristic>>> {
-        unsafe { option_from_ptr(msg_send![self, includedServices]) }
+        unsafe { option_from_ptr(msg_send![self, characteristics]) }
     }
 
     pub fn included_services(&self) -> Option<ShareId<NSArray<CBService>>> {

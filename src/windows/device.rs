@@ -1,5 +1,6 @@
 use smallvec::SmallVec;
 use tokio::sync::Mutex;
+use tracing::error;
 use uuid::Uuid;
 use windows::{
     core::GUID,
@@ -7,6 +8,7 @@ use windows::{
         BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
         GenericAttributeProfile::GattSession,
     },
+    Foundation::TypedEventHandler,
 };
 
 use crate::Result;
@@ -147,6 +149,27 @@ impl Device {
 
         let services = res.Services()?;
         Ok(services.into_iter().map(Service::new).collect())
+    }
+
+    /// Asynchronously blocks until a GATT services changed packet is received
+    pub async fn services_changed(&self) -> Result<()> {
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let mut sender = Some(sender);
+        let token = self.device.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
+            if let Some(sender) = sender.take() {
+                let _ = sender.send(());
+            }
+            Ok(())
+        }))?;
+
+        let _guard = scopeguard::guard((), move |_| {
+            if let Err(err) = self.device.RemoveGattServicesChanged(token) {
+                error!("Error removing state changed handler: {:?}", err);
+            }
+        });
+
+        receiver.await.unwrap();
+        Ok(())
     }
 
     pub(super) async fn connect(&self) -> Result<()> {

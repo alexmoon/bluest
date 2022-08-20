@@ -57,6 +57,11 @@ impl Service {
                     Some(err) => Err(Error::from_nserror(err))?,
                     None => break,
                 },
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&self.inner) =>
+                {
+                    Err(ErrorKind::ServiceChanged)?
+                }
                 _ => (),
             }
         }
@@ -102,6 +107,11 @@ impl Service {
                         Some(err) => Err(Error::from_nserror(err))?,
                         None => break,
                     }
+                }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&self.inner) =>
+                {
+                    Err(ErrorKind::ServiceChanged)?
                 }
                 _ => (),
             }

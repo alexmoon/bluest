@@ -58,7 +58,8 @@ impl Characteristic {
 
     /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
-        let peripheral = self.inner.service().peripheral();
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
 
         peripheral.read_characteristic_value(&self.inner);
@@ -73,27 +74,24 @@ impl Characteristic {
                         None => return self.value().await,
                     }
                 }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
+                }
                 _ => (),
             }
         }
     }
 
-    /// Write the value of this descriptor on the device to `value`
-    pub async fn write(&self, value: &[u8]) -> Result<()> {
-        self.write_kind(value, CBCharacteristicWriteType::WithoutResponse).await
-    }
-
     /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
     /// a successful write.
-    pub async fn write_with_response(&self, value: &[u8]) -> Result<()> {
-        self.write_kind(value, CBCharacteristicWriteType::WithResponse).await
-    }
-
-    async fn write_kind(&self, value: &[u8], kind: CBCharacteristicWriteType) -> Result<()> {
-        let peripheral = self.inner.service().peripheral();
+    pub async fn write(&self, value: &[u8]) -> Result<()> {
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
         let data = INSData::from_vec(value.to_vec());
-        peripheral.write_characteristic_value(&self.inner, &data, kind);
+        peripheral.write_characteristic_value(&self.inner, &data, CBCharacteristicWriteType::WithResponse);
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
@@ -103,30 +101,62 @@ impl Characteristic {
                         None => return Ok(()),
                     }
                 }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
+                }
                 _ => (),
             }
         }
+    }
+
+    /// Write the value of this descriptor on the device to `value` without requesting a response.
+    pub async fn write_without_response(&self, value: &[u8]) {
+        let data = INSData::from_vec(value.to_vec());
+        self.inner.service().peripheral().write_characteristic_value(
+            &self.inner,
+            &data,
+            CBCharacteristicWriteType::WithoutResponse,
+        );
     }
 
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
+        if !(self
+            .properties()
+            .intersects(CharacteristicProperty::Notify | CharacteristicProperty::Indicate))
+        {
+            return Err(Error::new(
+                ErrorKind::NotSupported,
+                None,
+                "characteristic does not support indications or notifications".to_string(),
+            ));
+        };
+
         let guard = scopeguard::guard((), move |_| {
             let peripheral = self.inner.service().peripheral();
             peripheral.set_notify(&self.inner, false);
         });
 
-        let peripheral = self.inner.service().peripheral();
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::NotificationStateUpdate { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(Error::from_nserror(err))?,
+                        Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
+                }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
             }
@@ -143,6 +173,11 @@ impl Characteristic {
                             Some(err) => Some(Err(Error::from_nserror(err))),
                             None => Some(Ok(())),
                         }
+                    }
+                    Ok(PeripheralEvent::ServicesChanged { invalidated_services })
+                        if invalidated_services.contains(&service) =>
+                    {
+                        Some(Err(ErrorKind::ServiceChanged.into()))
                     }
                     _ => None,
                 }
@@ -185,7 +220,8 @@ impl Characteristic {
             NSArray::from_vec(vec)
         });
 
-        let peripheral = self.inner.service().peripheral();
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_descriptors(&self.inner, uuids);
 
@@ -196,6 +232,11 @@ impl Characteristic {
                         Some(err) => Err(Error::from_nserror(err))?,
                         None => break,
                     }
+                }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
             }

@@ -78,6 +78,8 @@ pub enum ErrorKind {
     Protocol(AttError),
     /// an internal error has occured
     Internal,
+    /// the service changed and is no longer valid
+    ServiceChanged,
     /// error
     Other,
 }

@@ -131,6 +131,17 @@ impl Device {
             })
     }
 
+    /// Asynchronously blocks until a GATT services changed packet is received
+    pub async fn services_changed(&self) -> Result<()> {
+        let mut receiver = self.sender.subscribe();
+        while !matches!(
+            receiver.recv().await.map_err(Error::from_recv_error)?,
+            PeripheralEvent::ServicesChanged { .. }
+        ) {}
+
+        Ok(())
+    }
+
     /// Get the current signal strength from the device in dBm.
     ///
     /// # Platform specific
