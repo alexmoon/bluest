@@ -8,6 +8,27 @@
 //! ## Usage
 //!
 //! ```rust,no_run
+//!# #[tokio::main]
+//!# async fn main() -> Result<(), Box<dyn Error>> {
+//!let adapter = Adapter::default().await.unwrap();
+//!adapter.wait_available().await?;
+//!
+//!println!("starting scan");
+//!let mut scan = adapter.scan(&[]).await?;
+//!println!("scan started");
+//!while let Some(discovered_device) = scan.next().await {
+//!    if discovered_device.adv_data.local_name.is_some() {
+//!        println!(
+//!            "{} ({}dBm): {:?}",
+//!            discovered_device.adv_data.local_name.as_ref().unwrap(),
+//!            discovered_device.rssi.unwrap(),
+//!            discovered_device.adv_data.services
+//!        );
+//!    }
+//!}
+//!#
+//!#    Ok(())
+//!# }
 //! ```
 
 pub mod btuuid;
