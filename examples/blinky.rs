@@ -2,7 +2,7 @@ use std::{error::Error, time::Duration};
 
 use bluest::Adapter;
 use futures::future::Either;
-use tokio_stream::StreamExt;
+use futures::stream::StreamExt;
 use tracing::{error, info, metadata::LevelFilter};
 use uuid::Uuid;
 
@@ -43,75 +43,69 @@ async fn main() -> Result<(), Box<dyn Error>> {
     adapter.connect_device(&device).await?; // this will never timeout
     info!("connected!");
 
-    loop {
-        let services_changed = Box::pin(device.services_changed());
-        let task = async {
-            let service = match device
-                .discover_services(Some(NORDIC_LED_AND_BUTTON_SERVICE))
-                .await?
-                .get(0)
-                .cloned()
-            {
-                Some(service) => service,
-                None => return Err("service not found".into()),
-            };
-            info!("found LED and button service");
+    let service = match device
+        .discover_services(Some(NORDIC_LED_AND_BUTTON_SERVICE))
+        .await?
+        .get(0)
+        .cloned()
+    {
+        Some(service) => service,
+        None => return Err("service not found".into()),
+    };
+    info!("found LED and button service");
 
-            let characteristics = service.discover_characteristics(None).await?;
-            info!("discovered characteristics");
+    let characteristics = service.discover_characteristics(None).await?;
+    info!("discovered characteristics");
 
-            let button_characteristic = characteristics
-                .iter()
-                .find(|x| x.uuid() == BLINKY_BUTTON_STATE_CHARACTERISTIC)
-                .unwrap()
-                .clone();
+    let res: Result<_, Box<dyn Error>> = characteristics
+        .iter()
+        .find(|x| x.uuid() == BLINKY_BUTTON_STATE_CHARACTERISTIC)
+        .ok_or_else(|| "button characteristic not found".into());
+    let button_characteristic = res?;
 
-            let led_characteristic = characteristics
-                .iter()
-                .find(|x| x.uuid() == BLINKY_LED_STATE_CHARACTERISTIC)
-                .unwrap();
+    let button_fut = Box::pin(async {
+        info!("enabling button notifications");
+        let mut updates = button_characteristic.notify().await?;
+        info!("waiting for button changes");
+        while let Some(val) = updates.next().await {
+            info!("Button state changed: {:?}", val?);
+        }
+        Ok(())
+    });
 
-            let blink_fut = Box::pin(async {
-                info!("blinking LED");
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                loop {
-                    led_characteristic.write(&[0x01]).await?;
-                    info!("LED on");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    led_characteristic.write(&[0x00]).await?;
-                    info!("LED off");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-            });
+    let res: Result<_, Box<dyn Error>> = characteristics
+        .iter()
+        .find(|x| x.uuid() == BLINKY_LED_STATE_CHARACTERISTIC)
+        .ok_or_else(|| "led characteristic not found".into());
+    let led_characteristic = res?;
 
-            let button_fut = Box::pin(async {
-                info!("enabling button notifications");
-                let mut updates = button_characteristic.notify().await?;
-                info!("waiting for button changes");
-                while let Some(val) = updates.next().await {
-                    info!("Button state changed: {:?}", val?);
-                }
-                Ok(())
-            });
+    let blink_fut = Box::pin(async {
+        info!("blinking LED");
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        loop {
+            led_characteristic.write(&[0x01]).await?;
+            info!("LED on");
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            led_characteristic.write(&[0x00]).await?;
+            info!("LED off");
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
 
-            type R = Result<(), Box<dyn Error>>;
-            let res: Either<(R, _), (R, _)> = futures::future::select(blink_fut, button_fut).await;
-            match res {
-                futures::future::Either::Left((res, button_fut)) => {
-                    error!("Blink task exited: {:?}", res);
-                    button_fut.await
-                }
-                futures::future::Either::Right((res, blink_fut)) => {
-                    error!("Button task exited: {:?}", res);
-                    blink_fut.await
-                }
-            }
-        };
-
-        let task = Box::pin(task);
-        match futures::future::select(task, services_changed).await {
-            futures::future::Either::Left((res, _)) => res?,
-            futures::future::Either::Right(_) => (),
+    type R = Result<(), Box<dyn Error>>;
+    let res: Either<(R, _), (R, _)> = futures::future::select(blink_fut, button_fut).await;
+    match res {
+        futures::future::Either::Left((res, button_fut)) => {
+            error!("Blink task exited: {:?}", res);
+            let res = button_fut.await;
+            error!("Button task exited: {:?}", res);
+        }
+        futures::future::Either::Right((res, blink_fut)) => {
+            error!("Button task exited: {:?}", res);
+            let res = blink_fut.await;
+            error!("Blink task exited: {:?}", res);
         }
     }
+
+    Ok(())
 }
