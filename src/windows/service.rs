@@ -95,7 +95,7 @@ impl Service {
             self.inner.GetCharacteristicsWithCacheModeAsync(cachemode)?.await
         }?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering characteristics")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering characteristics")?;
 
         let characteristics = res.Characteristics()?;
         Ok(characteristics.into_iter().map(Characteristic::new).collect())
@@ -130,7 +130,7 @@ impl Service {
             self.inner.GetIncludedServicesWithCacheModeAsync(cachemode)?.await
         }?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering included services")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering included services")?;
 
         let services = res.Services()?;
         Ok(services.into_iter().map(Service::new).collect())

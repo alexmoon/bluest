@@ -49,7 +49,7 @@ impl Descriptor {
     async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
         let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "reading descriptor value")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "reading descriptor value")?;
 
         let buf = res.Value()?;
         let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
@@ -65,6 +65,6 @@ impl Descriptor {
         let buf = writer.DetachBuffer()?;
         let res = self.inner.WriteValueWithResultAsync(&buf)?.await?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "writing descriptor value")
+        check_communication_status(res.Status()?, res.ProtocolError(), "writing descriptor value")
     }
 }

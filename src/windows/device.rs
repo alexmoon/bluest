@@ -145,7 +145,7 @@ impl Device {
             self.device.GetGattServicesWithCacheModeAsync(cachemode)?.await
         }?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering services")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
 
         let services = res.Services()?;
         Ok(services.into_iter().map(Service::new).collect())

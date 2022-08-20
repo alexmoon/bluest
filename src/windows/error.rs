@@ -27,7 +27,7 @@ impl From<OsError> for crate::Error {
 
 pub(super) fn check_communication_status(
     status: GattCommunicationStatus,
-    protocol_error: IReference<u8>,
+    protocol_error: windows::core::Result<IReference<u8>>,
     message: &str,
 ) -> Result<()> {
     use crate::Error;
@@ -36,7 +36,7 @@ pub(super) fn check_communication_status(
         GattCommunicationStatus::AccessDenied => Err(Error::new(ErrorKind::NotAuthorized, None, message.to_string())),
         GattCommunicationStatus::Unreachable => Err(Error::new(ErrorKind::ConnectionFailed, None, message.to_string())),
         GattCommunicationStatus::ProtocolError => {
-            let code = protocol_error.Value()?;
+            let code = protocol_error?.Value()?;
             Err(Error::new(ErrorKind::Protocol(code.into()), None, message.to_string()))
         }
         _ => Err(Error::new(ErrorKind::Other, None, message.to_string())),

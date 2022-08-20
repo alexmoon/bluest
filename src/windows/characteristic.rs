@@ -79,7 +79,7 @@ impl Characteristic {
     async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
         let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "reading characteristic")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "reading characteristic")?;
 
         let buf = res.Value()?;
         let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
@@ -108,7 +108,7 @@ impl Characteristic {
             .WriteValueWithResultAndOptionAsync(&buf, writeoption)?
             .await?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "writing characteristic")
+        check_communication_status(res.Status()?, res.ProtocolError(), "writing characteristic")
     }
 
     /// Enables notification of value changes for this GATT characteristic.
@@ -161,7 +161,7 @@ impl Characteristic {
             .WriteClientCharacteristicConfigurationDescriptorWithResultAsync(value)?
             .await?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "enabling notifications")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "enabling notifications")?;
 
         let guard = scopeguard::guard((), move |_| {
             let _guard = guard;
@@ -176,7 +176,7 @@ impl Characteristic {
                             let res = res?;
                             check_communication_status(
                                 res.Status()?,
-                                res.ProtocolError()?,
+                                res.ProtocolError(),
                                 "disabling characteristic notifications",
                             )
                         }
@@ -207,7 +207,7 @@ impl Characteristic {
 
         check_communication_status(
             res.Status()?,
-            res.ProtocolError()?,
+            res.ProtocolError(),
             "reading client characteristic configuration descriptor",
         )?;
 
@@ -246,7 +246,7 @@ impl Characteristic {
             self.inner.GetDescriptorsWithCacheModeAsync(cachemode)?.await
         }?;
 
-        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering descriptors")?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering descriptors")?;
 
         let descriptors = res.Descriptors()?;
         Ok(descriptors.into_iter().map(Descriptor::new).collect())
