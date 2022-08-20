@@ -1,50 +1,48 @@
-# Reserved
+# Bluest — Cross-platform Bluetooth LE crate for Rust
 
-## Session
+[![crates.io page](https://img.shields.io/crates/v/bluest)](https://crates.io/crates/bluest)
+[![docs.rs page](https://docs.rs/bluest/badge.svg)](https://docs.rs/bluest)
 
-- list adapters
-- get adapter
-- default adapter
-- events stream (adapter added/removed)
+**Bluest** is a cross-platform [Bluetooth] Low Energy (BLE) crate for [Rust]. It
+supports the GAP Central and GATT Client roles, allowing you to access BLE
+peripheral devices and the GATT services they provide.
 
-### Adapter
+The primary functions provided by **Bluest** are:
 
-- get known devices
-- request device
-- events (availability changed)
+- Device discovery:
+  - Scanning for devices and receiving advertisements
+  - Finding connected devices
+  - Re-opening previously found devices
+  - Connecting to discovered devices
+- Accessing remote GATT services:
+  - Discovering devices by the services they advertise
+  - Discovering device services
+  - Discovering service characteristics
+  - Discovering characteristic descriptors
+  - Read, write (including write with response), and notify/indicate operations
+    on remote characteristics
+  - Read and write operations on characteristic descriptors
 
-#### Device
+[Rust]: https://www.rust-lang.org/
+[Bluetooth]: https://www.bluetooth.com/specifications/specs/
 
-- id
-- name
-- connected
-- connect
-- disconnect
-- get primary service(s)
+## Platform support
 
-##### GATT Service
+- Windows
+- MacOS
+- iOS
 
-- is_primary
-- uuid
-- get characteristics
+Linux support is coming soon.
 
-###### GATT Characteristic
+## Features
 
-- properties
-- service
-- uuid
-- value
-- events (value changed)
-- get descriptor(s)
-- read_Value
-- write_value_With_response
-- write_value_Without_response
-- start/stop notifications
+The `serde` feature is available to enable serializing/deserializing device
+identifiers.
 
-###### GATT Descriptor
+## Examples
 
-- characteristic
-- uuid
-- value
-- read value
-- write value
+Examples demonstrating basic usage are available in the [examples folder]. Refer
+to the [API documentation] for more details.
+
+[API documentation]: https://docs.rs/bluest
+[examples folder]: https://github.com/alexmoon/bluest/tree/master/bluest/examples

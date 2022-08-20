@@ -2,29 +2,64 @@ use smallvec::SmallVec;
 use uuid::Uuid;
 use windows::{
     core::GUID,
-    Devices::Bluetooth::{
-        BluetoothCacheMode,
-        GenericAttributeProfile::{GattCommunicationStatus, GattDeviceService},
-    },
+    Devices::Bluetooth::{BluetoothCacheMode, GenericAttributeProfile::GattDeviceService},
 };
 
-use crate::{error::ErrorKind, Error, Result};
+use crate::Result;
 
-use super::characteristic::Characteristic;
+use super::{characteristic::Characteristic, error::check_communication_status};
 
 /// A Bluetooth GATT service
+#[derive(Clone)]
 pub struct Service {
-    service: GattDeviceService,
+    inner: GattDeviceService,
+}
+
+impl PartialEq for Service {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.DeviceId() == other.inner.DeviceId()
+    }
+}
+
+impl Eq for Service {}
+
+impl std::hash::Hash for Service {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner
+            .DeviceId()
+            .expect("DeviceId missing on GattDeviceService")
+            .to_os_string()
+            .hash(state);
+    }
+}
+
+impl std::fmt::Debug for Service {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Service")
+            .field(
+                "device_id",
+                &self.inner.DeviceId().expect("DeviceId missing on GattDeviceService"),
+            )
+            .field("uuid", &self.inner.Uuid().expect("UUID missing on GattDeviceService"))
+            .field(
+                "handle",
+                &self
+                    .inner
+                    .AttributeHandle()
+                    .expect("AttributeHandle missing on GattDeviceService"),
+            )
+            .finish()
+    }
 }
 
 impl Service {
     pub(super) fn new(service: GattDeviceService) -> Self {
-        Service { service }
+        Service { inner: service }
     }
 
     /// The [UUID] identifying the type of service
     pub fn uuid(&self) -> Result<Uuid> {
-        Ok(Uuid::from_u128(self.service.Uuid()?.to_u128()))
+        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
     }
 
     /// Discover the characteristics associated with this service.
@@ -53,22 +88,17 @@ impl Service {
         cachemode: BluetoothCacheMode,
     ) -> Result<SmallVec<[Characteristic; 2]>> {
         let res = if let Some(characteristic) = characteristic {
-            self.service
+            self.inner
                 .GetCharacteristicsForUuidWithCacheModeAsync(GUID::from_u128(characteristic.as_u128()), cachemode)?
                 .await
         } else {
-            self.service.GetCharacteristicsWithCacheModeAsync(cachemode)?.await
+            self.inner.GetCharacteristicsWithCacheModeAsync(cachemode)?.await
         }?;
 
-        if let Ok(GattCommunicationStatus::Success) = res.Status() {
-            let characteristics = res.Characteristics()?;
-            Ok(characteristics.into_iter().map(Characteristic::new).collect())
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering characteristics")?;
+
+        let characteristics = res.Characteristics()?;
+        Ok(characteristics.into_iter().map(Characteristic::new).collect())
     }
 
     /// Discover the included services of this service.
@@ -93,21 +123,16 @@ impl Service {
         cachemode: BluetoothCacheMode,
     ) -> Result<SmallVec<[Service; 2]>> {
         let res = if let Some(service) = service {
-            self.service
+            self.inner
                 .GetIncludedServicesForUuidWithCacheModeAsync(GUID::from_u128(service.as_u128()), cachemode)?
                 .await
         } else {
-            self.service.GetIncludedServicesWithCacheModeAsync(cachemode)?.await
+            self.inner.GetIncludedServicesWithCacheModeAsync(cachemode)?.await
         }?;
 
-        if res.Status()? == GattCommunicationStatus::Success {
-            let services = res.Services()?;
-            Ok(services.into_iter().map(Service::new).collect())
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering included services")?;
+
+        let services = res.Services()?;
+        Ok(services.into_iter().map(Service::new).collect())
     }
 }

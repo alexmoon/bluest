@@ -1,28 +1,37 @@
 use smallvec::SmallVec;
 use uuid::Uuid;
 use windows::{
-    Devices::Bluetooth::{
-        BluetoothCacheMode,
-        GenericAttributeProfile::{GattCommunicationStatus, GattDescriptor},
-    },
+    Devices::Bluetooth::{BluetoothCacheMode, GenericAttributeProfile::GattDescriptor},
     Storage::Streams::{DataReader, DataWriter},
 };
 
-use crate::{error::ErrorKind, Error, Result};
+use crate::Result;
+
+use super::error::check_communication_status;
 
 /// A Bluetooth GATT descriptor
+#[derive(Clone, PartialEq, Eq)]
 pub struct Descriptor {
-    descriptor: GattDescriptor,
+    inner: GattDescriptor,
+}
+
+impl std::fmt::Debug for Descriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Characteristic")
+            .field("uuid", &self.inner.Uuid().unwrap())
+            .field("handle", &self.inner.AttributeHandle().unwrap())
+            .finish()
+    }
 }
 
 impl Descriptor {
     pub(super) fn new(descriptor: GattDescriptor) -> Self {
-        Descriptor { descriptor }
+        Descriptor { inner: descriptor }
     }
 
     /// The [Uuid] identifying the type of descriptor
     pub fn uuid(&self) -> Result<Uuid> {
-        Ok(Uuid::from_u128(self.descriptor.Uuid()?.to_u128()))
+        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
     }
 
     /// The cached value of this descriptor
@@ -38,20 +47,15 @@ impl Descriptor {
     }
 
     async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
-        let res = self.descriptor.ReadValueWithCacheModeAsync(cachemode)?.await?;
+        let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
-        if let Ok(GattCommunicationStatus::Success) = res.Status() {
-            let buf = res.Value()?;
-            let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
-            let reader = DataReader::FromBuffer(&buf)?;
-            reader.ReadBytes(data.as_mut_slice())?;
-            Ok(data)
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "reading descriptor value")?;
+
+        let buf = res.Value()?;
+        let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
+        let reader = DataReader::FromBuffer(&buf)?;
+        reader.ReadBytes(data.as_mut_slice())?;
+        Ok(data)
     }
 
     /// Write the value of this descriptor on the device to `value`
@@ -59,14 +63,8 @@ impl Descriptor {
         let writer = DataWriter::new()?;
         writer.WriteBytes(value)?;
         let buf = writer.DetachBuffer()?;
-        let res = self.descriptor.WriteValueWithResultAsync(&buf)?.await?;
+        let res = self.inner.WriteValueWithResultAsync(&buf)?.await?;
 
-        match res.Status() {
-            Ok(GattCommunicationStatus::Success) => Ok(()),
-            _ => Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            }),
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "writing descriptor value")
     }
 }

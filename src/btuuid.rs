@@ -2,8 +2,8 @@
 
 use uuid::Uuid;
 
-/// This is the Bluetooth Base UUID. It is used with 16-bit and 32-bit UUIDs defined by the Bluetooth SIG
-/// [here](https://www.bluetooth.com/specifications/assigned-numbers/).
+/// This is the Bluetooth Base UUID. It is used with 16-bit and 32-bit UUIDs
+/// [defined](https://www.bluetooth.com/specifications/assigned-numbers/) by the Bluetooth SIG.
 pub const BLUETOOTH_BASE_UUID: u128 = 0x00000000_0000_1000_8000_00805f9b34fb;
 
 /// Const function to create a 16-bit Bluetooth UUID
@@ -17,7 +17,7 @@ pub const fn bluetooth_uuid_from_u32(uuid: u32) -> Uuid {
 }
 
 /// Extension trait for [uuid::Uuid] with helper methods for dealing with Bluetooth 16-bit and 32-bit UUIDs
-pub trait BluetoothUuidExt {
+pub trait BluetoothUuidExt: private::Sealed {
     /// Creates a 16-bit Bluetooth UUID
     fn from_u16(uuid: u16) -> Self;
 
@@ -96,6 +96,14 @@ impl BluetoothUuidExt for Uuid {
             &bytes[..]
         }
     }
+}
+
+mod private {
+    use uuid::Uuid;
+
+    pub trait Sealed {}
+
+    impl Sealed for Uuid {}
 }
 
 /// Bluetooth GATT Service 16-bit UUIDs

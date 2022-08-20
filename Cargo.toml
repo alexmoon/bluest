@@ -1,12 +1,23 @@
 [package]
 name = "bluest"
 version = "0.1.0"
-edition = "2021"
 authors = ["Alex Moon"]
-description = "Work in progress"
+edition = "2021"
+description = "A cross-platform Bluetooth Low Energy (BLE) library"
 documentation = "https://docs.rs/bluest"
+homepage = "https://github.com/alexmoon/bluest/"
 repository = "https://github.com/alexmoon/bluest/"
 license = "BSD-2-Clause OR Apache-2.0"
+keywords = ["bluetooth", "BLE", "gatt", "bluez", "bluer", "uwp", "corebluetooth"]
+categories = ["asynchronous", "hardware-support", "os"]
+
+[package.metadata.docs.rs]
+features = ["serde"]
+default-target = "x86_64-apple-darwin"
+targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
+
+[features]
+serde = ["dep:serde", "uuid/serde"]
 
 [dependencies]
 displaydoc = "0.2.3"
@@ -14,6 +25,7 @@ enumflags2 = "0.7.5"
 futures = "0.3.23"
 num_enum = "0.5.7"
 scopeguard = "1.1.0"
+serde = { version = "1.0.143", optional = true, features = ["derive"] }
 smallvec = { version = "1.9.0", features = ["union"] }
 tokio = { version = "1.20.1", features = ["rt", "sync"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }
@@ -25,7 +37,7 @@ tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.39.0", features = ["Foundation", "Foundation_Collections", "Devices_Enumeration", "Devices_Bluetooth", "Devices_Bluetooth_Advertisement", "Devices_Bluetooth_GenericAttributeProfile", "Devices_Radios", "Storage_Streams"] }
+windows = { version = "0.39.0", features = ["implement", "Foundation", "Foundation_Collections", "Devices_Enumeration", "Devices_Bluetooth", "Devices_Bluetooth_Advertisement", "Devices_Bluetooth_GenericAttributeProfile", "Devices_Radios", "Storage_Streams"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = "0.15.0"

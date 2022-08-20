@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use bluest::{Adapter, BluetoothUuidExt};
 use tokio_stream::StreamExt;
@@ -24,15 +24,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let discovered_device = {
         info!("starting scan");
         let services = &[Uuid::from_u16(0x181c)];
-        let mut scan = adapter.scan(Some(services)).await?;
+        let mut scan = adapter.scan(services).await?;
         info!("scan started");
         scan.next().await.unwrap() // this will never timeout
     };
 
     info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);
-    adapter.connect(&discovered_device.device).await?; // this will never timeout
+    adapter.connect_device(&discovered_device.device).await?; // this will never timeout
     info!("connected!");
-    adapter.disconnect(&discovered_device.device).await?;
+
+    tokio::time::sleep(Duration::from_secs(30)).await;
+
+    adapter.disconnect_device(&discovered_device.device).await?;
     info!("disconnected!");
 
     Ok(())

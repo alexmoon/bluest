@@ -1,112 +1,52 @@
 #![allow(clippy::let_unit_value)]
 
-use std::collections::HashMap;
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use futures::Stream;
-use objc::runtime::{BOOL, NO};
-use objc::{msg_send, sel, sel_impl};
-use objc_foundation::{
-    INSArray, INSData, INSDictionary, INSFastEnumeration, INSString, NSArray, NSData, NSDictionary, NSObject, NSString,
-};
-use objc_id::Id;
-use smallvec::SmallVec;
+use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
+use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
-use tracing::{debug, error};
+use tracing::debug;
 use uuid::Uuid;
 
 use super::delegates::{self, CentralDelegate};
 use super::device::Device;
-use super::types::{dispatch_queue_create, dispatch_release, id_or_nil, nil, CBCentralManager, CBManagerState, CBUUID};
+use super::types::{dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerState, CBUUID, NSUUID};
 
 use crate::error::ErrorKind;
-use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, ManufacturerData, Result};
-
-impl From<&NSDictionary<NSString, NSObject>> for AdvertisementData {
-    fn from(adv_data: &NSDictionary<NSString, NSObject>) -> Self {
-        let is_connectable = adv_data
-            .object_for(&*INSString::from_str("kCBAdvDataIsConnectable"))
-            .map(|val| unsafe {
-                let n: BOOL = msg_send![val, boolValue];
-                n != NO
-            })
-            .unwrap_or(false);
-
-        let local_name = adv_data
-            .object_for(&*INSString::from_str("kCBAdvDataLocalName"))
-            .map(|val| unsafe { std::mem::transmute::<_, &NSString>(val).as_str().to_owned() });
-
-        let manufacturer_data = adv_data
-            .object_for(&*INSString::from_str("kCBAdvDataManufacturerData"))
-            .map(|val| unsafe { std::mem::transmute::<_, &NSData>(val).bytes() })
-            .and_then(|val| {
-                (val.len() >= 2).then(|| ManufacturerData {
-                    company_id: u16::from_le_bytes(val[0..2].try_into().unwrap()),
-                    data: SmallVec::from_slice(&val[2..]),
-                })
-            });
-
-        let tx_power_level: Option<i16> = adv_data
-            .object_for(&*INSString::from_str("kCBAdvDataTxPowerLevel"))
-            .map(|val| unsafe { msg_send![val, shortValue] });
-
-        let service_data = if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataServiceData")) {
-            unsafe {
-                let val: &NSDictionary<CBUUID, NSData> = std::mem::transmute(val);
-                let mut res = HashMap::with_capacity(val.count());
-                for k in val.enumerator() {
-                    res.insert(k.to_uuid(), SmallVec::from_slice(val.object_for(k).unwrap().bytes()));
-                }
-                res
-            }
-        } else {
-            HashMap::new()
-        };
-
-        let services = adv_data
-            .object_for(&*INSString::from_str("kCBAdvDataServiceUUIDs"))
-            .into_iter()
-            .chain(
-                adv_data
-                    .object_for(&*INSString::from_str("kCBAdvDataHashedServiceUUIDs"))
-                    .into_iter(),
-            )
-            .flat_map(|x| {
-                let val: &NSArray<CBUUID> = unsafe { std::mem::transmute(x) };
-                val.enumerator()
-            })
-            .map(|x| x.to_uuid())
-            .collect::<SmallVec<_>>();
-
-        let solicited_services =
-            if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataSolicitedServiceUUIDs")) {
-                let val: &NSArray<CBUUID> = unsafe { std::mem::transmute(val) };
-                val.enumerator().map(|x| x.to_uuid()).collect()
-            } else {
-                SmallVec::new()
-            };
-
-        AdvertisementData {
-            local_name,
-            manufacturer_data,
-            service_data,
-            services,
-            solicited_services,
-            tx_power_level,
-            is_connectable,
-        }
-    }
-}
+use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result};
 
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be accessed with the [Adapter::default()] method.
+#[derive(Clone)]
 pub struct Adapter {
-    central: Id<CBCentralManager>,
+    central: ShareId<CBCentralManager>,
     sender: tokio::sync::broadcast::Sender<delegates::CentralEvent>,
-    scanning: AtomicBool,
+    scanning: Arc<AtomicBool>,
+}
+
+impl PartialEq for Adapter {
+    fn eq(&self, other: &Self) -> bool {
+        self.central == other.central
+    }
+}
+
+impl Eq for Adapter {}
+
+impl std::hash::Hash for Adapter {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.central.hash(state);
+    }
+}
+
+impl std::fmt::Debug for Adapter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Adapter").field(&self.central).finish()
+    }
 }
 
 impl Adapter {
@@ -121,99 +61,130 @@ impl Adapter {
             }
             let central = CBCentralManager::with_delegate(delegate, queue);
             dispatch_release(queue);
-            central?
+            central.share()
         };
 
         Some(Adapter {
             central,
             sender,
-            scanning: AtomicBool::new(false),
+            scanning: Arc::new(AtomicBool::new(false)),
         })
     }
 
     /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
-    pub fn events(&self) -> impl Stream<Item = AdapterEvent> + '_ {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let receiver = self.sender.subscribe();
-        BroadcastStream::new(receiver).filter_map(|x| match x {
+        Ok(BroadcastStream::new(receiver).filter_map(|x| match x {
             Ok(delegates::CentralEvent::StateChanged) => {
+                // TODO: Check CBCentralManager::authorization()?
                 let state = self.central.state();
                 debug!("Central state is now {:?}", state);
                 match state {
-                    CBManagerState::PoweredOn => Some(AdapterEvent::Available),
-                    _ => Some(AdapterEvent::Unavailable),
+                    CBManagerState::PoweredOn => Some(Ok(AdapterEvent::Available)),
+                    _ => Some(Ok(AdapterEvent::Unavailable)),
                 }
             }
+            Err(err) => Some(Err(Error::new(
+                ErrorKind::Internal,
+                Some(Box::new(err)),
+                "adapter event stream".to_string(),
+            ))),
             _ => None,
-        })
+        }))
     }
 
     /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
         let events = self.events();
         if self.central.state() != CBManagerState::PoweredOn {
-            let _ = events.skip_while(|x| *x != AdapterEvent::Available).next().await;
+            events
+                .await?
+                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
+                .next()
+                .await
+                .ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::Internal,
+                        None,
+                        "adapter event stream closed unexpectedly".to_string(),
+                    )
+                })??;
         }
         Ok(())
     }
 
-    // pub async fn discover_devices(&self, services: Option<&[Uuid]>) -> Result<impl Stream<Item = DiscoveredDevice> + '_> {}
+    /// Attempts to create the device identified by `id`
+    pub async fn open_device(&self, id: DeviceId) -> Result<Device> {
+        let identifiers = NSArray::from_vec(vec![NSUUID::from_uuid(id.0)]);
+        let peripherals = self.central.retrieve_peripherals_with_identifiers(identifiers);
+        peripherals
+            .first_object()
+            .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device".to_string()))
+    }
 
-    // pub async fn known_devices(&self, services: Option<&[Uuid]>)
+    /// Finds all connected devices providing any service in `services`
+    pub async fn connected_devices(&self, services: &[Uuid]) -> Result<Vec<Device>> {
+        let services = (!services.is_empty()).then(|| {
+            let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
+            NSArray::from_vec(vec)
+        });
+        let peripherals = self.central.retrieve_connected_peripherals_with_services(services);
+        Ok(peripherals
+            .enumerator()
+            .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
+            .collect())
+    }
 
     /// Starts scanning for Bluetooth advertising packets.
     ///
     /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
     /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
-    pub async fn scan<'a>(
-        &'a self,
-        services: Option<&'a [Uuid]>,
-    ) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
-        unsafe {
-            if self.central.state() != CBManagerState::PoweredOn {
-                Err(ErrorKind::AdapterUnavailable)?
-            }
-
-            if self.scanning.swap(true, Ordering::Acquire) {
-                Err(ErrorKind::AlreadyScanning)?;
-            }
-
-            let services = services.map(|x| {
-                let vec = x.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
-                NSArray::from_vec(vec)
-            });
-
-            let guard = scopeguard::guard((), |_| {
-                let _: () = msg_send![self.central, stopScan];
-                self.scanning.store(false, Ordering::Release);
-            });
-
-            let events = BroadcastStream::new(self.sender.subscribe())
-                .take_while(|_| self.central.state() == CBManagerState::PoweredOn)
-                .filter_map(move |x| {
-                    let _guard = &guard;
-                    match x {
-                        Ok(delegates::CentralEvent::Discovered {
-                            peripheral,
-                            adv_data,
-                            rssi,
-                        }) => Some(AdvertisingDevice {
-                            device: Device::new(peripheral),
-                            adv_data: AdvertisementData::from(&*adv_data),
-                            rssi: Some(rssi),
-                        }),
-                        _ => None,
-                    }
-                });
-
-            let _: () = msg_send![self.central, scanForPeripheralsWithServices: id_or_nil(&services) options: nil ];
-
-            Ok(events)
+    pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
+        if self.central.state() != CBManagerState::PoweredOn {
+            Err(ErrorKind::AdapterUnavailable)?
         }
+
+        if self.scanning.swap(true, Ordering::Acquire) {
+            Err(ErrorKind::AlreadyScanning)?;
+        }
+
+        let services = (!services.is_empty()).then(|| {
+            let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
+            NSArray::from_vec(vec)
+        });
+
+        let guard = scopeguard::guard((), |_| {
+            self.central.stop_scan();
+            self.scanning.store(false, Ordering::Release);
+        });
+
+        let events = BroadcastStream::new(self.sender.subscribe())
+            .take_while(|_| self.central.state() == CBManagerState::PoweredOn)
+            .filter_map(move |x| {
+                let _guard = &guard;
+                match x {
+                    Ok(delegates::CentralEvent::Discovered {
+                        peripheral,
+                        adv_data,
+                        rssi,
+                    }) => Some(AdvertisingDevice {
+                        device: Device::new(peripheral),
+                        adv_data: AdvertisementData::from_nsdictionary(adv_data),
+                        rssi: Some(rssi),
+                    }),
+                    _ => None,
+                }
+            });
+
+        self.central.scan_for_peripherals_with_services(services, None);
+
+        Ok(events)
     }
 
     /// Connects to the [Device]
-    pub async fn connect(&self, device: &Device) -> Result<()> {
+    pub async fn connect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             Err(ErrorKind::AdapterUnavailable)?
         }
@@ -226,23 +197,21 @@ impl Adapter {
                 Err(ErrorKind::AdapterUnavailable)?
             }
             match event {
-                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.peripheral => return Ok(()),
+                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.peripheral => break,
                 Ok(delegates::CentralEvent::ConnectFailed { peripheral, error }) if peripheral == device.peripheral => {
-                    error!("Failed to connect to {:?}: {:?}", peripheral, error);
-                    match error {
-                        Some(err) => Err(&*err)?,
-                        None => Err(ErrorKind::ConnectionFailed)?,
-                    }
+                    return Err(error
+                        .map(Error::from_nserror)
+                        .unwrap_or_else(|| ErrorKind::ConnectionFailed.into()));
                 }
                 _ => (),
             }
         }
 
-        unreachable!()
+        Ok(())
     }
 
     /// Disconnects from the [Device]
-    pub async fn disconnect(&self, device: &Device) -> Result<()> {
+    pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             Err(ErrorKind::AdapterUnavailable)?
         }
@@ -256,18 +225,14 @@ impl Adapter {
             }
             match event {
                 Ok(delegates::CentralEvent::Disconnect { peripheral, error }) if peripheral == device.peripheral => {
-                    match error {
-                        Some(err) => {
-                            error!("Failed to disconnect from {:?}: {:?}", peripheral, err);
-                            Err(&*err)?
-                        }
-                        None => return Ok(()),
-                    }
+                    return Err(error
+                        .map(Error::from_nserror)
+                        .unwrap_or_else(|| ErrorKind::ConnectionFailed.into()));
                 }
                 _ => (),
             }
         }
 
-        unreachable!()
+        Ok(())
     }
 }

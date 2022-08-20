@@ -11,8 +11,9 @@ use crate::error::ErrorKind;
 use crate::{Error, Result};
 
 /// A Bluetooth GATT descriptor
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Descriptor {
-    descriptor: ShareId<CBDescriptor>,
+    inner: ShareId<CBDescriptor>,
 }
 
 fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
@@ -48,45 +49,41 @@ fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
 impl Descriptor {
     pub(super) fn new(descriptor: &CBDescriptor) -> Self {
         Descriptor {
-            descriptor: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
+            inner: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
         }
     }
 
     /// The [Uuid] identifying the type of this GATT descriptor
     pub fn uuid(&self) -> Uuid {
-        self.descriptor.uuid().to_uuid()
+        self.inner.uuid().to_uuid()
     }
 
     /// The cached value of this descriptor
     ///
     /// If the value has not yet been read, this function may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
-        self.descriptor.value().map(|val| value_to_slice(&*val)).ok_or(Error {
-            kind: ErrorKind::AdapterUnavailable,
-            message: String::new(),
+        self.inner.value().map(|val| value_to_slice(&*val)).ok_or_else(|| {
+            Error::new(
+                ErrorKind::NotReady,
+                None,
+                "the descriptor value has not been read".to_string(),
+            )
         })
     }
 
     /// Read the value of this descriptor from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
-        let peripheral = self.descriptor.characteristic().service().peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-
-        peripheral.read_descriptor_value(&self.descriptor);
+        let peripheral = self.inner.characteristic().service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
+        peripheral.read_descriptor_value(&self.inner);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::DescriptorValueUpdate { descriptor, error }) if descriptor == self.descriptor => {
-                    match error {
-                        Some(err) => Err(&*err)?,
-                        None => return self.value().await,
-                    }
-                }
-                Err(_err) => Err(ErrorKind::InternalError)?,
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::DescriptorValueUpdate { descriptor, error } if descriptor == self.inner => match error
+                {
+                    Some(err) => Err(Error::from_nserror(err))?,
+                    None => return self.value().await,
+                },
                 _ => (),
             }
         }
@@ -94,25 +91,19 @@ impl Descriptor {
 
     /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let peripheral = self.descriptor.characteristic().service().peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-
+        let peripheral = self.inner.characteristic().service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
         let data = INSData::from_vec(value.to_vec());
-        peripheral.write_descriptor_value(&self.descriptor, &data);
+        peripheral.write_descriptor_value(&self.inner, &data);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::DescriptorValueWrite { descriptor, error }) if descriptor == self.descriptor => {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::DescriptorValueWrite { descriptor, error } if descriptor == self.inner => {
                     match error {
-                        Some(err) => Err(&*err)?,
+                        Some(err) => Err(Error::from_nserror(err))?,
                         None => return Ok(()),
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }

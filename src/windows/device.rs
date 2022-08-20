@@ -4,22 +4,74 @@ use uuid::Uuid;
 use windows::{
     core::GUID,
     Devices::Bluetooth::{
-        BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothDeviceId, BluetoothLEDevice,
-        GenericAttributeProfile::{GattCommunicationStatus, GattSession},
+        BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
+        GenericAttributeProfile::GattSession,
     },
 };
 
-use crate::{error::ErrorKind, Error, Result};
+use crate::Result;
 
-use super::service::Service;
+use super::{error::check_communication_status, service::Service};
 
 /// A platform-specific device identifier.
-pub type DeviceId = BluetoothDeviceId;
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeviceId(pub(super) std::ffi::OsString);
+
+impl std::fmt::Display for DeviceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0.to_string_lossy(), f)
+    }
+}
 
 /// A Bluetooth LE device
 pub struct Device {
     device: BluetoothLEDevice,
     session: Mutex<Option<GattSession>>,
+}
+
+impl Clone for Device {
+    fn clone(&self) -> Self {
+        Self {
+            device: self.device.clone(),
+            session: Mutex::new(None),
+        }
+    }
+}
+
+impl PartialEq for Device {
+    fn eq(&self, other: &Self) -> bool {
+        self.device.DeviceId() == other.device.DeviceId()
+    }
+}
+
+impl Eq for Device {}
+
+impl std::hash::Hash for Device {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.device.DeviceId().unwrap().to_os_string().hash(state);
+    }
+}
+
+impl std::fmt::Debug for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut f = f.debug_struct("Device");
+        f.field("id", &self.id());
+        if let Some(name) = self.name() {
+            f.field("name", &name);
+        }
+        f.finish()
+    }
+}
+
+impl std::fmt::Display for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(name) = self.name() {
+            f.write_str(&name)
+        } else {
+            f.write_str("(Unknown)")
+        }
+    }
 }
 
 impl Device {
@@ -31,13 +83,26 @@ impl Device {
         })
     }
 
+    pub(super) async fn from_id(id: DeviceId) -> windows::core::Result<Self> {
+        let device = BluetoothLEDevice::FromIdAsync(&(&id.0).into())?.await?;
+        Ok(Device {
+            device,
+            session: Mutex::new(None),
+        })
+    }
+
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
-        self.device.BluetoothDeviceId().expect("error getting BluetoothDeviceId for BluetoothLEDevice")
+        DeviceId(
+            self.device
+                .DeviceId()
+                .expect("error getting DeviceId for BluetoothLEDevice")
+                .to_os_string(),
+        )
     }
 
     /// The local name for this device, if available
-    pub async fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.device
             .Name()
             .ok()
@@ -78,15 +143,10 @@ impl Device {
             self.device.GetGattServicesWithCacheModeAsync(cachemode)?.await
         }?;
 
-        if res.Status()? == GattCommunicationStatus::Success {
-            let services = res.Services()?;
-            Ok(services.into_iter().map(Service::new).collect())
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering services")?;
+
+        let services = res.Services()?;
+        Ok(services.into_iter().map(Service::new).collect())
     }
 
     pub(super) async fn connect(&self) -> Result<()> {

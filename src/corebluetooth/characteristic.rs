@@ -15,20 +15,21 @@ use crate::error::ErrorKind;
 use crate::{CharacteristicProperty, Error, Result};
 
 /// A Bluetooth GATT characteristic
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Characteristic {
-    characteristic: ShareId<CBCharacteristic>,
+    inner: ShareId<CBCharacteristic>,
 }
 
 impl Characteristic {
     pub(super) fn new(characteristic: &CBCharacteristic) -> Self {
         Characteristic {
-            characteristic: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
+            inner: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
         }
     }
 
     /// The [Uuid] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
-        self.characteristic.uuid().to_uuid()
+        self.inner.uuid().to_uuid()
     }
 
     /// The properties of this this GATT characteristic.
@@ -36,44 +37,42 @@ impl Characteristic {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
-        BitFlags::from_bits(self.characteristic.properties() as u32).unwrap_or_else(|x| x.truncate())
+        BitFlags::from_bits(self.inner.properties() as u32).unwrap_or_else(|x| x.truncate())
     }
 
     /// The cached value of this characteristic
     ///
     /// If the value has not yet been read, this function may either return an error or perform a read of the value.
-    pub fn value(&self) -> Result<SmallVec<[u8; 16]>> {
-        self.characteristic
+    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+        self.inner
             .value()
             .map(|val| SmallVec::from_slice(val.bytes()))
-            .ok_or_else(|| Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::NotReady,
+                    None,
+                    "the characteristic value has not been read".to_string(),
+                )
             })
     }
 
     /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
-        let peripheral = self.characteristic.service().peripheral();
+        let peripheral = self.inner.service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
 
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-
-        peripheral.read_characteristic_value(&self.characteristic);
+        peripheral.read_characteristic_value(&self.inner);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::CharacteristicValueUpdate { characteristic, error })
-                    if characteristic == self.characteristic =>
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::CharacteristicValueUpdate { characteristic, error }
+                    if characteristic == self.inner =>
                 {
                     match error {
-                        Some(err) => Err(&*err)?,
-                        None => return self.value(),
+                        Some(err) => return Err(Error::from_nserror(err)),
+                        None => return self.value().await,
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }
@@ -91,27 +90,19 @@ impl Characteristic {
     }
 
     async fn write_kind(&self, value: &[u8], kind: CBCharacteristicWriteType) -> Result<()> {
-        let peripheral = self.characteristic.service().peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-
+        let peripheral = self.inner.service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
         let data = INSData::from_vec(value.to_vec());
-        peripheral.write_characteristic_value(&self.characteristic, &data, kind);
+        peripheral.write_characteristic_value(&self.inner, &data, kind);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::CharacteristicValueWrite { characteristic, error })
-                    if characteristic == self.characteristic =>
-                {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::CharacteristicValueWrite { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(&*err)?,
+                        Some(err) => Err(Error::from_nserror(err))?,
                         None => return Ok(()),
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }
@@ -122,54 +113,66 @@ impl Characteristic {
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
         let guard = scopeguard::guard((), move |_| {
-            let peripheral = self.characteristic.service().peripheral();
-            peripheral.set_notify(&self.characteristic, false);
+            let peripheral = self.inner.service().peripheral();
+            peripheral.set_notify(&self.inner, false);
         });
 
-        let peripheral = self.characteristic.service().peripheral();
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
+        let peripheral = self.inner.service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::NotificationStateUpdate { characteristic, error })
-                    if characteristic == self.characteristic =>
-                {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::NotificationStateUpdate { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(&*err)?,
+                        Some(err) => Err(Error::from_nserror(err))?,
                         None => break,
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }
 
-        let updates = BroadcastStream::new(receiver).filter_map(move |x| {
-            let _guard = &guard;
-            match x {
-                Ok(PeripheralEvent::CharacteristicValueUpdate { characteristic, error })
-                    if characteristic == self.characteristic =>
-                {
-                    match error {
-                        Some(err) => Some(Err(Error::from(&*err))),
-                        None => Some(Ok(self.value().unwrap())),
+        let updates = BroadcastStream::new(receiver)
+            .filter_map(move |x| {
+                let _guard = &guard;
+                match x {
+                    Ok(PeripheralEvent::CharacteristicValueUpdate { characteristic, error })
+                        if characteristic == self.inner =>
+                    {
+                        match error {
+                            Some(err) => Some(Err(Error::from_nserror(err))),
+                            None => Some(Ok(())),
+                        }
                     }
+                    _ => None,
                 }
-                _ => None,
-            }
-        });
+            })
+            .then(move |x| {
+                Box::pin(async move {
+                    match x {
+                        Ok(_) => self.value().await,
+                        Err(err) => Err(err),
+                    }
+                })
+            });
 
-        peripheral.set_notify(&self.characteristic, true);
+        peripheral.set_notify(&self.inner, true);
 
         Ok(updates)
     }
 
     /// Is the device currently sending notifications for this characteristic?
     pub async fn is_notifying(&self) -> Result<bool> {
-        Ok(self.characteristic.is_notifying())
+        Ok(self.inner.is_notifying())
+    }
+
+    /// Is the device currently broadcasting this characteristic?
+    ///
+    /// # Platform specific
+    ///
+    /// This function is available on MacOS/iOS only.
+    pub async fn is_broadcasting(&self) -> Result<bool> {
+        Ok(self.inner.is_broadcasting())
     }
 
     /// Discover the descriptors associated with this service.
@@ -182,40 +185,39 @@ impl Characteristic {
             NSArray::from_vec(vec)
         });
 
-        let peripheral = self.characteristic.service().peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-        peripheral.discover_descriptors(&self.characteristic, uuids);
+        let peripheral = self.inner.service().peripheral();
+        let mut receiver = peripheral.subscribe()?;
+        peripheral.discover_descriptors(&self.inner, uuids);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::DiscoveredDescriptors { characteristic, error })
-                    if characteristic == self.characteristic =>
-                {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::DiscoveredDescriptors { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(&*err)?,
+                        Some(err) => Err(Error::from_nserror(err))?,
                         None => break,
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }
 
-        Ok(self.descriptors().await)
+        self.descriptors().await
     }
 
     /// Get previously discovered descriptors.
     ///
     /// If no descriptors have been discovered yet, this function may either perform descriptor discovery or
-    /// return an empty set.
-    pub async fn descriptors(&self) -> SmallVec<[Descriptor; 2]> {
-        match self.characteristic.descriptors() {
-            Some(s) => s.enumerator().map(Descriptor::new).collect(),
-            None => SmallVec::new(),
-        }
+    /// return an error.
+    pub async fn descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+        self.inner
+            .descriptors()
+            .map(|s| s.enumerator().map(Descriptor::new).collect())
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::NotReady,
+                    None,
+                    "no descriptors have been discovered".to_string(),
+                )
+            })
     }
 }

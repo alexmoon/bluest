@@ -8,24 +8,24 @@ use super::types::CBUUID;
 use super::{characteristic::Characteristic, types::CBService};
 
 use crate::error::ErrorKind;
-use crate::Result;
+use crate::{Error, Result};
 
 /// A Bluetooth GATT service
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
-    service: ShareId<CBService>,
+    inner: ShareId<CBService>,
 }
 
 impl Service {
     pub(super) fn new(service: &CBService) -> Self {
         Service {
-            service: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
+            inner: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
         }
     }
 
     /// The [Uuid] identifying the type of this GATT service
     pub fn uuid(&self) -> Uuid {
-        self.service.uuid().to_uuid()
+        self.inner.uuid().to_uuid()
     }
 
     /// Whether this is a primary service of the device.
@@ -34,7 +34,7 @@ impl Service {
     ///
     /// This function is available on MacOS/iOS only.
     pub fn is_primary(&self) -> bool {
-        self.service.is_primary()
+        self.inner.is_primary()
     }
 
     /// Discover the characteristics associated with this service.
@@ -47,39 +47,38 @@ impl Service {
             NSArray::from_vec(vec)
         });
 
-        let peripheral = self.service.peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-        peripheral.discover_characteristics(&self.service, uuids);
+        let peripheral = self.inner.peripheral();
+        let mut receiver = peripheral.subscribe()?;
+        peripheral.discover_characteristics(&self.inner, uuids);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::DiscoveredCharacteristics { service, error }) if service == self.service => {
-                    match error {
-                        Some(err) => Err(&*err)?,
-                        None => break,
-                    }
-                }
-                Err(_err) => Err(ErrorKind::InternalError)?,
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::DiscoveredCharacteristics { service, error } if service == self.inner => match error {
+                    Some(err) => Err(Error::from_nserror(err))?,
+                    None => break,
+                },
                 _ => (),
             }
         }
 
-        Ok(self.characteristics().await)
+        self.characteristics().await
     }
 
     /// Get previously discovered characteristics.
     ///
     /// If no characteristics have been discovered yet, this function may either perform characteristic discovery or
-    /// return an empty set.
-    pub async fn characteristics(&self) -> SmallVec<[Characteristic; 2]> {
-        match self.service.characteristics() {
-            Some(c) => c.enumerator().map(Characteristic::new).collect(),
-            None => SmallVec::new(),
-        }
+    /// return an error.
+    pub async fn characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+        self.inner
+            .characteristics()
+            .map(|s| s.enumerator().map(Characteristic::new).collect())
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::NotReady,
+                    None,
+                    "no characteristics have been discovered".to_string(),
+                )
+            })
     }
 
     /// Discover the included services of this service.
@@ -92,38 +91,39 @@ impl Service {
             NSArray::from_vec(vec)
         });
 
-        let peripheral = self.service.peripheral();
-
-        let mut receiver = peripheral
-            .delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
-            .ok_or(ErrorKind::InternalError)?;
-        peripheral.discover_included_services(&self.service, uuids);
+        let peripheral = self.inner.peripheral();
+        let mut receiver = peripheral.subscribe()?;
+        peripheral.discover_included_services(&self.inner, uuids);
 
         loop {
-            match receiver.recv().await {
-                Ok(PeripheralEvent::DiscoveredIncludedServices { service, error }) if service == self.service => {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::DiscoveredIncludedServices { service, error } if service == self.inner => {
                     match error {
-                        Some(err) => Err(&*err)?,
+                        Some(err) => Err(Error::from_nserror(err))?,
                         None => break,
                     }
                 }
-                Err(_err) => Err(ErrorKind::InternalError)?,
                 _ => (),
             }
         }
 
-        Ok(self.included_services().await)
+        self.included_services().await
     }
 
     /// Get previously discovered included services.
     ///
     /// If no included services have been discovered yet, this function may either perform included service discovery
-    /// or return an empty set.
-    pub async fn included_services(&self) -> SmallVec<[Service; 2]> {
-        match self.service.included_services() {
-            Some(s) => s.enumerator().map(Service::new).collect(),
-            None => SmallVec::new(),
-        }
+    /// or return an error.
+    pub async fn included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+        self.inner
+            .included_services()
+            .map(|s| s.enumerator().map(Service::new).collect())
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::NotReady,
+                    None,
+                    "no included services have been discovered".to_string(),
+                )
+            })
     }
 }

@@ -2,72 +2,91 @@
 
 use num_enum::TryFromPrimitive;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// The error type for Bluetooth operations
+#[derive(Debug)]
 pub struct Error {
-    pub kind: ErrorKind,
-    pub message: String,
+    kind: ErrorKind,
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    message: String,
+}
+
+impl Error {
+    pub(crate) fn new(
+        kind: ErrorKind,
+        source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
+        message: String,
+    ) -> Self {
+        Error { kind, source, message }
+    }
+
+    /// Returns the corresponding [ErrorKind] for this error.
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
+
+    /// Returns the message for this error.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.message.is_empty() {
-            write!(f, "{}", &self.kind)
-        } else {
-            write!(f, "{}: {}", &self.kind, &self.message)
+        match (self.message.is_empty(), &self.source) {
+            (true, None) => write!(f, "{}", &self.kind),
+            (false, None) => write!(f, "{}: {}", &self.kind, &self.message),
+            (true, Some(err)) => write!(f, "{}: {} ({})", &self.kind, &self.message, err),
+            (false, Some(err)) => write!(f, "{}: {}", &self.kind, err),
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source.as_ref().map(|x| {
+            let x: &(dyn std::error::Error + 'static) = &**x;
+            x
+        })
+    }
+}
 
-#[derive(Debug, displaydoc::Display, Clone, PartialEq, Eq, Hash)]
+/// A list of general categories of Bluetooth error.
+#[non_exhaustive]
+#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorKind {
-    /// an unknown error occured
-    Unknown,
-    /// invalid parameters for Bluetooth operation
-    InvalidParameters,
-    /// invalid handle for Bluetooth operation
-    InvalidHandle,
-    /// the Bluetooth device isn't connected
-    NotConnected,
-    /// Bluetooth out of space
-    OutOfSpace,
-    /// Bluetooth operation was cancelled
-    OperationCancelled,
-    /// Bluetooth connection timed out
-    ConnectionTimeout,
-    /// Bluetooth device disconnected
-    PeripheralDisconnected,
-    /// the provided UUID is not allowed
-    UuidNotAllowed,
-    /// the Bluetooth device is already advertising
-    AlreadyAdvertising,
-    /// the Bluetooth connection failed
-    ConnectionFailed,
-    /// the Bluetooth device has reached the maximum number of connections
-    ConnectionLimitReached,
-    /// the Bluetooth device is unknown
-    UnkownDevice,
-    /// the Bluetooth operation is unsupported
-    OperationNotSupported,
-    /// the Bluetooth device has removed pairing information
-    PeerRemovedPairingInformation,
-    /// Bluetooth encryption timed out
-    EncryptionTimedOut,
-    /// too many Bluetooth LE devices have been paired
-    TooManyLEPairedDevices,
-    /// Bluetooth adapter not available
+    /// the Bluetooth adapter is not available
     AdapterUnavailable,
     /// the Bluetooth adapter is already scanning
     AlreadyScanning,
-    /// internal error
-    InternalError,
+    /// connection failed
+    ConnectionFailed,
+    /// the Bluetooth device isn't connected
+    NotConnected,
+    /// the Bluetooth operation is unsupported
+    NotSupported,
+    /// permission denied
+    NotAuthorized,
+    /// not ready
+    NotReady,
+    /// not found
+    NotFound,
+    /// invalid paramter
+    InvalidParameter,
+    /// timed out
+    Timeout,
+    /// protocol error: {0}
+    Protocol(AttError),
+    /// an internal error has occured
+    Internal,
+    /// error
+    Other,
 }
 
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
         Error {
             kind,
+            source: None,
             message: String::new(),
         }
     }
@@ -75,7 +94,7 @@ impl From<ErrorKind> for Error {
 
 /// Bluetooth Attribute Protocol error codes. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, TryFromPrimitive)]
 pub enum AttErrorCode {
     /// The operation completed successfully.
     Success = 0x00,
@@ -105,8 +124,7 @@ pub enum AttErrorCode {
     InsufficientEncryptionKeySize = 0x0c,
     /// The attribute value length is invalid for the operation.
     InvalidAttributeValueLength = 0x0d,
-    /// The attribute request that was requested has encountered an error that was unlikely, and therefore could not
-    /// be completed as requested.
+    /// The attribute request that was requested has encountered an error that was unlikely, and therefore could not be completed as requested.
     UnlikelyError = 0x0e,
     /// The attribute requires encryption before it can be read or written.
     InsufficientEncryption = 0x0f,
@@ -129,13 +147,13 @@ pub enum AttErrorCode {
 }
 
 /// Bluetooth Attribute Protocol error. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AttError {
-    /// Known error codes defined by the Bluetooth specification.
+    /// {0}
     Known(AttErrorCode),
-    /// Application error code defined by a higher layer specification. Values range from 0x80-0x9f.
+    /// application specific error: {0}
     Application(u8),
-    /// Reserved or unknown error code.
+    /// unknown error: {0}
     Reserved(u8),
 }
 

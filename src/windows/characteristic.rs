@@ -9,8 +9,8 @@ use windows::{
     Devices::Bluetooth::{
         BluetoothCacheMode,
         GenericAttributeProfile::{
-            GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattCommunicationStatus,
-            GattValueChangedEventArgs, GattWriteOption, GattWriteResult,
+            GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattValueChangedEventArgs,
+            GattWriteOption, GattWriteResult,
         },
     },
     Foundation::TypedEventHandler,
@@ -19,26 +19,37 @@ use windows::{
 
 use crate::{error::ErrorKind, CharacteristicProperty, Error, Result};
 
-use super::descriptor::Descriptor;
+use super::{descriptor::Descriptor, error::check_communication_status};
 
 /// A Bluetooth GATT characteristic
+#[derive(Clone, PartialEq, Eq)]
 pub struct Characteristic {
-    characteristic: GattCharacteristic,
+    inner: GattCharacteristic,
+}
+
+impl std::fmt::Debug for Characteristic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Characteristic")
+            .field("uuid", &self.inner.Uuid().expect("UUID missing on GattCharacteristic"))
+            .field(
+                "handle",
+                &self
+                    .inner
+                    .AttributeHandle()
+                    .expect("AttributeHandle missing on GattCharacteristic"),
+            )
+            .finish()
+    }
 }
 
 impl Characteristic {
     pub(super) fn new(characteristic: GattCharacteristic) -> Self {
-        Characteristic { characteristic }
+        Characteristic { inner: characteristic }
     }
 
     /// The [Uuid] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
-        Uuid::from_u128(
-            self.characteristic
-                .Uuid()
-                .expect("UUID missing on GattCharacteristic")
-                .to_u128(),
-        )
+        Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattCharacteristic").to_u128())
     }
 
     /// The properties of this this GATT characteristic.
@@ -47,7 +58,7 @@ impl Characteristic {
     /// characteristic.
     pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
         let props = self
-            .characteristic
+            .inner
             .CharacteristicProperties()
             .expect("CharacteristicProperties missing on GattCharacteristic");
         BitFlags::from_bits(props.0).unwrap_or_else(|e| e.truncate())
@@ -66,20 +77,15 @@ impl Characteristic {
     }
 
     async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
-        let res = self.characteristic.ReadValueWithCacheModeAsync(cachemode)?.await?;
+        let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
-        if let Ok(GattCommunicationStatus::Success) = res.Status() {
-            let buf = res.Value()?;
-            let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
-            let reader = DataReader::FromBuffer(&buf)?;
-            reader.ReadBytes(data.as_mut_slice())?;
-            Ok(data)
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "reading characteristic")?;
+
+        let buf = res.Value()?;
+        let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
+        let reader = DataReader::FromBuffer(&buf)?;
+        reader.ReadBytes(data.as_mut_slice())?;
+        Ok(data)
     }
 
     /// Write the value of this descriptor on the device to `value`
@@ -98,17 +104,11 @@ impl Characteristic {
         writer.WriteBytes(value)?;
         let buf = writer.DetachBuffer()?;
         let res = self
-            .characteristic
+            .inner
             .WriteValueWithResultAndOptionAsync(&buf, writeoption)?
             .await?;
 
-        match res.Status() {
-            Ok(GattCommunicationStatus::Success) => Ok(()),
-            _ => Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            }),
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "writing characteristic")
     }
 
     /// Enables notification of value changes for this GATT characteristic.
@@ -121,14 +121,15 @@ impl Characteristic {
         } else if props.contains(CharacteristicProperty::Indicate) {
             GattClientCharacteristicConfigurationDescriptorValue::Indicate
         } else {
-            return Err(Error {
-                kind: ErrorKind::OperationNotSupported,
-                message: String::new(),
-            });
+            return Err(Error::new(
+                ErrorKind::NotSupported,
+                None,
+                "characteristic does not support indications or notifications".to_string(),
+            ));
         };
 
         let (sender, receiver) = tokio::sync::mpsc::channel(16);
-        let token = self.characteristic.ValueChanged(&TypedEventHandler::new(
+        let token = self.inner.ValueChanged(&TypedEventHandler::new(
             move |_characteristic, event_args: &Option<GattValueChangedEventArgs>| {
                 let event_args = event_args
                     .as_ref()
@@ -150,77 +151,70 @@ impl Characteristic {
         ))?;
 
         let guard = scopeguard::guard((), move |_| {
-            if let Err(err) = self.characteristic.RemoveValueChanged(token) {
+            if let Err(err) = self.inner.RemoveValueChanged(token) {
                 warn!("Error removing value change event handler: {:?}", err);
             }
         });
 
         let res = self
-            .characteristic
+            .inner
             .WriteClientCharacteristicConfigurationDescriptorWithResultAsync(value)?
             .await?;
 
-        match res.Status() {
-            Ok(GattCommunicationStatus::Success) => {
-                let guard = scopeguard::guard((), move |_| {
-                    let _guard = guard;
-                    match self
-                        .characteristic
-                        .WriteClientCharacteristicConfigurationDescriptorWithResultAsync(
-                            GattClientCharacteristicConfigurationDescriptorValue::None,
-                        ) {
-                        Ok(fut) => {
-                            tokio::task::spawn(async move {
-                                fn check_status(res: windows::core::Result<GattWriteResult>) -> Result<()> {
-                                    match res?.Status()? {
-                                        GattCommunicationStatus::Success => Ok(()),
-                                        _err => Err(Error {
-                                            kind: ErrorKind::AdapterUnavailable,
-                                            message: String::new(),
-                                        }),
-                                    }
-                                }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "enabling notifications")?;
 
-                                if let Err(err) = check_status(fut.await) {
-                                    warn!("Error disabling characteristic notifications: {:?}", err);
-                                }
-                            });
+        let guard = scopeguard::guard((), move |_| {
+            let _guard = guard;
+            match self
+                .inner
+                .WriteClientCharacteristicConfigurationDescriptorWithResultAsync(
+                    GattClientCharacteristicConfigurationDescriptorValue::None,
+                ) {
+                Ok(fut) => {
+                    tokio::task::spawn(async move {
+                        fn check_status(res: windows::core::Result<GattWriteResult>) -> Result<()> {
+                            let res = res?;
+                            check_communication_status(
+                                res.Status()?,
+                                res.ProtocolError()?,
+                                "disabling characteristic notifications",
+                            )
                         }
-                        Err(err) => {
-                            warn!("Error disabling characteristic notifications: {:?}", err);
-                        }
-                    }
-                });
 
-                Ok(tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |x| {
-                    let _guard = &guard;
-                    x
-                }))
+                        if let Err(err) = check_status(fut.await) {
+                            warn!("{:?}", err);
+                        }
+                    });
+                }
+                Err(err) => {
+                    warn!("Error disabling characteristic notifications: {:?}", err);
+                }
             }
-            _ => Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            }),
-        }
+        });
+
+        Ok(tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |x| {
+            let _guard = &guard;
+            x
+        }))
     }
 
     /// Is the device currently sending notifications for this characteristic?
     pub async fn is_notifying(&self) -> Result<bool> {
         let res = self
-            .characteristic
+            .inner
             .ReadClientCharacteristicConfigurationDescriptorAsync()?
             .await?;
-        if let Ok(GattCommunicationStatus::Success) = res.Status() {
-            const INDICATE: i32 = GattClientCharacteristicConfigurationDescriptorValue::Indicate.0;
-            const NOTIFY: i32 = GattClientCharacteristicConfigurationDescriptorValue::Notify.0;
-            let cccd = res.ClientCharacteristicConfigurationDescriptor()?;
-            Ok((cccd.0 & (INDICATE | NOTIFY)) != 0)
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+
+        check_communication_status(
+            res.Status()?,
+            res.ProtocolError()?,
+            "reading client characteristic configuration descriptor",
+        )?;
+
+        const INDICATE: i32 = GattClientCharacteristicConfigurationDescriptorValue::Indicate.0;
+        const NOTIFY: i32 = GattClientCharacteristicConfigurationDescriptorValue::Notify.0;
+        let cccd = res.ClientCharacteristicConfigurationDescriptor()?;
+        Ok((cccd.0 & (INDICATE | NOTIFY)) != 0)
     }
 
     /// Discover the descriptors associated with this service.
@@ -245,21 +239,16 @@ impl Characteristic {
         cachemode: BluetoothCacheMode,
     ) -> Result<SmallVec<[Descriptor; 2]>> {
         let res = if let Some(uuid) = uuid {
-            self.characteristic
+            self.inner
                 .GetDescriptorsForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), cachemode)?
                 .await
         } else {
-            self.characteristic.GetDescriptorsWithCacheModeAsync(cachemode)?.await
+            self.inner.GetDescriptorsWithCacheModeAsync(cachemode)?.await
         }?;
 
-        if let Ok(GattCommunicationStatus::Success) = res.Status() {
-            let descriptors = res.Descriptors()?;
-            Ok(descriptors.into_iter().map(Descriptor::new).collect())
-        } else {
-            Err(Error {
-                kind: ErrorKind::AdapterUnavailable,
-                message: String::new(),
-            })
-        }
+        check_communication_status(res.Status()?, res.ProtocolError()?, "discovering descriptors")?;
+
+        let descriptors = res.Descriptors()?;
+        Ok(descriptors.into_iter().map(Descriptor::new).collect())
     }
 }
