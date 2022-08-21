@@ -117,11 +117,26 @@ impl Device {
     }
 
     /// Discover the primary services of this device.
-    ///
-    /// If a [Uuid] is provided, only services with that [Uuid] will be discovered. If `uuid` is `None` then all
-    /// services will be discovered.
-    pub async fn discover_services(&self, service: Option<Uuid>) -> Result<SmallVec<[Service; 2]>> {
-        self.get_services(service, BluetoothCacheMode::Uncached).await
+    pub async fn discover_services(&self) -> Result<SmallVec<[Service; 2]>> {
+        let res = self
+            .device
+            .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Uncached)?
+            .await?;
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
+        let services = res.Services()?;
+        Ok(services.into_iter().map(Service::new).collect())
+    }
+
+    /// Discover the primary service(s) of this device with the given [Uuid].
+    pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+        let res = self
+            .device
+            .GetGattServicesForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), BluetoothCacheMode::Uncached)?
+            .await?;
+
+        check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
+        let services = res.Services()?;
+        Ok(services.into_iter().map(Service::new).collect())
     }
 
     /// Get previously discovered services.
@@ -129,24 +144,11 @@ impl Device {
     /// If no services have been discovered yet, this function may either perform service discovery or return an empty
     /// set.
     pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
-        self.get_services(None, BluetoothCacheMode::Cached).await
-    }
-
-    async fn get_services(
-        &self,
-        service: Option<Uuid>,
-        cachemode: BluetoothCacheMode,
-    ) -> Result<SmallVec<[Service; 2]>> {
-        let res = if let Some(service) = service {
-            self.device
-                .GetGattServicesForUuidWithCacheModeAsync(GUID::from_u128(service.as_u128()), cachemode)?
-                .await
-        } else {
-            self.device.GetGattServicesWithCacheModeAsync(cachemode)?.await
-        }?;
-
+        let res = self
+            .device
+            .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Cached)?
+            .await?;
         check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
-
         let services = res.Services()?;
         Ok(services.into_iter().map(Service::new).collect())
     }

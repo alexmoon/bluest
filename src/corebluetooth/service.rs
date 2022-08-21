@@ -1,5 +1,5 @@
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
-use objc_id::ShareId;
+use objc_id::{Id, ShareId};
 use smallvec::SmallVec;
 use uuid::Uuid;
 
@@ -37,16 +37,25 @@ impl Service {
         self.inner.is_primary()
     }
 
-    /// Discover the characteristics associated with this service.
-    ///
-    /// If a [Uuid] is provided, only characteristics with that [Uuid] will be discovered. If `uuid` is `None` then all
-    /// characteristics will be discovered.
-    pub async fn discover_characteristics(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Characteristic; 2]>> {
-        let uuids = uuid.map(|x| {
-            let vec = vec![CBUUID::from_uuid(x)];
-            NSArray::from_vec(vec)
-        });
+    /// Discover all characteristics associated with this service.
+    pub async fn discover_characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+        self.discover_characteristics_inner(None).await
+    }
 
+    /// Discover the characteristic(s) with the given [Uuid].
+    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Characteristic; 2]>> {
+        let uuids = {
+            let vec = vec![CBUUID::from_uuid(uuid)];
+            NSArray::from_vec(vec)
+        };
+
+        self.discover_characteristics_inner(Some(uuids)).await
+    }
+
+    async fn discover_characteristics_inner(
+        &self,
+        uuids: Option<Id<NSArray<CBUUID>>>,
+    ) -> Result<SmallVec<[Characteristic; 2]>> {
         let peripheral = self.inner.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_characteristics(&self.inner, uuids);
@@ -87,15 +96,24 @@ impl Service {
     }
 
     /// Discover the included services of this service.
-    ///
-    /// If a [Uuid] is provided, only services with that [Uuid] will be discovered. If `uuid` is `None` then all
-    /// services will be discovered.
-    pub async fn discover_included_services(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Service; 2]>> {
-        let uuids = uuid.map(|x| {
-            let vec = vec![CBUUID::from_uuid(x)];
-            NSArray::from_vec(vec)
-        });
+    pub async fn discover_included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+        self.discover_included_services_inner(None).await
+    }
 
+    /// Discover the included service(s) with the given [Uuid].
+    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+        let uuids = {
+            let vec = vec![CBUUID::from_uuid(uuid)];
+            NSArray::from_vec(vec)
+        };
+
+        self.discover_included_services_inner(Some(uuids)).await
+    }
+
+    async fn discover_included_services_inner(
+        &self,
+        uuids: Option<Id<NSArray<CBUUID>>>,
+    ) -> Result<SmallVec<[Service; 2]>> {
         let peripheral = self.inner.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_included_services(&self.inner, uuids);

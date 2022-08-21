@@ -1,6 +1,6 @@
 use enumflags2::BitFlags;
 use futures::Stream;
-use objc_foundation::{INSArray, INSData, INSFastEnumeration, NSArray};
+use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
 use smallvec::SmallVec;
 use tokio_stream::wrappers::BroadcastStream;
@@ -8,7 +8,7 @@ use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use super::delegates::PeripheralEvent;
-use super::types::{CBCharacteristicWriteType, CBUUID};
+use super::types::CBCharacteristicWriteType;
 use super::{descriptor::Descriptor, types::CBCharacteristic};
 
 use crate::error::ErrorKind;
@@ -214,16 +214,11 @@ impl Characteristic {
     ///
     /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
     /// descriptors for this characteristic will be discovered.
-    pub async fn discover_descriptors(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Descriptor; 2]>> {
-        let uuids = uuid.map(|x| {
-            let vec = vec![CBUUID::from_uuid(x)];
-            NSArray::from_vec(vec)
-        });
-
+    pub async fn discover_descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
-        peripheral.discover_descriptors(&self.inner, uuids);
+        peripheral.discover_descriptors(&self.inner);
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {

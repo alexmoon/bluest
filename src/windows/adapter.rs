@@ -16,8 +16,6 @@ use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEManufacturerData;
 use windows::Devices::Bluetooth::BluetoothAdapter;
-use windows::Devices::Bluetooth::BluetoothConnectionStatus;
-use windows::Devices::Bluetooth::BluetoothLEDevice;
 use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 use windows::Devices::Enumeration::DeviceInformation;
 use windows::Devices::Enumeration::DeviceInformationKind;
@@ -127,61 +125,44 @@ impl Adapter {
         Device::from_id(id).await.map_err(Into::into)
     }
 
-    /// Finds connected devices.
+    /// Finds all connected devices providing any service in `services`
     ///
-    /// If `services` is not empty, returns connected devices providing at least one GATT service with a UUID in
-    /// `services`. Otherwise returns all connected devices.
+    /// # Panics
+    ///
+    /// Panics if `services` is empty.
     pub async fn connected_devices(&self, services: &[Uuid]) -> Result<Vec<Device>> {
-        if !services.is_empty() {
-            let mut aqsfilter = OsString::new();
-            for uuid in services {
-                if !aqsfilter.is_empty() {
-                    aqsfilter.push(" OR ");
-                }
-                aqsfilter.push(
-                    GattDeviceService::GetDeviceSelectorFromUuid(GUID::from_u128(uuid.as_u128()))?.to_os_string(),
-                );
+        assert!(!services.is_empty());
+
+        let mut aqsfilter = OsString::new();
+        for uuid in services {
+            if !aqsfilter.is_empty() {
+                aqsfilter.push(" OR ");
             }
-
-            let aep_id = HSTRING::from("System.Devices.AepService.AepId");
-            let services = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
-                &aqsfilter.into(),
-                &IIterable::from(StringVec::new(vec![aep_id.clone()])),
-                DeviceInformationKind::AssociationEndpointService,
-            )?
-            .await?;
-
-            let mut device_ids = HashSet::with_capacity(services.Size()? as usize);
-            for service in services {
-                let id = service.Properties()?.Lookup(&aep_id)?;
-                let id: HSTRING = id.try_into()?;
-                device_ids.insert(DeviceId(id.to_os_string()));
-            }
-
-            let mut res = Vec::with_capacity(device_ids.len());
-            for id in device_ids {
-                res.push(Device::from_id(id).await?);
-            }
-
-            Ok(res)
-        } else {
-            let aqsfilter =
-                BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected)?;
-
-            let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
-                &aqsfilter,
-                &IIterable::from(StringVec::new(Vec::new())),
-                DeviceInformationKind::AssociationEndpoint,
-            )?
-            .await?;
-
-            let mut res = Vec::with_capacity(devices.Size()? as usize);
-            for device in devices {
-                res.push(Device::from_id(DeviceId(device.Id()?.to_os_string())).await?);
-            }
-
-            Ok(res)
+            aqsfilter
+                .push(GattDeviceService::GetDeviceSelectorFromUuid(GUID::from_u128(uuid.as_u128()))?.to_os_string());
         }
+
+        let aep_id = HSTRING::from("System.Devices.AepService.AepId");
+        let services = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+            &aqsfilter.into(),
+            &IIterable::from(StringVec::new(vec![aep_id.clone()])),
+            DeviceInformationKind::AssociationEndpointService,
+        )?
+        .await?;
+
+        let mut device_ids = HashSet::with_capacity(services.Size()? as usize);
+        for service in services {
+            let id = service.Properties()?.Lookup(&aep_id)?;
+            let id: HSTRING = id.try_into()?;
+            device_ids.insert(DeviceId(id.to_os_string()));
+        }
+
+        let mut res = Vec::with_capacity(device_ids.len());
+        for id in device_ids {
+            res.push(Device::from_id(id).await?);
+        }
+
+        Ok(res)
     }
 
     /// Starts scanning for Bluetooth advertising packets.
@@ -190,8 +171,8 @@ impl Adapter {
     /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     ///
-    /// If `services` is not empty, returns connected devices providing at least one GATT service with a UUID in
-    /// `services`. Otherwise returns all connected devices.
+    /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
+    /// `services`. Otherwise returns all advertisements.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         let watcher = BluetoothLEAdvertisementWatcher::new()?;
         watcher.SetAllowExtendedAdvertisements(true)?;

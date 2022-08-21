@@ -15,6 +15,14 @@ impl crate::Error {
         )
     }
 
+    pub(super) fn from_stream_recv_error(err: tokio_stream::wrappers::errors::BroadcastStreamRecvError) -> Self {
+        crate::Error::new(
+            ErrorKind::Internal,
+            Some(Box::new(err)),
+            "receiving delegate event".to_string(),
+        )
+    }
+
     pub(super) fn from_nserror(err: ShareId<NSError>) -> Self {
         crate::Error::new(
             kind_from_nserror(&*err),

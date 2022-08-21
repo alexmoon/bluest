@@ -44,17 +44,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("connected!");
 
     let service = match device
-        .discover_services(Some(NORDIC_LED_AND_BUTTON_SERVICE))
+        .discover_services_with_uuid(NORDIC_LED_AND_BUTTON_SERVICE)
         .await?
         .get(0)
-        .cloned()
     {
-        Some(service) => service,
+        Some(service) => service.clone(),
         None => return Err("service not found".into()),
     };
     info!("found LED and button service");
 
-    let characteristics = service.discover_characteristics(None).await?;
+    let characteristics = service.discover_characteristics().await?;
     info!("discovered characteristics");
 
     let res: Result<_, Box<dyn Error>> = characteristics

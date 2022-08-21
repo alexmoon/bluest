@@ -1,7 +1,7 @@
 #![allow(clippy::let_unit_value)]
 
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
-use objc_id::ShareId;
+use objc_id::{Id, ShareId};
 use smallvec::SmallVec;
 use uuid::Uuid;
 
@@ -92,15 +92,21 @@ impl Device {
     }
 
     /// Discover the primary services of this device.
-    ///
-    /// If a [Uuid] is provided, only services with that [Uuid] will be discovered. If `uuid` is `None` then all
-    /// services will be discovered.
-    pub async fn discover_services(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Service; 2]>> {
-        let uuids = uuid.map(|x| {
-            let vec = vec![CBUUID::from_uuid(x)];
-            NSArray::from_vec(vec)
-        });
+    pub async fn discover_services(&self) -> Result<SmallVec<[Service; 2]>> {
+        self.discover_services_inner(None).await
+    }
 
+    /// Discover the primary service(s) of this device with the given [Uuid].
+    pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+        let uuids = {
+            let vec = vec![CBUUID::from_uuid(uuid)];
+            NSArray::from_vec(vec)
+        };
+
+        self.discover_services_inner(Some(uuids)).await
+    }
+
+    async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<SmallVec<[Service; 2]>> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.discover_services(uuids);
 

@@ -124,11 +124,17 @@ impl Adapter {
     }
 
     /// Finds all connected devices providing any service in `services`
+    ///
+    /// # Panics
+    ///
+    /// Panics if `services` is empty.
     pub async fn connected_devices(&self, services: &[Uuid]) -> Result<Vec<Device>> {
-        let services = (!services.is_empty()).then(|| {
+        assert!(!services.is_empty());
+
+        let services = {
             let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
             NSArray::from_vec(vec)
-        });
+        };
         let peripherals = self.central.retrieve_connected_peripherals_with_services(services);
         Ok(peripherals
             .enumerator()
@@ -224,11 +230,15 @@ impl Adapter {
                 Err(ErrorKind::AdapterUnavailable)?
             }
             match event {
-                Ok(delegates::CentralEvent::Disconnect { peripheral, error }) if peripheral == device.peripheral => {
-                    return Err(error
-                        .map(Error::from_nserror)
-                        .unwrap_or_else(|| ErrorKind::ConnectionFailed.into()));
-                }
+                Ok(delegates::CentralEvent::Disconnect {
+                    peripheral,
+                    error: None,
+                }) if peripheral == device.peripheral => break,
+                Ok(delegates::CentralEvent::Disconnect {
+                    peripheral,
+                    error: Some(err),
+                }) if peripheral == device.peripheral => return Err(Error::from_nserror(err)),
+                Err(err) => return Err(Error::from_stream_recv_error(err)),
                 _ => (),
             }
         }

@@ -330,14 +330,9 @@ impl CBCentralManager {
 
     pub fn retrieve_connected_peripherals_with_services(
         &self,
-        services: Option<Id<NSArray<CBUUID>>>,
+        services: Id<NSArray<CBUUID>>,
     ) -> Id<NSArray<CBPeripheral>> {
-        unsafe {
-            Id::from_ptr(msg_send![
-                self,
-                retrieveConnectedPeripheralsWithServices: id_or_nil(&services)
-            ])
-        }
+        unsafe { Id::from_ptr(msg_send![self, retrieveConnectedPeripheralsWithServices: services]) }
     }
 
     pub fn retrieve_peripherals_with_identifiers(&self, identifiers: Id<NSArray<NSUUID>>) -> Id<NSArray<CBPeripheral>> {
@@ -419,8 +414,8 @@ impl CBPeripheral {
         unsafe { msg_send![self, discoverCharacteristics: id_or_nil(&characteristics) forService: service] }
     }
 
-    pub fn discover_descriptors(&self, characteristic: &CBCharacteristic, descriptors: Option<Id<NSArray<CBUUID>>>) {
-        unsafe { msg_send![self, discoverDescriptors: id_or_nil(&descriptors) forCharacteristic: characteristic] }
+    pub fn discover_descriptors(&self, characteristic: &CBCharacteristic) {
+        unsafe { msg_send![self, discoverDescriptorsForCharacteristic: characteristic] }
     }
 
     pub fn read_characteristic_value(&self, characteristic: &CBCharacteristic) {

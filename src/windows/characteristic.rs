@@ -5,7 +5,6 @@ use tokio_stream::StreamExt;
 use tracing::warn;
 use uuid::Uuid;
 use windows::{
-    core::GUID,
     Devices::Bluetooth::{
         BluetoothCacheMode,
         GenericAttributeProfile::{
@@ -217,12 +216,9 @@ impl Characteristic {
         Ok((cccd.0 & (INDICATE | NOTIFY)) != 0)
     }
 
-    /// Discover the descriptors associated with this service.
-    ///
-    /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
-    /// descriptors for this characteristic will be discovered.
-    pub async fn discover_descriptors(&self, uuid: Option<Uuid>) -> Result<SmallVec<[Descriptor; 2]>> {
-        self.get_descriptors(uuid, BluetoothCacheMode::Uncached).await
+    /// Discover the descriptors associated with this characteristic.
+    pub async fn discover_descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+        self.get_descriptors(BluetoothCacheMode::Uncached).await
     }
 
     /// Get previously discovered descriptors.
@@ -230,24 +226,12 @@ impl Characteristic {
     /// If no descriptors have been discovered yet, this function may either perform descriptor discovery or
     /// return an empty set.
     pub async fn descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
-        self.get_descriptors(None, BluetoothCacheMode::Cached).await
+        self.get_descriptors(BluetoothCacheMode::Cached).await
     }
 
-    async fn get_descriptors(
-        &self,
-        uuid: Option<Uuid>,
-        cachemode: BluetoothCacheMode,
-    ) -> Result<SmallVec<[Descriptor; 2]>> {
-        let res = if let Some(uuid) = uuid {
-            self.inner
-                .GetDescriptorsForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), cachemode)?
-                .await
-        } else {
-            self.inner.GetDescriptorsWithCacheModeAsync(cachemode)?.await
-        }?;
-
+    async fn get_descriptors(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[Descriptor; 2]>> {
+        let res = self.inner.GetDescriptorsWithCacheModeAsync(cachemode)?.await?;
         check_communication_status(res.Status()?, res.ProtocolError(), "discovering descriptors")?;
-
         let descriptors = res.Descriptors()?;
         Ok(descriptors.into_iter().map(Descriptor::new).collect())
     }

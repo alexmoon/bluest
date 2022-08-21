@@ -1,9 +1,8 @@
 use std::{error::Error, time::Duration};
 
-use bluest::{Adapter, BluetoothUuidExt};
+use bluest::{btuuid, Adapter};
 use tokio_stream::StreamExt;
 use tracing::{info, metadata::LevelFilter};
-use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -23,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let discovered_device = {
         info!("starting scan");
-        let services = &[Uuid::from_u16(0x181c)];
+        let services = &[btuuid::services::USER_DATA];
         let mut scan = adapter.scan(services).await?;
         info!("scan started");
         scan.next().await.unwrap() // this will never timeout
