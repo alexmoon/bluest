@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 use tracing::error;
 use uuid::Uuid;
 use windows::{
-    core::GUID,
+    core::{GUID, HSTRING},
     Devices::Bluetooth::{
         BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
         GenericAttributeProfile::GattSession,
@@ -85,8 +85,8 @@ impl Device {
         })
     }
 
-    pub(super) async fn from_id(id: DeviceId) -> windows::core::Result<Self> {
-        let device = BluetoothLEDevice::FromIdAsync(&(&id.0).into())?.await?;
+    pub(super) async fn from_id(id: &HSTRING) -> windows::core::Result<Self> {
+        let device = BluetoothLEDevice::FromIdAsync(id)?.await?;
         Ok(Device {
             device,
             session: Mutex::new(None),

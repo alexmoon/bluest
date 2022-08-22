@@ -5,10 +5,12 @@ use std::ffi::OsString;
 use futures::Stream;
 use smallvec::SmallVec;
 use tokio_stream::StreamExt;
+use tracing::debug;
 use tracing::error;
+use tracing::trace;
 use tracing::warn;
 use uuid::Uuid;
-use windows::core::GUID;
+use windows::core::InParam;
 use windows::core::HSTRING;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementDataSection;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
@@ -16,7 +18,8 @@ use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs;
 use windows::Devices::Bluetooth::Advertisement::BluetoothLEManufacturerData;
 use windows::Devices::Bluetooth::BluetoothAdapter;
-use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
+use windows::Devices::Bluetooth::BluetoothConnectionStatus;
+use windows::Devices::Bluetooth::BluetoothLEDevice;
 use windows::Devices::Enumeration::DeviceInformation;
 use windows::Devices::Enumeration::DeviceInformationKind;
 use windows::Devices::Radios::Radio;
@@ -122,7 +125,27 @@ impl Adapter {
 
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: DeviceId) -> Result<Device> {
-        Device::from_id(id).await.map_err(Into::into)
+        Device::from_id(&id.0.into()).await.map_err(Into::into)
+    }
+
+    /// Finds all connected Bluetooth LE devices
+    pub async fn connected_devices(&self) -> Result<Vec<Device>> {
+        let aqsfilter = BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected)?;
+
+        let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+            &aqsfilter,
+            InParam::null(),
+            DeviceInformationKind::AssociationEndpoint,
+        )?
+        .await?;
+
+        let mut res = Vec::with_capacity(devices.Size()? as usize);
+        for device in devices {
+            let id = device.Id()?;
+            res.push(Device::from_id(&id).await?);
+        }
+
+        Ok(res)
     }
 
     /// Finds all connected devices providing any service in `services`
@@ -130,36 +153,83 @@ impl Adapter {
     /// # Panics
     ///
     /// Panics if `services` is empty.
-    pub async fn connected_devices(&self, services: &[Uuid]) -> Result<Vec<Device>> {
+    pub async fn connected_devices_with_services(&self, services: &[Uuid]) -> Result<Vec<Device>> {
         assert!(!services.is_empty());
 
-        let mut aqsfilter = OsString::new();
-        for uuid in services {
-            if !aqsfilter.is_empty() {
-                aqsfilter.push(" OR ");
+        // Find all connected devices
+        let aqsfilter = BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected)?;
+
+        let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+            &aqsfilter,
+            InParam::null(),
+            DeviceInformationKind::AssociationEndpoint,
+        )?
+        .await?;
+
+        trace!("found {} connected devices", devices.Size()?);
+
+        // Build an AQS filter for services of any of the connected devices
+        let mut devicefilter = OsString::new();
+        for device in devices {
+            if !devicefilter.is_empty() {
+                devicefilter.push(" OR ");
             }
-            aqsfilter
-                .push(GattDeviceService::GetDeviceSelectorFromUuid(GUID::from_u128(uuid.as_u128()))?.to_os_string());
+            devicefilter.push("System.Devices.AepService.AepId:=\"");
+            devicefilter.push(device.Id()?.to_os_string());
+            devicefilter.push("\"");
         }
 
+        debug!("device filter = {:?}", devicefilter);
+
+        // Build an AQS filter for any of the service Uuids
+        let mut servicefilter = String::new();
+        for service in services {
+            if !servicefilter.is_empty() {
+                servicefilter.push_str(" OR ");
+            }
+            servicefilter.push_str("System.Devices.AepService.Bluetooth.ServiceGuid:=\"{");
+            servicefilter.push_str(&service.to_string());
+            servicefilter.push_str("}\"");
+        }
+
+        debug!("service filter = {:?}", servicefilter);
+
+        // Combine the device and service filters
+        let mut aqsfilter = OsString::from("(");
+        aqsfilter.push(devicefilter);
+        aqsfilter.push(") AND (");
+        aqsfilter.push(servicefilter);
+        aqsfilter.push(")");
+        let aqsfilter: HSTRING = aqsfilter.into();
+
+        debug!("aqs filter = {:?}", aqsfilter);
+
+        // Find all associated endpoint services matching the filter
         let aep_id = HSTRING::from("System.Devices.AepService.AepId");
+        let additional_properties = StringVec::new(vec![aep_id.clone()]);
         let services = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
-            &aqsfilter.into(),
-            &IIterable::from(StringVec::new(vec![aep_id.clone()])),
+            &aqsfilter,
+            &IIterable::from(additional_properties),
             DeviceInformationKind::AssociationEndpointService,
         )?
         .await?;
 
+        trace!("found {} matching services of connected devices", services.Size()?);
+
+        // Find the unique set of device ids which matched
         let mut device_ids = HashSet::with_capacity(services.Size()? as usize);
         for service in services {
             let id = service.Properties()?.Lookup(&aep_id)?;
             let id: HSTRING = id.try_into()?;
-            device_ids.insert(DeviceId(id.to_os_string()));
+            device_ids.insert(id.to_os_string());
         }
 
+        trace!("found {} devices with at least one matching service", device_ids.len());
+
+        // Build the devices
         let mut res = Vec::with_capacity(device_ids.len());
         for id in device_ids {
-            res.push(Device::from_id(id).await?);
+            res.push(Device::from_id(&id.into()).await?);
         }
 
         Ok(res)

@@ -19,7 +19,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let adapter = Adapter::default().await.unwrap();
     adapter.wait_available().await?;
 
-    let devices = adapter.connected_devices(&[btuuid::services::GENERIC_ACCESS]).await?;
+    info!("getting connected devices");
+    // let devices = adapter.connected_devices().await?;
+    let devices = adapter
+        .connected_devices_with_services(&[btuuid::services::BATTERY])
+        .await?;
     for device in devices {
         info!("found {:?}", device);
         adapter.connect_device(&device).await?;
@@ -37,6 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         adapter.disconnect_device(&device).await?;
     }
+    info!("done");
 
     Ok(())
 }

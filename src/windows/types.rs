@@ -32,7 +32,7 @@ impl IIterable_Impl<HSTRING> for StringVec {
 impl IIterator_Impl<HSTRING> for StringIterator {
     fn Current(&self) -> windows::core::Result<HSTRING> {
         let pos = self.pos.load(Ordering::Relaxed);
-        if pos <= self.vec.len() {
+        if pos < self.vec.len() {
             Ok(self.vec[pos].clone())
         } else {
             Err(windows::core::Error::OK)
@@ -41,12 +41,12 @@ impl IIterator_Impl<HSTRING> for StringIterator {
 
     fn HasCurrent(&self) -> windows::core::Result<bool> {
         let pos = self.pos.load(Ordering::Relaxed);
-        Ok(pos <= self.vec.len())
+        Ok(pos < self.vec.len())
     }
 
     fn MoveNext(&self) -> windows::core::Result<bool> {
         let pos = self.pos.fetch_add(1, Ordering::Relaxed);
-        Ok(pos < self.vec.len() - 1)
+        Ok(pos + 1 < self.vec.len())
     }
 
     fn GetMany(

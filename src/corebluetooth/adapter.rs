@@ -123,12 +123,18 @@ impl Adapter {
             .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device".to_string()))
     }
 
+    /// Finds all connected Bluetooth LE devices
+    pub async fn connected_devices(&self) -> Result<Vec<Device>> {
+        self.connected_devices_with_services(&[crate::btuuid::services::GENERIC_ATTRIBUTE])
+            .await
+    }
+
     /// Finds all connected devices providing any service in `services`
     ///
     /// # Panics
     ///
     /// Panics if `services` is empty.
-    pub async fn connected_devices(&self, services: &[Uuid]) -> Result<Vec<Device>> {
+    pub async fn connected_devices_with_services(&self, services: &[Uuid]) -> Result<Vec<Device>> {
         assert!(!services.is_empty());
 
         let services = {

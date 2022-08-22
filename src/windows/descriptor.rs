@@ -17,7 +17,7 @@ pub struct Descriptor {
 
 impl std::fmt::Debug for Descriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Characteristic")
+        f.debug_struct("Descriptor")
             .field("uuid", &self.inner.Uuid().unwrap())
             .field("handle", &self.inner.AttributeHandle().unwrap())
             .finish()
