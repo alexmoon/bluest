@@ -159,6 +159,8 @@ impl Adapter {
         // Find all connected devices
         let aqsfilter = BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected)?;
 
+        debug!("aqs filter = {:?}", aqsfilter);
+
         let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
             InParam::null(),
@@ -167,6 +169,10 @@ impl Adapter {
         .await?;
 
         trace!("found {} connected devices", devices.Size()?);
+
+        if devices.Size()? == 0 {
+            return Ok(Vec::new());
+        }
 
         // Build an AQS filter for services of any of the connected devices
         let mut devicefilter = OsString::new();
@@ -195,7 +201,7 @@ impl Adapter {
         debug!("service filter = {:?}", servicefilter);
 
         // Combine the device and service filters
-        let mut aqsfilter = OsString::from("(");
+        let mut aqsfilter = OsString::from("System.Devices.AepService.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\" AND (");
         aqsfilter.push(devicefilter);
         aqsfilter.push(") AND (");
         aqsfilter.push(servicefilter);
