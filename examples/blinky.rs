@@ -1,10 +1,11 @@
-use std::{error::Error, time::Duration};
+use std::error::Error;
+use std::time::Duration;
 
-use bluest::Adapter;
+use bluest::{Adapter, Uuid};
 use futures::future::Either;
 use futures::stream::StreamExt;
-use tracing::{error, info, metadata::LevelFilter};
-use uuid::Uuid;
+use tracing::metadata::LevelFilter;
+use tracing::{error, info};
 
 const NORDIC_LED_AND_BUTTON_SERVICE: Uuid = Uuid::from_u128(0x00001523_1212_efde_1523_785feabcd123);
 const BLINKY_BUTTON_STATE_CHARACTERISTIC: Uuid = Uuid::from_u128(0x00001524_1212_efde_1523_785feabcd123);
@@ -12,7 +13,8 @@ const BLINKY_LED_STATE_CHARACTERISTIC: Uuid = Uuid::from_u128(0x00001525_1212_ef
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{fmt, EnvFilter};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

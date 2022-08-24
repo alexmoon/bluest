@@ -1,14 +1,11 @@
 use objc::{class, msg_send, sel, sel_impl};
 use objc_foundation::{INSData, INSObject, NSObject};
 use objc_id::ShareId;
-use smallvec::SmallVec;
-use uuid::Uuid;
 
 use super::delegates::PeripheralEvent;
 use super::types::{CBDescriptor, NSUInteger};
-
 use crate::error::ErrorKind;
-use crate::{Error, Result};
+use crate::{Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone, PartialEq, Eq)]

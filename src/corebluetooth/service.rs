@@ -1,14 +1,11 @@
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::{Id, ShareId};
-use smallvec::SmallVec;
-use uuid::Uuid;
 
+use super::characteristic::Characteristic;
 use super::delegates::PeripheralEvent;
-use super::types::CBUUID;
-use super::{characteristic::Characteristic, types::CBService};
-
+use super::types::{CBService, CBUUID};
 use crate::error::ErrorKind;
-use crate::{Error, Result};
+use crate::{Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

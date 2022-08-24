@@ -10,14 +10,12 @@ use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 use tracing::debug;
-use uuid::Uuid;
 
 use super::delegates::{self, CentralDelegate};
 use super::device::Device;
 use super::types::{dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerState, CBUUID, NSUUID};
-
 use crate::error::ErrorKind;
-use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result};
+use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///

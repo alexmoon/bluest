@@ -1,10 +1,9 @@
 use objc_foundation::INSString;
 use objc_id::ShareId;
 
-use crate::error::{AttError, ErrorKind};
-
 use super::types::CBError;
 pub use super::types::NSError;
+use crate::error::{AttError, ErrorKind};
 
 impl crate::Error {
     pub(super) fn from_recv_error(err: tokio::sync::broadcast::error::RecvError) -> Self {

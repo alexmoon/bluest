@@ -1,6 +1,6 @@
 //! `Uuid` extensions for Bluetooth UUIDs
 
-use uuid::Uuid;
+use crate::Uuid;
 
 /// This is the Bluetooth Base UUID. It is used with 16-bit and 32-bit UUIDs
 /// [defined](https://www.bluetooth.com/specifications/assigned-numbers/) by the Bluetooth SIG.
@@ -16,7 +16,7 @@ pub const fn bluetooth_uuid_from_u32(uuid: u32) -> Uuid {
     Uuid::from_u128(((uuid as u128) << 96) | BLUETOOTH_BASE_UUID)
 }
 
-/// Extension trait for [uuid::Uuid] with helper methods for dealing with Bluetooth 16-bit and 32-bit UUIDs
+/// Extension trait for [Uuid] with helper methods for dealing with Bluetooth 16-bit and 32-bit UUIDs
 pub trait BluetoothUuidExt: private::Sealed {
     /// Creates a 16-bit Bluetooth UUID
     fn from_u16(uuid: u16) -> Self;
@@ -99,7 +99,7 @@ impl BluetoothUuidExt for Uuid {
 }
 
 mod private {
-    use uuid::Uuid;
+    use crate::Uuid;
 
     pub trait Sealed {}
 
@@ -110,9 +110,8 @@ mod private {
 pub mod services {
     #![allow(missing_docs)]
 
-    use uuid::Uuid;
-
     use super::bluetooth_uuid_from_u16;
+    use crate::Uuid;
 
     pub const GENERIC_ACCESS: Uuid = bluetooth_uuid_from_u16(0x1800);
     pub const GENERIC_ATTRIBUTE: Uuid = bluetooth_uuid_from_u16(0x1801);
@@ -183,9 +182,8 @@ pub mod services {
 pub mod characteristics {
     #![allow(missing_docs)]
 
-    use uuid::Uuid;
-
     use super::bluetooth_uuid_from_u16;
+    use crate::Uuid;
 
     pub const DEVICE_NAME: Uuid = bluetooth_uuid_from_u16(0x2A00);
     pub const APPEARANCE: Uuid = bluetooth_uuid_from_u16(0x2A01);
@@ -595,9 +593,8 @@ pub mod characteristics {
 pub mod descriptors {
     #![allow(missing_docs)]
 
-    use uuid::Uuid;
-
     use super::bluetooth_uuid_from_u16;
+    use crate::Uuid;
 
     pub const CHARACTERISTIC_EXTENDED_PROPERTIES: Uuid = bluetooth_uuid_from_u16(0x2900);
     pub const CHARACTERISTIC_USER_DESCRIPTION: Uuid = bluetooth_uuid_from_u16(0x2901);

@@ -1,19 +1,15 @@
-use smallvec::SmallVec;
 use tokio::sync::Mutex;
 use tracing::error;
-use uuid::Uuid;
-use windows::{
-    core::{GUID, HSTRING},
-    Devices::Bluetooth::{
-        BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
-        GenericAttributeProfile::GattSession,
-    },
-    Foundation::TypedEventHandler,
+use windows::core::{GUID, HSTRING};
+use windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
+use windows::Devices::Bluetooth::{
+    BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
 };
+use windows::Foundation::TypedEventHandler;
 
-use crate::Result;
-
-use super::{error::check_communication_status, service::Service};
+use super::error::check_communication_status;
+use super::service::Service;
+use crate::{Result, SmallVec, Uuid};
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -104,7 +100,7 @@ impl Device {
     }
 
     /// The local name for this device, if available
-    pub fn name(&self) -> Option<String> {
+    pub async fn name(&self) -> Option<String> {
         self.device
             .Name()
             .ok()

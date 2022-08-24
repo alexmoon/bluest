@@ -1,24 +1,19 @@
 use enumflags2::BitFlags;
 use futures::Stream;
-use smallvec::SmallVec;
 use tokio_stream::StreamExt;
 use tracing::warn;
-use uuid::Uuid;
-use windows::{
-    Devices::Bluetooth::{
-        BluetoothCacheMode,
-        GenericAttributeProfile::{
-            GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattValueChangedEventArgs,
-            GattWriteOption, GattWriteResult,
-        },
-    },
-    Foundation::TypedEventHandler,
-    Storage::Streams::{DataReader, DataWriter},
+use windows::Devices::Bluetooth::BluetoothCacheMode;
+use windows::Devices::Bluetooth::GenericAttributeProfile::{
+    GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattValueChangedEventArgs,
+    GattWriteOption, GattWriteResult,
 };
+use windows::Foundation::TypedEventHandler;
+use windows::Storage::Streams::{DataReader, DataWriter};
 
-use crate::{error::ErrorKind, CharacteristicProperty, Error, Result};
-
-use super::{descriptor::Descriptor, error::check_communication_status};
+use super::descriptor::Descriptor;
+use super::error::check_communication_status;
+use crate::error::ErrorKind;
+use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Clone, PartialEq, Eq)]

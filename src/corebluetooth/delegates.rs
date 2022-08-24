@@ -1,15 +1,13 @@
 #![allow(clippy::let_unit_value)]
 
-use objc::{
-    class,
-    declare::ClassDecl,
-    msg_send,
-    runtime::{Class, Object, Protocol, Sel},
-    sel, sel_impl,
-};
+use std::os::raw::c_void;
+use std::sync::Once;
+
+use objc::declare::ClassDecl;
+use objc::runtime::{Class, Object, Protocol, Sel};
+use objc::{class, msg_send, sel, sel_impl};
 use objc_foundation::{INSArray, NSArray, NSDictionary, NSObject, NSString};
 use objc_id::{Id, ShareId, Shared};
-use std::{os::raw::c_void, sync::Once};
 use tracing::{debug, error};
 
 use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};

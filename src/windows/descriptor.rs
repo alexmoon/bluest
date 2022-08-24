@@ -1,13 +1,9 @@
-use smallvec::SmallVec;
-use uuid::Uuid;
-use windows::{
-    Devices::Bluetooth::{BluetoothCacheMode, GenericAttributeProfile::GattDescriptor},
-    Storage::Streams::{DataReader, DataWriter},
-};
-
-use crate::Result;
+use windows::Devices::Bluetooth::BluetoothCacheMode;
+use windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
+use windows::Storage::Streams::{DataReader, DataWriter};
 
 use super::error::check_communication_status;
+use crate::{Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Clone, PartialEq, Eq)]

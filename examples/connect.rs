@@ -1,12 +1,15 @@
-use std::{error::Error, time::Duration};
+use std::error::Error;
+use std::time::Duration;
 
 use bluest::{btuuid, Adapter};
 use tokio_stream::StreamExt;
-use tracing::{info, metadata::LevelFilter};
+use tracing::info;
+use tracing::metadata::LevelFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{fmt, EnvFilter};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

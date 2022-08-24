@@ -2,17 +2,14 @@ use enumflags2::BitFlags;
 use futures::Stream;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
-use smallvec::SmallVec;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
-use uuid::Uuid;
 
 use super::delegates::PeripheralEvent;
-use super::types::CBCharacteristicWriteType;
-use super::{descriptor::Descriptor, types::CBCharacteristic};
-
+use super::descriptor::Descriptor;
+use super::types::{CBCharacteristic, CBCharacteristicWriteType};
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperty, Error, Result};
+use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone, PartialEq, Eq)]

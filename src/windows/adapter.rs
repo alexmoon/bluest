@@ -1,43 +1,27 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 
 use futures::Stream;
-use smallvec::SmallVec;
 use tokio_stream::StreamExt;
-use tracing::debug;
-use tracing::error;
-use tracing::trace;
-use tracing::warn;
-use uuid::Uuid;
-use windows::core::InParam;
-use windows::core::HSTRING;
-use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementDataSection;
-use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
-use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
-use windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs;
-use windows::Devices::Bluetooth::Advertisement::BluetoothLEManufacturerData;
-use windows::Devices::Bluetooth::BluetoothAdapter;
-use windows::Devices::Bluetooth::BluetoothConnectionStatus;
-use windows::Devices::Bluetooth::BluetoothLEDevice;
-use windows::Devices::Enumeration::DeviceInformation;
-use windows::Devices::Enumeration::DeviceInformationKind;
-use windows::Devices::Radios::Radio;
-use windows::Devices::Radios::RadioState;
-use windows::Foundation::Collections::IIterable;
-use windows::Foundation::Collections::IVector;
+use tracing::{debug, error, trace, warn};
+use windows::core::{InParam, HSTRING};
+use windows::Devices::Bluetooth::Advertisement::{
+    BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementWatcher,
+    BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData,
+};
+use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
+use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
+use windows::Devices::Radios::{Radio, RadioState};
+use windows::Foundation::Collections::{IIterable, IVector};
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
 
 use super::device::{Device, DeviceId};
 use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
-use crate::AdapterEvent;
-use crate::AdvertisementData;
-use crate::AdvertisingDevice;
-use crate::BluetoothUuidExt;
-use crate::ManufacturerData;
-use crate::Result;
+use crate::{
+    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ManufacturerData, Result, SmallVec, Uuid,
+};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -201,7 +185,8 @@ impl Adapter {
         debug!("service filter = {:?}", servicefilter);
 
         // Combine the device and service filters
-        let mut aqsfilter = OsString::from("System.Devices.AepService.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\" AND (");
+        let mut aqsfilter =
+            OsString::from("System.Devices.AepService.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\" AND (");
         aqsfilter.push(devicefilter);
         aqsfilter.push(") AND (");
         aqsfilter.push(servicefilter);

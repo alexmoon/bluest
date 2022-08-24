@@ -1,13 +1,10 @@
-use smallvec::SmallVec;
-use uuid::Uuid;
-use windows::{
-    core::GUID,
-    Devices::Bluetooth::{BluetoothCacheMode, GenericAttributeProfile::GattDeviceService},
-};
+use windows::core::GUID;
+use windows::Devices::Bluetooth::BluetoothCacheMode;
+use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 
-use crate::Result;
-
-use super::{characteristic::Characteristic, error::check_communication_status};
+use super::characteristic::Characteristic;
+use super::error::check_communication_status;
+use crate::{Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Clone)]

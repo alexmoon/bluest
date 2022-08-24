@@ -17,7 +17,7 @@ default-target = "x86_64-apple-darwin"
 targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
 
 [features]
-serde = ["dep:serde", "uuid/serde"]
+serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
 displaydoc = "0.2.3"
@@ -30,7 +30,6 @@ smallvec = { version = "1.9.0", features = ["union"] }
 tokio = { version = "1.20.1", features = ["rt", "sync"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }
 tracing = "0.1.36"
-uuid = "1.1.1"
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
@@ -38,11 +37,14 @@ tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.39.0", features = ["implement", "Foundation", "Foundation_Collections", "Devices_Enumeration", "Devices_Bluetooth", "Devices_Bluetooth_Advertisement", "Devices_Bluetooth_GenericAttributeProfile", "Devices_Radios", "Storage_Streams"] }
+uuid = "1.1.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.15.0", features = ["bluetoothd"] }
+once_cell = "1.13.1"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 objc = "0.2.7"
 objc_id = "0.1.1"
 objc-foundation = "0.1.1"
+uuid = "1.1.1"

@@ -1,4 +1,5 @@
-use windows::{Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus, Foundation::IReference};
+use windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+use windows::Foundation::IReference;
 
 use crate::error::ErrorKind;
 use crate::Result;

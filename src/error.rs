@@ -151,6 +151,8 @@ pub enum AttErrorCode {
 /// Bluetooth Attribute Protocol error. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
 #[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AttError {
+    /// (unknown)
+    Unknown,
     /// {0}
     Known(AttErrorCode),
     /// application specific error: {0}

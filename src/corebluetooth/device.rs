@@ -2,15 +2,12 @@
 
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::{Id, ShareId};
-use smallvec::SmallVec;
-use uuid::Uuid;
 
 use super::delegates::{self, PeripheralDelegate, PeripheralEvent};
 use super::service::Service;
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
-
 use crate::error::ErrorKind;
-use crate::{Error, Result};
+use crate::{Error, Result, SmallVec, Uuid};
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -82,7 +79,7 @@ impl Device {
     }
 
     /// The local name for this device, if available
-    pub fn name(&self) -> Option<String> {
+    pub async fn name(&self) -> Option<String> {
         self.peripheral.name().map(|x| x.as_str().to_owned())
     }
 
