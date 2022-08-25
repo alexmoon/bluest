@@ -46,8 +46,6 @@ use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 pub use ::bluer::Uuid;
 pub use btuuid::BluetoothUuidExt;
-use enumflags2::bitflags;
-pub use enumflags2::BitFlags;
 pub use error::Error;
 pub use smallvec::SmallVec;
 pub use sys::adapter::Adapter;
@@ -116,20 +114,55 @@ pub struct ManufacturerData {
 }
 
 /// GATT characteristic properties as defined in the Bluetooth Core Specification, Vol 3, Part G, §3.3.1.1.
-/// Extended properties are also included in the upper bits as defined in §3.3.3.1.
+/// Extended properties are also included as defined in §3.3.3.1.
 #[allow(missing_docs)]
-#[bitflags]
-#[repr(u32)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum CharacteristicProperty {
-    Broadcast = 0x01,
-    Read = 0x02,
-    WriteWithoutResponse = 0x04,
-    Write = 0x08,
-    Notify = 0x10,
-    Indicate = 0x20,
-    AuthenticatedSignedWrites = 0x40,
-    ExtendedProperties = 0x80,
-    ReliableWrite = 0x0100,
-    WritableAuxiliaries = 0x0200,
+#[non_exhaustive]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CharacteristicProperties {
+    pub broadcast: bool,
+    pub read: bool,
+    pub write_without_response: bool,
+    pub write: bool,
+    pub notify: bool,
+    pub indicate: bool,
+    pub authenticated_signed_writes: bool,
+    pub extended_properties: bool,
+    pub reliable_write: bool,
+    pub writable_auxiliaries: bool,
+}
+
+impl CharacteristicProperties {
+    /// Raw transmutation from [u32].
+    ///
+    /// Extended properties are in the upper bits.
+    pub fn from_bits(bits: u32) -> Self {
+        CharacteristicProperties {
+            broadcast: (bits & (1 << 0)) != 0,
+            read: (bits & (1 << 1)) != 0,
+            write_without_response: (bits & (1 << 2)) != 0,
+            write: (bits & (1 << 3)) != 0,
+            notify: (bits & (1 << 4)) != 0,
+            indicate: (bits & (1 << 5)) != 0,
+            authenticated_signed_writes: (bits & (1 << 6)) != 0,
+            extended_properties: (bits & (1 << 7)) != 0,
+            reliable_write: (bits & (1 << 8)) != 0,
+            writable_auxiliaries: (bits & (1 << 9)) != 0,
+        }
+    }
+
+    /// Raw transmutation to [u32].
+    ///
+    /// Extended properties are in the upper bits.
+    pub fn to_bits(self) -> u32 {
+        u32::from(self.broadcast)
+            | (u32::from(self.read) << 1)
+            | (u32::from(self.write_without_response) << 2)
+            | (u32::from(self.write) << 3)
+            | (u32::from(self.notify) << 4)
+            | (u32::from(self.indicate) << 5)
+            | (u32::from(self.authenticated_signed_writes) << 6)
+            | (u32::from(self.extended_properties) << 7)
+            | (u32::from(self.reliable_write) << 8)
+            | (u32::from(self.writable_auxiliaries) << 9)
+    }
 }

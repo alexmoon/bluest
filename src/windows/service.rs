@@ -7,9 +7,25 @@ use super::error::check_communication_status;
 use crate::{Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT service
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone)]
 pub struct Service {
     inner: GattDeviceService,
+}
+
+impl PartialEq for Service {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.DeviceId().unwrap() == other.inner.DeviceId().unwrap()
+            && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
+    }
+}
+
+impl Eq for Service {}
+
+impl std::hash::Hash for Service {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner.DeviceId().unwrap().to_os_string().hash(state);
+        self.inner.AttributeHandle().unwrap().hash(state);
+    }
 }
 
 impl std::fmt::Debug for Service {

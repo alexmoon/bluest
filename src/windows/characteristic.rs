@@ -12,12 +12,34 @@ use windows::Storage::Streams::{DataReader, DataWriter};
 use super::descriptor::Descriptor;
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid, BitFlags};
+use crate::{CharacteristicProperties, Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT characteristic
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Characteristic {
     inner: GattCharacteristic,
+}
+
+impl PartialEq for Characteristic {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.Service().unwrap().DeviceId().unwrap() == other.inner.Service().unwrap().DeviceId().unwrap()
+            && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
+    }
+}
+
+impl Eq for Characteristic {}
+
+impl std::hash::Hash for Characteristic {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner
+            .Service()
+            .unwrap()
+            .DeviceId()
+            .unwrap()
+            .to_os_string()
+            .hash(state);
+        self.inner.AttributeHandle().unwrap().hash(state);
+    }
 }
 
 impl std::fmt::Debug for Characteristic {
@@ -49,12 +71,12 @@ impl Characteristic {
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
-    pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
+    pub fn properties(&self) -> CharacteristicProperties {
         let props = self
             .inner
             .CharacteristicProperties()
             .expect("CharacteristicProperties missing on GattCharacteristic");
-        BitFlags::from_bits(props.0).unwrap_or_else(|e| e.truncate())
+        CharacteristicProperties::from_bits(props.0)
     }
 
     /// The cached value of this characteristic
@@ -109,9 +131,9 @@ impl Characteristic {
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
         let props = self.properties();
-        let value = if props.contains(CharacteristicProperty::Notify) {
+        let value = if props.notify {
             GattClientCharacteristicConfigurationDescriptorValue::Notify
-        } else if props.contains(CharacteristicProperty::Indicate) {
+        } else if props.indicate {
             GattClientCharacteristicConfigurationDescriptorValue::Indicate
         } else {
             return Err(Error::new(

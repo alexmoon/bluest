@@ -357,7 +357,7 @@ impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
 
             (local_name, manufacturer_data, services, service_data)
         } else {
-            (None, None, SmallVec::new(), SmallVec::new(), HashMap::new())
+            (None, None, SmallVec::new(), HashMap::new())
         };
 
         AdvertisementData {

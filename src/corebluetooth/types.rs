@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::os::raw::{c_char, c_void};
 
-use enumflags2::bitflags;
+use enumflags2::{bitflags, BitFlags};
 use num_enum::{FromPrimitive, TryFromPrimitive};
 use objc::runtime::{Object, BOOL, NO};
 use objc::{msg_send, sel, sel_impl};
@@ -17,7 +17,7 @@ use objc_id::{Id, ShareId};
 
 use super::delegates::{CentralDelegate, PeripheralDelegate};
 use crate::btuuid::BluetoothUuidExt;
-use crate::{AdvertisementData, BitFlags, ManufacturerData, SmallVec, Uuid};
+use crate::{AdvertisementData, ManufacturerData, SmallVec, Uuid};
 
 #[allow(non_camel_case_types)]
 pub type id = *mut Object;

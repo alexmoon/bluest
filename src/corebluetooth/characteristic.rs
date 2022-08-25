@@ -1,4 +1,3 @@
-use enumflags2::{ FromBitsError};
 use futures::Stream;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
@@ -9,10 +8,10 @@ use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
 use super::types::{CBCharacteristic, CBCharacteristicWriteType};
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid, BitFlags};
+use crate::{CharacteristicProperties, Error, Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT characteristic
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Characteristic {
     inner: ShareId<CBCharacteristic>,
 }
@@ -33,8 +32,8 @@ impl Characteristic {
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
-    pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
-        BitFlags::from_bits(self.inner.properties() as u32).unwrap_or_else(FromBitsError::truncate)
+    pub fn properties(&self) -> CharacteristicProperties {
+        CharacteristicProperties::from_bits(self.inner.properties() as u32)
     }
 
     /// The cached value of this characteristic
@@ -122,10 +121,8 @@ impl Characteristic {
     ///
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
-        if !(self
-            .properties()
-            .intersects(CharacteristicProperty::Notify | CharacteristicProperty::Indicate))
-        {
+        let properties = self.properties();
+        if !(properties.notify || properties.indicate) {
             return Err(Error::new(
                 ErrorKind::NotSupported,
                 None,
