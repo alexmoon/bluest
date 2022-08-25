@@ -28,13 +28,13 @@ impl Characteristic {
         Characteristic { inner }
     }
 
-    /// The [Uuid] identifying the type of this GATT characteristic
+    /// The [`Uuid`] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
         // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
         futures::executor::block_on(async { self.uuid_async().await.unwrap() })
     }
 
-    /// The [Uuid] identifying the type of this GATT characteristic
+    /// The [`Uuid`] identifying the type of this GATT characteristic
     ///
     /// # Platform specific
     ///
@@ -118,7 +118,7 @@ impl Characteristic {
 
     /// Discover the descriptors associated with this service.
     ///
-    /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
+    /// If a [`Uuid`] is provided, only descriptors with that [`Uuid`] will be discovered. If `uuid` is `None` then all
     /// descriptors for this characteristic will be discovered.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         self.descriptors().await

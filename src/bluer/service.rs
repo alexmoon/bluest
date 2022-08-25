@@ -30,13 +30,13 @@ impl Service {
         Service { inner }
     }
 
-    /// The [Uuid] identifying the type of this GATT service
+    /// The [`Uuid`] identifying the type of this GATT service
     pub fn uuid(&self) -> Uuid {
         // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
         futures::executor::block_on(async { self.uuid_async().await.unwrap() })
     }
 
-    /// The [Uuid] identifying the type of this GATT service
+    /// The [`Uuid`] identifying the type of this GATT service
     ///
     /// # Platform specific
     ///
@@ -59,7 +59,7 @@ impl Service {
         self.characteristics().await
     }
 
-    /// Discover the characteristic(s) with the given [Uuid].
+    /// Discover the characteristic(s) with the given [`Uuid`].
     pub async fn discover_characteristics_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Characteristic>> {
         self.characteristics().await
     }
@@ -81,7 +81,7 @@ impl Service {
         self.included_services().await
     }
 
-    /// Discover the included service(s) with the given [Uuid].
+    /// Discover the included service(s) with the given [`Uuid`].
     pub async fn discover_included_services_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Service>> {
         self.included_services().await
     }

@@ -62,7 +62,7 @@ impl Characteristic {
         Characteristic { inner: characteristic }
     }
 
-    /// The [Uuid] identifying the type of this GATT characteristic
+    /// The [`Uuid`] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattCharacteristic").to_u128())
     }

@@ -23,7 +23,7 @@ impl Characteristic {
         }
     }
 
-    /// The [Uuid] identifying the type of this GATT characteristic
+    /// The [`Uuid`] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }
@@ -194,7 +194,7 @@ impl Characteristic {
 
     /// Discover the descriptors associated with this service.
     ///
-    /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
+    /// If a [`Uuid`] is provided, only descriptors with that [`Uuid`] will be discovered. If `uuid` is `None` then all
     /// descriptors for this characteristic will be discovered.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         let service = self.inner.service();

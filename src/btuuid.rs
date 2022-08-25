@@ -18,7 +18,7 @@ pub const fn bluetooth_uuid_from_u32(uuid: u32) -> Uuid {
     Uuid::from_u128(((uuid as u128) << 96) | BLUETOOTH_BASE_UUID)
 }
 
-/// Extension trait for [Uuid] with helper methods for dealing with Bluetooth 16-bit and 32-bit UUIDs
+/// Extension trait for [`Uuid`] with helper methods for dealing with Bluetooth 16-bit and 32-bit UUIDs
 pub trait BluetoothUuidExt: private::Sealed {
     /// Creates a 16-bit Bluetooth UUID
     fn from_u16(uuid: u16) -> Self;

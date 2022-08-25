@@ -25,7 +25,7 @@ impl Descriptor {
         Descriptor { inner: descriptor }
     }
 
-    /// The [Uuid] identifying the type of descriptor
+    /// The [`Uuid`] identifying the type of descriptor
     pub fn uuid(&self) -> Result<Uuid> {
         Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
     }

@@ -22,7 +22,7 @@ pub(super) async fn session() -> bluer::Result<&'static Session> {
 
 /// The system's Bluetooth adapter interface.
 ///
-/// The default adapter for the system may be accessed with the [Adapter::default()] method.
+/// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Debug, Clone)]
 pub struct Adapter {
     inner: bluer::Adapter,
@@ -54,7 +54,7 @@ impl Adapter {
             .map(|inner| Adapter { inner })
     }
 
-    /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
+    /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let stream = self.inner.events().await?;
         Ok(stream.filter_map(|event| match event {
@@ -133,8 +133,8 @@ impl Adapter {
 
     /// Starts scanning for Bluetooth advertising packets.
     ///
-    /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
-    /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
+    /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
+    /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         Ok(self
@@ -158,12 +158,12 @@ impl Adapter {
             .filter(|x| services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))))
     }
 
-    /// Connects to the [Device]
+    /// Connects to the [`Device`]
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         device.inner.connect().await.map_err(Into::into)
     }
 
-    /// Disconnects from the [Device]
+    /// Disconnects from the [`Device`]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         device.inner.disconnect().await.map_err(Into::into)
     }

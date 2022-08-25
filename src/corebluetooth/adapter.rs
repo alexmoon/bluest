@@ -149,7 +149,7 @@ impl Adapter {
     /// Starts scanning for Bluetooth advertising packets.
     ///
     /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
-    /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
+    /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         if self.central.state() != CBManagerState::PoweredOn {
@@ -193,7 +193,7 @@ impl Adapter {
         Ok(events)
     }
 
-    /// Connects to the [Device]
+    /// Connects to the [`Device`]
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             return Err(ErrorKind::AdapterUnavailable.into());
@@ -218,7 +218,7 @@ impl Adapter {
         Ok(())
     }
 
-    /// Disconnects from the [Device]
+    /// Disconnects from the [`Device`]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
             return Err(ErrorKind::AdapterUnavailable.into());

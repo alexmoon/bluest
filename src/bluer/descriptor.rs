@@ -23,13 +23,13 @@ impl Descriptor {
         Descriptor { inner }
     }
 
-    /// The [Uuid] identifying the type of this GATT descriptor
+    /// The [`Uuid`] identifying the type of this GATT descriptor
     pub fn uuid(&self) -> Uuid {
         // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
         futures::executor::block_on(async { self.uuid_async().await.unwrap() })
     }
 
-    /// The [Uuid] identifying the type of this GATT descriptor
+    /// The [`Uuid`] identifying the type of this GATT descriptor
     ///
     /// # Platform specific
     ///

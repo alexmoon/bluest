@@ -119,7 +119,7 @@ impl Device {
         Ok(services.into_iter().map(Service::new).collect())
     }
 
-    /// Discover the primary service(s) of this device with the given [Uuid].
+    /// Discover the primary service(s) of this device with the given [`Uuid`].
     pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
             .device

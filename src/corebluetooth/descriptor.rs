@@ -50,7 +50,7 @@ impl Descriptor {
         }
     }
 
-    /// The [Uuid] identifying the type of this GATT descriptor
+    /// The [`Uuid`] identifying the type of this GATT descriptor
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }

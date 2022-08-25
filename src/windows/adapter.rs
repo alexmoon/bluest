@@ -23,7 +23,7 @@ use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt
 
 /// The system's Bluetooth adapter interface.
 ///
-/// The default adapter for the system may be created with the [Adapter::default()] method.
+/// The default adapter for the system may be created with the [`Adapter::default()`] method.
 #[derive(Clone)]
 pub struct Adapter {
     inner: BluetoothAdapter,
@@ -56,7 +56,7 @@ impl Adapter {
         Some(Adapter { inner: adapter })
     }
 
-    /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
+    /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let (sender, receiver) = tokio::sync::mpsc::channel(16);
         let radio = self.inner.GetRadioAsync()?.await?;
@@ -226,8 +226,8 @@ impl Adapter {
 
     /// Starts scanning for Bluetooth advertising packets.
     ///
-    /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
-    /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
+    /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
+    /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     ///
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
@@ -303,12 +303,12 @@ impl Adapter {
             }))
     }
 
-    /// Connects to the [Device]
+    /// Connects to the [`Device`]
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         device.connect().await
     }
 
-    /// Disconnects from [Device]
+    /// Disconnects from [`Device`]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         device.disconnect().await
     }

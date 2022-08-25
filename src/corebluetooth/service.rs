@@ -20,7 +20,7 @@ impl Service {
         }
     }
 
-    /// The [Uuid] identifying the type of this GATT service
+    /// The [`Uuid`] identifying the type of this GATT service
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }
@@ -39,7 +39,7 @@ impl Service {
         self.discover_characteristics_inner(None).await
     }
 
-    /// Discover the characteristic(s) with the given [Uuid].
+    /// Discover the characteristic(s) with the given [`Uuid`].
     pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
         let uuids = {
             let vec = vec![CBUUID::from_uuid(uuid)];
@@ -94,7 +94,7 @@ impl Service {
         self.discover_included_services_inner(None).await
     }
 
-    /// Discover the included service(s) with the given [Uuid].
+    /// Discover the included service(s) with the given [`Uuid`].
     pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let uuids = {
             let vec = vec![CBUUID::from_uuid(uuid)];

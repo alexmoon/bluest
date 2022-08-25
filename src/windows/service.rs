@@ -52,7 +52,7 @@ impl Service {
         Service { inner: service }
     }
 
-    /// The [UUID] identifying the type of service
+    /// The [`Uuid`] identifying the type of service
     pub fn uuid(&self) -> Result<Uuid> {
         Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
     }
@@ -68,7 +68,7 @@ impl Service {
         Ok(characteristics.into_iter().map(Characteristic::new).collect())
     }
 
-    /// Discover the characteristics(s) of this service with the given [Uuid].
+    /// Discover the characteristics(s) of this service with the given [`Uuid`].
     pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
@@ -104,7 +104,7 @@ impl Service {
         Ok(services.into_iter().map(Service::new).collect())
     }
 
-    /// Discover the included service(s) of this service with the given [Uuid].
+    /// Discover the included service(s) of this service with the given [`Uuid`].
     pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
             .inner

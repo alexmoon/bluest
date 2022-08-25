@@ -131,7 +131,7 @@ pub struct CharacteristicProperties {
 }
 
 impl CharacteristicProperties {
-    /// Raw transmutation from [u32].
+    /// Raw transmutation from [`u32`].
     ///
     /// Extended properties are in the upper bits.
     pub fn from_bits(bits: u32) -> Self {
@@ -149,7 +149,7 @@ impl CharacteristicProperties {
         }
     }
 
-    /// Raw transmutation to [u32].
+    /// Raw transmutation to [`u32`].
     ///
     /// Extended properties are in the upper bits.
     pub fn to_bits(self) -> u32 {

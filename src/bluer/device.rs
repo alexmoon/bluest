@@ -84,7 +84,7 @@ impl Device {
         self.services().await
     }
 
-    /// Discover the primary service(s) of this device with the given [Uuid].
+    /// Discover the primary service(s) of this device with the given [`Uuid`].
     pub async fn discover_services_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Service>> {
         self.services().await
     }
