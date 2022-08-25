@@ -19,7 +19,7 @@ use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error,
 
 /// The system's Bluetooth adapter interface.
 ///
-/// The default adapter for the system may be accessed with the [Adapter::default()] method.
+/// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Clone)]
 pub struct Adapter {
     central: ShareId<CBCentralManager>,
@@ -69,7 +69,7 @@ impl Adapter {
         })
     }
 
-    /// A stream of [AdapterEvent] which allows the application to identify when the adapter is enabled or disabled.
+    /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let receiver = self.sender.subscribe();
         Ok(BroadcastStream::new(receiver).filter_map(|x| match x {
@@ -148,16 +148,16 @@ impl Adapter {
 
     /// Starts scanning for Bluetooth advertising packets.
     ///
-    /// Returns a stream of [AdvertisingDevice] structs which contain the data from the advertising packet and the
+    /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
     /// [Device] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         if self.central.state() != CBManagerState::PoweredOn {
-            Err(ErrorKind::AdapterUnavailable)?
+            return Err(ErrorKind::AdapterUnavailable.into());
         }
 
         if self.scanning.swap(true, Ordering::Acquire) {
-            Err(ErrorKind::AlreadyScanning)?;
+            return Err(ErrorKind::AlreadyScanning.into());
         }
 
         let services = (!services.is_empty()).then(|| {
@@ -181,7 +181,7 @@ impl Adapter {
                         rssi,
                     }) => Some(AdvertisingDevice {
                         device: Device::new(peripheral),
-                        adv_data: AdvertisementData::from_nsdictionary(adv_data),
+                        adv_data: AdvertisementData::from_nsdictionary(&adv_data),
                         rssi: Some(rssi),
                     }),
                     _ => None,
@@ -196,7 +196,7 @@ impl Adapter {
     /// Connects to the [Device]
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
-            Err(ErrorKind::AdapterUnavailable)?
+            return Err(ErrorKind::AdapterUnavailable.into());
         }
 
         let mut events = BroadcastStream::new(self.sender.subscribe());
@@ -204,14 +204,12 @@ impl Adapter {
         self.central.connect_peripheral(&*device.peripheral, None);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::PoweredOn {
-                Err(ErrorKind::AdapterUnavailable)?
+                return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
                 Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.peripheral => break,
                 Ok(delegates::CentralEvent::ConnectFailed { peripheral, error }) if peripheral == device.peripheral => {
-                    return Err(error
-                        .map(Error::from_nserror)
-                        .unwrap_or_else(|| ErrorKind::ConnectionFailed.into()));
+                    return Err(error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror));
                 }
                 _ => (),
             }
@@ -223,7 +221,7 @@ impl Adapter {
     /// Disconnects from the [Device]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::PoweredOn {
-            Err(ErrorKind::AdapterUnavailable)?
+            return Err(ErrorKind::AdapterUnavailable.into());
         }
 
         let mut events = BroadcastStream::new(self.sender.subscribe());
@@ -231,7 +229,7 @@ impl Adapter {
         self.central.cancel_peripheral_connection(&*device.peripheral);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::PoweredOn {
-                Err(ErrorKind::AdapterUnavailable)?
+                return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
                 Ok(delegates::CentralEvent::Disconnect {

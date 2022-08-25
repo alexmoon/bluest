@@ -7,11 +7,13 @@ use crate::Uuid;
 pub const BLUETOOTH_BASE_UUID: u128 = 0x00000000_0000_1000_8000_00805f9b34fb;
 
 /// Const function to create a 16-bit Bluetooth UUID
+#[must_use]
 pub const fn bluetooth_uuid_from_u16(uuid: u16) -> Uuid {
     Uuid::from_u128(((uuid as u128) << 96) | BLUETOOTH_BASE_UUID)
 }
 
 /// Const function to create a 32-bit Bluetooth UUID
+#[must_use]
 pub const fn bluetooth_uuid_from_u32(uuid: u32) -> Uuid {
     Uuid::from_u128(((uuid as u128) << 96) | BLUETOOTH_BASE_UUID)
 }
@@ -67,8 +69,7 @@ impl BluetoothUuidExt for Uuid {
     }
 
     fn is_u16_uuid(&self) -> bool {
-        let u = self.as_u128();
-        (u & ((1 << 96) - 1)) == BLUETOOTH_BASE_UUID && (((u >> 96) as u32) & 0xffff0000) == 0
+        self.try_to_u16().is_some()
     }
 
     fn is_u32_uuid(&self) -> bool {
@@ -77,8 +78,7 @@ impl BluetoothUuidExt for Uuid {
     }
 
     fn try_to_u16(&self) -> Option<u16> {
-        let u = self.as_u128();
-        self.is_u16_uuid().then(|| (u >> 96) as u16)
+        self.try_to_u32().and_then(|x| x.try_into().ok())
     }
 
     fn try_to_u32(&self) -> Option<u32> {

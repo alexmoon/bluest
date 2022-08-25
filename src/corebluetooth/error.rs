@@ -82,6 +82,6 @@ impl std::ops::Deref for OsError {
     type Target = NSError;
 
     fn deref(&self) -> &Self::Target {
-        self.inner.deref()
+        &*self.inner
     }
 }

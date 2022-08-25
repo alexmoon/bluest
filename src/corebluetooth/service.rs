@@ -60,13 +60,13 @@ impl Service {
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DiscoveredCharacteristics { service, error } if service == self.inner => match error {
-                    Some(err) => Err(Error::from_nserror(err))?,
+                    Some(err) => return Err(Error::from_nserror(err)),
                     None => break,
                 },
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&self.inner) =>
                 {
-                    Err(ErrorKind::ServiceChanged)?
+                    return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
             }
@@ -119,14 +119,14 @@ impl Service {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DiscoveredIncludedServices { service, error } if service == self.inner => {
                     match error {
-                        Some(err) => Err(Error::from_nserror(err))?,
+                        Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&self.inner) =>
                 {
-                    Err(ErrorKind::ServiceChanged)?
+                    return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
             }

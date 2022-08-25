@@ -100,7 +100,7 @@ impl Device {
     }
 
     /// The local name for this device, if available
-    pub async fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.device
             .Name()
             .ok()
@@ -108,7 +108,7 @@ impl Device {
     }
 
     /// The connection status for this device
-    pub async fn is_connected(&self) -> bool {
+    pub fn is_connected(&self) -> bool {
         self.device.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
     }
 

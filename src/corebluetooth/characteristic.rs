@@ -1,4 +1,4 @@
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, FromBitsError};
 use futures::Stream;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
@@ -34,7 +34,7 @@ impl Characteristic {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub fn properties(&self) -> BitFlags<CharacteristicProperty> {
-        BitFlags::from_bits(self.inner.properties() as u32).unwrap_or_else(|x| x.truncate())
+        BitFlags::from_bits(self.inner.properties() as u32).unwrap_or_else(FromBitsError::truncate)
     }
 
     /// The cached value of this characteristic
@@ -94,7 +94,7 @@ impl Characteristic {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::CharacteristicValueWrite { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(Error::from_nserror(err))?,
+                        Some(err) => return Err(Error::from_nserror(err)),
                         None => return Ok(()),
                     }
                 }
@@ -198,15 +198,6 @@ impl Characteristic {
         Ok(self.inner.is_notifying())
     }
 
-    /// Is the device currently broadcasting this characteristic?
-    ///
-    /// # Platform specific
-    ///
-    /// This function is available on MacOS/iOS only.
-    pub async fn is_broadcasting(&self) -> Result<bool> {
-        Ok(self.inner.is_broadcasting())
-    }
-
     /// Discover the descriptors associated with this service.
     ///
     /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
@@ -221,7 +212,7 @@ impl Characteristic {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DiscoveredDescriptors { characteristic, error } if characteristic == self.inner => {
                     match error {
-                        Some(err) => Err(Error::from_nserror(err))?,
+                        Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
                 }

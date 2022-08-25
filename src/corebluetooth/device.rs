@@ -79,12 +79,12 @@ impl Device {
     }
 
     /// The local name for this device, if available
-    pub async fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.peripheral.name().map(|x| x.as_str().to_owned())
     }
 
     /// The connection status for this device
-    pub async fn is_connected(&self) -> bool {
+    pub fn is_connected(&self) -> bool {
         self.peripheral.state() == CBPeripheralState::Connected
     }
 
@@ -110,7 +110,7 @@ impl Device {
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DiscoveredServices { error: None } => break,
-                PeripheralEvent::DiscoveredServices { error: Some(err) } => Err(Error::from_nserror(err))?,
+                PeripheralEvent::DiscoveredServices { error: Some(err) } => return Err(Error::from_nserror(err)),
                 _ => (),
             }
         }
@@ -157,8 +157,8 @@ impl Device {
         loop {
             match receiver.recv().await {
                 Ok(PeripheralEvent::ReadRssi { rssi, error: None }) => return Ok(rssi),
-                Ok(PeripheralEvent::ReadRssi { error: Some(err), .. }) => Err(Error::from_nserror(err))?,
-                Err(err) => Err(Error::from_recv_error(err))?,
+                Ok(PeripheralEvent::ReadRssi { error: Some(err), .. }) => return Err(Error::from_nserror(err)),
+                Err(err) => return Err(Error::from_recv_error(err)),
                 _ => (),
             }
         }

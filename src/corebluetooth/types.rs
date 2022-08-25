@@ -125,22 +125,21 @@ pub enum CBATTError {
 }
 
 impl AdvertisementData {
-    pub(super) fn from_nsdictionary(adv_data: ShareId<NSDictionary<NSString, NSObject>>) -> Self {
+    pub(super) fn from_nsdictionary(adv_data: &ShareId<NSDictionary<NSString, NSObject>>) -> Self {
         let is_connectable = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataIsConnectable"))
-            .map(|val| unsafe {
+            .map_or(false, |val| unsafe {
                 let n: BOOL = msg_send![val, boolValue];
                 n != NO
-            })
-            .unwrap_or(false);
+            });
 
         let local_name = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataLocalName"))
-            .map(|val| unsafe { std::mem::transmute::<_, &NSString>(val).as_str().to_owned() });
+            .map(|val| unsafe { (*(val as *const NSObject).cast::<NSString>()).as_str().to_owned() });
 
         let manufacturer_data = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataManufacturerData"))
-            .map(|val| unsafe { std::mem::transmute::<_, &NSData>(val).bytes() })
+            .map(|val| unsafe { (*(val as *const NSObject).cast::<NSData>()).bytes() })
             .and_then(|val| {
                 (val.len() >= 2).then(|| ManufacturerData {
                     company_id: u16::from_le_bytes(val[0..2].try_into().unwrap()),
@@ -154,7 +153,7 @@ impl AdvertisementData {
 
         let service_data = if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataServiceData")) {
             unsafe {
-                let val: &NSDictionary<CBUUID, NSData> = std::mem::transmute(val);
+                let val: &NSDictionary<CBUUID, NSData> = &*(val as *const NSObject).cast();
                 let mut res = HashMap::with_capacity(val.count());
                 for k in val.enumerator() {
                     res.insert(k.to_uuid(), SmallVec::from_slice(val.object_for(k).unwrap().bytes()));
@@ -174,16 +173,16 @@ impl AdvertisementData {
                     .into_iter(),
             )
             .flat_map(|x| {
-                let val: &NSArray<CBUUID> = unsafe { std::mem::transmute(x) };
+                let val: &NSArray<CBUUID> = unsafe { &*(x as *const NSObject).cast() };
                 val.enumerator()
             })
-            .map(|x| x.to_uuid())
+            .map(CBUUID::to_uuid)
             .collect::<SmallVec<_>>();
 
         let solicited_services =
             if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataSolicitedServiceUUIDs")) {
-                let val: &NSArray<CBUUID> = unsafe { std::mem::transmute(val) };
-                val.enumerator().map(|x| x.to_uuid()).collect()
+                let val: &NSArray<CBUUID> = unsafe { &*(val as *const NSObject).cast() };
+                val.enumerator().map(CBUUID::to_uuid).collect()
             } else {
                 SmallVec::new()
             };
@@ -191,9 +190,9 @@ impl AdvertisementData {
         AdvertisementData {
             local_name,
             manufacturer_data,
-            service_data,
             services,
             solicited_services,
+            service_data,
             tx_power_level,
             is_connectable,
         }
@@ -379,7 +378,7 @@ impl CBPeripheral {
 
     pub fn subscribe(&self) -> crate::Result<tokio::sync::broadcast::Receiver<super::delegates::PeripheralEvent>> {
         self.delegate()
-            .and_then(|x| x.sender().map(|x| x.subscribe()))
+            .and_then(|x| x.sender().map(tokio::sync::broadcast::Sender::subscribe))
             .ok_or_else(|| {
                 crate::Error::new(
                     crate::error::ErrorKind::Internal,

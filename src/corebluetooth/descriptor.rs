@@ -79,7 +79,7 @@ impl Descriptor {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DescriptorValueUpdate { descriptor, error } if descriptor == self.inner => match error
                 {
-                    Some(err) => Err(Error::from_nserror(err))?,
+                    Some(err) => return Err(Error::from_nserror(err)),
                     None => return self.value().await,
                 },
                 PeripheralEvent::ServicesChanged { invalidated_services }
@@ -104,7 +104,7 @@ impl Descriptor {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DescriptorValueWrite { descriptor, error } if descriptor == self.inner => {
                     match error {
-                        Some(err) => Err(Error::from_nserror(err))?,
+                        Some(err) => return Err(Error::from_nserror(err)),
                         None => return Ok(()),
                     }
                 }

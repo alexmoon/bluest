@@ -19,7 +19,7 @@ impl Error {
         Error { kind, source, message }
     }
 
-    /// Returns the corresponding [ErrorKind] for this error.
+    /// Returns the corresponding [`ErrorKind`] for this error.
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }
