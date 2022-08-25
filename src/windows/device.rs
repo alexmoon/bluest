@@ -9,7 +9,7 @@ use windows::Foundation::TypedEventHandler;
 
 use super::error::check_communication_status;
 use super::service::Service;
-use crate::{Result, SmallVec, Uuid};
+use crate::{Result, Uuid};
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -109,7 +109,7 @@ impl Device {
     }
 
     /// Discover the primary services of this device.
-    pub async fn discover_services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_services(&self) -> Result<Vec<Service>> {
         let res = self
             .device
             .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Uncached)?
@@ -120,7 +120,7 @@ impl Device {
     }
 
     /// Discover the primary service(s) of this device with the given [Uuid].
-    pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
             .device
             .GetGattServicesForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), BluetoothCacheMode::Uncached)?
@@ -135,7 +135,7 @@ impl Device {
     ///
     /// If no services have been discovered yet, this method may either perform service discovery or return an empty
     /// set.
-    pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn services(&self) -> Result<Vec<Service>> {
         let res = self
             .device
             .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Cached)?

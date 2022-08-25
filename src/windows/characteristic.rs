@@ -12,7 +12,7 @@ use windows::Storage::Streams::{DataReader, DataWriter};
 use super::descriptor::Descriptor;
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperties, Error, Result, SmallVec, Uuid};
+use crate::{CharacteristicProperties, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Clone)]
@@ -82,22 +82,22 @@ impl Characteristic {
     /// The cached value of this characteristic
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
-    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn value(&self) -> Result<Vec<u8>> {
         self.read_value(BluetoothCacheMode::Cached).await
     }
 
     /// Read the value of this characteristic from the device
-    pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn read(&self) -> Result<Vec<u8>> {
         self.read_value(BluetoothCacheMode::Uncached).await
     }
 
-    async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
+    async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<Vec<u8>> {
         let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
         check_communication_status(res.Status()?, res.ProtocolError(), "reading characteristic")?;
 
         let buf = res.Value()?;
-        let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
+        let mut data = vec![0; buf.Length()? as usize];
         let reader = DataReader::FromBuffer(&buf)?;
         reader.ReadBytes(data.as_mut_slice())?;
         Ok(data)
@@ -129,7 +129,7 @@ impl Characteristic {
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
         let props = self.properties();
         let value = if props.notify {
             GattClientCharacteristicConfigurationDescriptorValue::Notify
@@ -150,10 +150,10 @@ impl Characteristic {
                     .as_ref()
                     .expect("GattValueChangedEventArgs was null in ValueChanged handler");
 
-                fn get_value(event_args: &GattValueChangedEventArgs) -> Result<SmallVec<[u8; 16]>> {
+                fn get_value(event_args: &GattValueChangedEventArgs) -> Result<Vec<u8>> {
                     let buf = event_args.CharacteristicValue()?;
                     let len = buf.Length()?;
-                    let mut data: SmallVec<[u8; 16]> = SmallVec::from_elem(0, len as usize);
+                    let mut data: Vec<u8> = vec![0; len as usize];
                     let reader = DataReader::FromBuffer(&buf)?;
                     reader.ReadBytes(data.as_mut_slice())?;
                     Ok(data)
@@ -233,7 +233,7 @@ impl Characteristic {
     }
 
     /// Discover the descriptors associated with this characteristic.
-    pub async fn discover_descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+    pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         self.get_descriptors(BluetoothCacheMode::Uncached).await
     }
 
@@ -241,11 +241,11 @@ impl Characteristic {
     ///
     /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
     /// return an empty set.
-    pub async fn descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+    pub async fn descriptors(&self) -> Result<Vec<Descriptor>> {
         self.get_descriptors(BluetoothCacheMode::Cached).await
     }
 
-    async fn get_descriptors(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[Descriptor; 2]>> {
+    async fn get_descriptors(&self, cachemode: BluetoothCacheMode) -> Result<Vec<Descriptor>> {
         let res = self.inner.GetDescriptorsWithCacheModeAsync(cachemode)?.await?;
         check_communication_status(res.Status()?, res.ProtocolError(), "discovering descriptors")?;
         let descriptors = res.Descriptors()?;

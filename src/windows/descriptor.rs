@@ -3,7 +3,7 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
 use windows::Storage::Streams::{DataReader, DataWriter};
 
 use super::error::check_communication_status;
-use crate::{Result, SmallVec, Uuid};
+use crate::{Result, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Clone, PartialEq, Eq)]
@@ -33,22 +33,22 @@ impl Descriptor {
     /// The cached value of this descriptor
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
-    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn value(&self) -> Result<Vec<u8>> {
         self.read_value(BluetoothCacheMode::Cached).await
     }
 
     /// Read the value of this descriptor from the device
-    pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn read(&self) -> Result<Vec<u8>> {
         self.read_value(BluetoothCacheMode::Uncached).await
     }
 
-    async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<SmallVec<[u8; 16]>> {
+    async fn read_value(&self, cachemode: BluetoothCacheMode) -> Result<Vec<u8>> {
         let res = self.inner.ReadValueWithCacheModeAsync(cachemode)?.await?;
 
         check_communication_status(res.Status()?, res.ProtocolError(), "reading descriptor value")?;
 
         let buf = res.Value()?;
-        let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
+        let mut data = vec![0; buf.Length()? as usize];
         let reader = DataReader::FromBuffer(&buf)?;
         reader.ReadBytes(data.as_mut_slice())?;
         Ok(data)

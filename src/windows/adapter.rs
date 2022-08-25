@@ -19,9 +19,7 @@ use windows::Storage::Streams::DataReader;
 use super::device::{Device, DeviceId};
 use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
-use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ManufacturerData, Result, SmallVec, Uuid,
-};
+use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ManufacturerData, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -322,7 +320,7 @@ impl TryFrom<BluetoothLEManufacturerData> for ManufacturerData {
     fn try_from(val: BluetoothLEManufacturerData) -> Result<Self, Self::Error> {
         let company_id = val.CompanyId()?;
         let buf = val.Data()?;
-        let mut data = SmallVec::from_elem(0, buf.Length()? as usize);
+        let mut data = vec![0; buf.Length()? as usize];
         let reader = DataReader::FromBuffer(&buf)?;
         reader.ReadBytes(data.as_mut_slice())?;
         Ok(ManufacturerData { company_id, data })
@@ -357,7 +355,7 @@ impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
 
             (local_name, manufacturer_data, services, service_data)
         } else {
-            (None, None, SmallVec::new(), HashMap::new())
+            (None, None, Vec::new(), HashMap::new())
         };
 
         AdvertisementData {
@@ -392,7 +390,7 @@ fn read_uuid(reader: &DataReader, kind: UuidKind) -> windows::core::Result<Uuid>
 
 fn to_service_data(
     data_sections: &IVector<BluetoothLEAdvertisementDataSection>,
-) -> windows::core::Result<HashMap<Uuid, SmallVec<[u8; 16]>>> {
+) -> windows::core::Result<HashMap<Uuid, Vec<u8>>> {
     let mut service_data = HashMap::new();
 
     for data in data_sections {
@@ -408,7 +406,7 @@ fn to_service_data(
             let reader = DataReader::FromBuffer(&buf)?;
             if let Ok(uuid) = read_uuid(&reader, kind) {
                 let len = reader.UnconsumedBufferLength()? as usize;
-                let mut value = SmallVec::from_elem(0, len);
+                let mut value = vec![0; len];
                 reader.ReadBytes(value.as_mut_slice())?;
                 service_data.insert(uuid, value);
             }

@@ -5,7 +5,7 @@ use super::characteristic::Characteristic;
 use super::delegates::PeripheralEvent;
 use super::types::{CBService, CBUUID};
 use crate::error::ErrorKind;
-use crate::{Error, Result, SmallVec, Uuid};
+use crate::{Error, Result, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,12 +35,12 @@ impl Service {
     }
 
     /// Discover all characteristics associated with this service.
-    pub async fn discover_characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn discover_characteristics(&self) -> Result<Vec<Characteristic>> {
         self.discover_characteristics_inner(None).await
     }
 
     /// Discover the characteristic(s) with the given [Uuid].
-    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
         let uuids = {
             let vec = vec![CBUUID::from_uuid(uuid)];
             NSArray::from_vec(vec)
@@ -49,10 +49,7 @@ impl Service {
         self.discover_characteristics_inner(Some(uuids)).await
     }
 
-    async fn discover_characteristics_inner(
-        &self,
-        uuids: Option<Id<NSArray<CBUUID>>>,
-    ) -> Result<SmallVec<[Characteristic; 2]>> {
+    async fn discover_characteristics_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Characteristic>> {
         let peripheral = self.inner.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_characteristics(&self.inner, uuids);
@@ -79,7 +76,7 @@ impl Service {
     ///
     /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
     /// return an error.
-    pub async fn characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
         self.inner
             .characteristics()
             .map(|s| s.enumerator().map(Characteristic::new).collect())
@@ -93,12 +90,12 @@ impl Service {
     }
 
     /// Discover the included services of this service.
-    pub async fn discover_included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_included_services(&self) -> Result<Vec<Service>> {
         self.discover_included_services_inner(None).await
     }
 
     /// Discover the included service(s) with the given [Uuid].
-    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let uuids = {
             let vec = vec![CBUUID::from_uuid(uuid)];
             NSArray::from_vec(vec)
@@ -107,10 +104,7 @@ impl Service {
         self.discover_included_services_inner(Some(uuids)).await
     }
 
-    async fn discover_included_services_inner(
-        &self,
-        uuids: Option<Id<NSArray<CBUUID>>>,
-    ) -> Result<SmallVec<[Service; 2]>> {
+    async fn discover_included_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
         let peripheral = self.inner.peripheral();
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_included_services(&self.inner, uuids);
@@ -139,7 +133,7 @@ impl Service {
     ///
     /// If no included services have been discovered yet, this method may either perform included service discovery
     /// or return an error.
-    pub async fn included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn included_services(&self) -> Result<Vec<Service>> {
         self.inner
             .included_services()
             .map(|s| s.enumerator().map(Service::new).collect())

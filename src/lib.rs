@@ -47,7 +47,6 @@ use std::collections::HashMap;
 pub use ::bluer::Uuid;
 pub use btuuid::BluetoothUuidExt;
 pub use error::Error;
-pub use smallvec::SmallVec;
 pub use sys::adapter::Adapter;
 pub use sys::characteristic::Characteristic;
 pub use sys::descriptor::Descriptor;
@@ -94,9 +93,9 @@ pub struct AdvertisementData {
     /// Manufacturer specific data (CSS §A.1.4)
     pub manufacturer_data: Option<ManufacturerData>,
     /// Advertised GATT service UUIDs (CSS §A.1.1)
-    pub services: SmallVec<[Uuid; 1]>,
+    pub services: Vec<Uuid>,
     /// Service associated data (CSS §A.1.11)
-    pub service_data: HashMap<Uuid, SmallVec<[u8; 16]>>,
+    pub service_data: HashMap<Uuid, Vec<u8>>,
     /// Transmitted power level (CSS §A.1.5)
     pub tx_power_level: Option<i16>,
     /// Set to true for connectable advertising packets
@@ -110,7 +109,7 @@ pub struct ManufacturerData {
     /// Company identifier (defined [here](https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers/))
     pub company_id: u16,
     /// Manufacturer specific data
-    pub data: SmallVec<[u8; 16]>,
+    pub data: Vec<u8>,
 }
 
 /// GATT characteristic properties as defined in the Bluetooth Core Specification, Vol 3, Part G, §3.3.1.1.

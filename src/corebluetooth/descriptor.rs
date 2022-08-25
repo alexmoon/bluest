@@ -5,7 +5,7 @@ use objc_id::ShareId;
 use super::delegates::PeripheralEvent;
 use super::types::{CBDescriptor, NSUInteger};
 use crate::error::ErrorKind;
-use crate::{Error, Result, SmallVec, Uuid};
+use crate::{Error, Result, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13,11 +13,11 @@ pub struct Descriptor {
     inner: ShareId<CBDescriptor>,
 }
 
-fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
+fn value_to_slice(val: &NSObject) -> Vec<u8> {
     if val.is_kind_of(class!(NSNumber)) {
         // Characteristic EXtended Properties, Client Characteristic COnfiguration, Service Characteristic Configuration, or L2CAP PSM Value Characteristic
         let n: u16 = unsafe { msg_send![val, unsignedShortValue] };
-        SmallVec::from_slice(&n.to_le_bytes()[..])
+        n.to_le_bytes().to_vec()
     } else if val.is_kind_of(class!(NSString)) {
         // Characteristic User Description
         let ptr: *const u8 = unsafe { msg_send![val, UTF8String] };
@@ -27,7 +27,7 @@ fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
             let len: NSUInteger = unsafe { msg_send![val, lengthOfBytesUsingEncoding: 4usize] }; // NSUTF8StringEncoding
             unsafe { std::slice::from_raw_parts(ptr, len) }
         };
-        SmallVec::from_slice(val)
+        val.to_vec()
     } else if val.is_kind_of(class!(NSData)) {
         // All other descriptors
         let ptr: *const u8 = unsafe { msg_send![val, bytes] };
@@ -37,9 +37,9 @@ fn value_to_slice(val: &NSObject) -> SmallVec<[u8; 16]> {
             let len: NSUInteger = unsafe { msg_send![val, length] };
             unsafe { std::slice::from_raw_parts(ptr, len) }
         };
-        SmallVec::from_slice(val)
+        val.to_vec()
     } else {
-        SmallVec::new()
+        Vec::new()
     }
 }
 
@@ -58,7 +58,7 @@ impl Descriptor {
     /// The cached value of this descriptor
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
-    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn value(&self) -> Result<Vec<u8>> {
         self.inner.value().map(|val| value_to_slice(&*val)).ok_or_else(|| {
             Error::new(
                 ErrorKind::NotReady,
@@ -69,7 +69,7 @@ impl Descriptor {
     }
 
     /// Read the value of this descriptor from the device
-    pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.characteristic().service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;

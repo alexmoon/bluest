@@ -8,7 +8,7 @@ use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
 use super::types::{CBCharacteristic, CBCharacteristicWriteType};
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperties, Error, Result, SmallVec, Uuid};
+use crate::{CharacteristicProperties, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -39,21 +39,18 @@ impl Characteristic {
     /// The cached value of this characteristic
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
-    pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
-        self.inner
-            .value()
-            .map(|val| SmallVec::from_slice(val.bytes()))
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::NotReady,
-                    None,
-                    "the characteristic value has not been read".to_string(),
-                )
-            })
+    pub async fn value(&self) -> Result<Vec<u8>> {
+        self.inner.value().map(|val| val.bytes().to_vec()).ok_or_else(|| {
+            Error::new(
+                ErrorKind::NotReady,
+                None,
+                "the characteristic value has not been read".to_string(),
+            )
+        })
     }
 
     /// Read the value of this characteristic from the device
-    pub async fn read(&self) -> Result<SmallVec<[u8; 16]>> {
+    pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
@@ -120,7 +117,7 @@ impl Characteristic {
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<SmallVec<[u8; 16]>>> + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
         let properties = self.properties();
         if !(properties.notify || properties.indicate) {
             return Err(Error::new(
@@ -199,7 +196,7 @@ impl Characteristic {
     ///
     /// If a [Uuid] is provided, only descriptors with that [Uuid] will be discovered. If `uuid` is `None` then all
     /// descriptors for this characteristic will be discovered.
-    pub async fn discover_descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+    pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
@@ -229,7 +226,7 @@ impl Characteristic {
     ///
     /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
     /// return an error.
-    pub async fn descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
+    pub async fn descriptors(&self) -> Result<Vec<Descriptor>> {
         self.inner
             .descriptors()
             .map(|s| s.enumerator().map(Descriptor::new).collect())

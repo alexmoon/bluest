@@ -17,7 +17,7 @@ use objc_id::{Id, ShareId};
 
 use super::delegates::{CentralDelegate, PeripheralDelegate};
 use crate::btuuid::BluetoothUuidExt;
-use crate::{AdvertisementData, ManufacturerData, SmallVec, Uuid};
+use crate::{AdvertisementData, ManufacturerData, Uuid};
 
 #[allow(non_camel_case_types)]
 pub type id = *mut Object;
@@ -135,7 +135,7 @@ impl AdvertisementData {
 
         let local_name = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataLocalName"))
-            .map(|val| unsafe { (*(val as *const NSObject).cast::<NSString>()).as_str().to_owned() });
+            .map(|val| unsafe { (*(val as *const NSObject).cast::<NSString>()).as_str().to_string() });
 
         let manufacturer_data = adv_data
             .object_for(&*INSString::from_str("kCBAdvDataManufacturerData"))
@@ -143,7 +143,7 @@ impl AdvertisementData {
             .and_then(|val| {
                 (val.len() >= 2).then(|| ManufacturerData {
                     company_id: u16::from_le_bytes(val[0..2].try_into().unwrap()),
-                    data: SmallVec::from_slice(&val[2..]),
+                    data: val[2..].to_vec(),
                 })
             });
 
@@ -156,7 +156,7 @@ impl AdvertisementData {
                 let val: &NSDictionary<CBUUID, NSData> = &*(val as *const NSObject).cast();
                 let mut res = HashMap::with_capacity(val.count());
                 for k in val.enumerator() {
-                    res.insert(k.to_uuid(), SmallVec::from_slice(val.object_for(k).unwrap().bytes()));
+                    res.insert(k.to_uuid(), val.object_for(k).unwrap().bytes().to_vec());
                 }
                 res
             }
@@ -177,7 +177,7 @@ impl AdvertisementData {
                 val.enumerator()
             })
             .map(CBUUID::to_uuid)
-            .collect::<SmallVec<_>>();
+            .collect();
 
         AdvertisementData {
             local_name,
@@ -274,7 +274,7 @@ impl CBUUID {
     pub fn from_uuid(uuid: Uuid) -> Id<Self> {
         unsafe {
             let obj: *mut Self =
-                msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_owned())];
+                msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_vec())];
             Id::from_retained_ptr(obj)
         }
     }

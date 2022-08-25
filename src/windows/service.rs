@@ -4,7 +4,7 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 
 use super::characteristic::Characteristic;
 use super::error::check_communication_status;
-use crate::{Result, SmallVec, Uuid};
+use crate::{Result, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Clone)]
@@ -58,7 +58,7 @@ impl Service {
     }
 
     /// Discover the characteristics associated with this service.
-    pub async fn discover_characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn discover_characteristics(&self) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
             .GetCharacteristicsWithCacheModeAsync(BluetoothCacheMode::Uncached)?
@@ -69,7 +69,7 @@ impl Service {
     }
 
     /// Discover the characteristics(s) of this service with the given [Uuid].
-    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
             .GetCharacteristicsForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), BluetoothCacheMode::Uncached)?
@@ -83,7 +83,7 @@ impl Service {
     ///
     /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
     /// return an empty set.
-    pub async fn characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
+    pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
             .GetCharacteristicsWithCacheModeAsync(BluetoothCacheMode::Cached)?
@@ -94,7 +94,7 @@ impl Service {
     }
 
     /// Discover the included services of this service.
-    pub async fn discover_included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_included_services(&self) -> Result<Vec<Service>> {
         let res = self
             .inner
             .GetIncludedServicesWithCacheModeAsync(BluetoothCacheMode::Uncached)?
@@ -105,7 +105,7 @@ impl Service {
     }
 
     /// Discover the included service(s) of this service with the given [Uuid].
-    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
             .inner
             .GetIncludedServicesForUuidWithCacheModeAsync(
@@ -122,7 +122,7 @@ impl Service {
     ///
     /// If no included services have been discovered yet, this method may either perform included service discovery
     /// or return an empty set.
-    pub async fn included_services(&self) -> Result<SmallVec<[Service; 2]>> {
+    pub async fn included_services(&self) -> Result<Vec<Service>> {
         let res = self
             .inner
             .GetIncludedServicesWithCacheModeAsync(BluetoothCacheMode::Cached)?
