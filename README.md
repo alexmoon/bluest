@@ -31,8 +31,9 @@ The primary functions provided by **Bluest** are:
 - Windows
 - MacOS
 - iOS
+- Linux
 
-Linux support is coming soon.
+Android support is planned.
 
 ## Features
 

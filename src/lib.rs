@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 
-//! Bluest is a cross-platform Bluetooth Low Energy (BLE) crate. It currently supports Windows (version 10 and later)
-//! and MacOS/iOS. Linux and Android support are planned.
+//! Bluest is a cross-platform Bluetooth Low Energy (BLE) crate. It currently supports Windows (version 10 and later),
+//! MacOS/iOS, and Linux. Android support are planned.
 //!
 //! The crate currently supports the GAP Central and GATT Client roles. Peripheral and Server roles are not supported.
 //!
