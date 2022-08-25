@@ -1,4 +1,4 @@
-use enumflags2::{BitFlags, FromBitsError};
+use enumflags2::{ FromBitsError};
 use futures::Stream;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
@@ -9,7 +9,7 @@ use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
 use super::types::{CBCharacteristic, CBCharacteristicWriteType};
 use crate::error::ErrorKind;
-use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid};
+use crate::{CharacteristicProperty, Error, Result, SmallVec, Uuid, BitFlags};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +39,7 @@ impl Characteristic {
 
     /// The cached value of this characteristic
     ///
-    /// If the value has not yet been read, this function may either return an error or perform a read of the value.
+    /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
         self.inner
             .value()
@@ -230,7 +230,7 @@ impl Characteristic {
 
     /// Get previously discovered descriptors.
     ///
-    /// If no descriptors have been discovered yet, this function may either perform descriptor discovery or
+    /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
     /// return an error.
     pub async fn descriptors(&self) -> Result<SmallVec<[Descriptor; 2]>> {
         self.inner

@@ -32,7 +32,7 @@ impl Descriptor {
 
     /// The cached value of this descriptor
     ///
-    /// If the value has not yet been read, this function may either return an error or perform a read of the value.
+    /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<SmallVec<[u8; 16]>> {
         self.read_value(BluetoothCacheMode::Cached).await
     }

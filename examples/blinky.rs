@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
 use futures::future::Either;
+use futures::pin_mut;
 use futures::stream::StreamExt;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
@@ -64,15 +65,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .ok_or_else(|| "button characteristic not found".into());
     let button_characteristic = res?;
 
-    let button_fut = Box::pin(async {
+    let button_fut = async {
         info!("enabling button notifications");
-        let mut updates = button_characteristic.notify().await?;
+        let updates = button_characteristic.notify().await?;
+        pin_mut!(updates);
         info!("waiting for button changes");
         while let Some(val) = updates.next().await {
             info!("Button state changed: {:?}", val?);
         }
         Ok(())
-    });
+    };
+    pin_mut!(button_fut);
 
     let res: Result<_, Box<dyn Error>> = characteristics
         .iter()
@@ -80,7 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .ok_or_else(|| "led characteristic not found".into());
     let led_characteristic = res?;
 
-    let blink_fut = Box::pin(async {
+    let blink_fut = async {
         info!("blinking LED");
         tokio::time::sleep(Duration::from_secs(1)).await;
         loop {
@@ -91,7 +94,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             info!("LED off");
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    });
+    };
+    pin_mut!(blink_fut);
 
     type R = Result<(), Box<dyn Error>>;
     let res: Either<(R, _), (R, _)> = futures::future::select(blink_fut, button_fut).await;

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::os::raw::{c_char, c_void};
 
-use enumflags2::{bitflags, BitFlags};
+use enumflags2::bitflags;
 use num_enum::{FromPrimitive, TryFromPrimitive};
 use objc::runtime::{Object, BOOL, NO};
 use objc::{msg_send, sel, sel_impl};
@@ -17,7 +17,7 @@ use objc_id::{Id, ShareId};
 
 use super::delegates::{CentralDelegate, PeripheralDelegate};
 use crate::btuuid::BluetoothUuidExt;
-use crate::{AdvertisementData, ManufacturerData, SmallVec, Uuid};
+use crate::{AdvertisementData, BitFlags, ManufacturerData, SmallVec, Uuid};
 
 #[allow(non_camel_case_types)]
 pub type id = *mut Object;
@@ -179,19 +179,10 @@ impl AdvertisementData {
             .map(CBUUID::to_uuid)
             .collect::<SmallVec<_>>();
 
-        let solicited_services =
-            if let Some(val) = adv_data.object_for(&*INSString::from_str("kCBAdvDataSolicitedServiceUUIDs")) {
-                let val: &NSArray<CBUUID> = unsafe { &*(val as *const NSObject).cast() };
-                val.enumerator().map(CBUUID::to_uuid).collect()
-            } else {
-                SmallVec::new()
-            };
-
         AdvertisementData {
             local_name,
             manufacturer_data,
             services,
-            solicited_services,
             service_data,
             tx_power_level,
             is_connectable,

@@ -29,7 +29,7 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// This function is available on MacOS/iOS only.
+    /// This method is available on MacOS/iOS only.
     pub fn is_primary(&self) -> bool {
         self.inner.is_primary()
     }
@@ -77,7 +77,7 @@ impl Service {
 
     /// Get previously discovered characteristics.
     ///
-    /// If no characteristics have been discovered yet, this function may either perform characteristic discovery or
+    /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
     /// return an error.
     pub async fn characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
         self.inner
@@ -137,7 +137,7 @@ impl Service {
 
     /// Get previously discovered included services.
     ///
-    /// If no included services have been discovered yet, this function may either perform included service discovery
+    /// If no included services have been discovered yet, this method may either perform included service discovery
     /// or return an error.
     pub async fn included_services(&self) -> Result<SmallVec<[Service; 2]>> {
         self.inner

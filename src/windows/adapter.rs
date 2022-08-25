@@ -333,42 +333,32 @@ impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
     fn from(event_args: BluetoothLEAdvertisementReceivedEventArgs) -> Self {
         let is_connectable = event_args.IsConnectable().unwrap_or(false);
         let tx_power_level = event_args.TransmitPowerLevelInDBm().ok().and_then(|x| x.Value().ok());
-        let (local_name, manufacturer_data, services, solicited_services, service_data) =
-            if let Ok(adv) = event_args.Advertisement() {
-                let local_name = adv
-                    .LocalName()
-                    .ok()
-                    .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()));
-                let manufacturer_data = adv
-                    .ManufacturerData()
-                    .and_then(|x| x.GetAt(0))
-                    .and_then(|x| x.try_into())
-                    .ok();
+        let (local_name, manufacturer_data, services, service_data) = if let Ok(adv) = event_args.Advertisement() {
+            let local_name = adv
+                .LocalName()
+                .ok()
+                .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()));
+            let manufacturer_data = adv
+                .ManufacturerData()
+                .and_then(|x| x.GetAt(0))
+                .and_then(|x| x.try_into())
+                .ok();
 
-                let services = adv
-                    .ServiceUuids()
-                    .map(|x| x.into_iter().map(|x| Uuid::from_u128(x.to_u128())).collect())
-                    .unwrap_or_default();
+            let services = adv
+                .ServiceUuids()
+                .map(|x| x.into_iter().map(|x| Uuid::from_u128(x.to_u128())).collect())
+                .unwrap_or_default();
 
-                let (solicited_services, service_data) = if let Ok(data_sections) = adv.DataSections() {
-                    (
-                        to_solicited_services(&data_sections).unwrap_or_default(),
-                        to_service_data(&data_sections).unwrap_or_default(),
-                    )
-                } else {
-                    (Default::default(), Default::default())
-                };
-
-                (
-                    local_name,
-                    manufacturer_data,
-                    services,
-                    solicited_services,
-                    service_data,
-                )
+            let service_data = if let Ok(data_sections) = adv.DataSections() {
+                to_service_data(&data_sections).unwrap_or_default()
             } else {
-                (None, None, SmallVec::new(), SmallVec::new(), HashMap::new())
+                Default::default()
             };
+
+            (local_name, manufacturer_data, services, service_data)
+        } else {
+            (None, None, SmallVec::new(), SmallVec::new(), HashMap::new())
+        };
 
         AdvertisementData {
             local_name,
@@ -376,7 +366,6 @@ impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
             services,
             tx_power_level,
             is_connectable,
-            solicited_services,
             service_data,
         }
     }
@@ -399,31 +388,6 @@ fn read_uuid(reader: &DataReader, kind: UuidKind) -> windows::core::Result<Uuid>
             Uuid::from_bytes(uuid)
         }
     })
-}
-
-fn to_solicited_services(
-    data_sections: &IVector<BluetoothLEAdvertisementDataSection>,
-) -> windows::core::Result<SmallVec<[Uuid; 1]>> {
-    let mut solicited_services = SmallVec::new();
-
-    for data in data_sections {
-        let kind = match data.DataType()? {
-            0x14 => Some(UuidKind::U16),
-            0x15 => Some(UuidKind::U128),
-            0x1f => Some(UuidKind::U32),
-            _ => None,
-        };
-
-        if let Some(kind) = kind {
-            let buf = data.Data()?;
-            let reader = DataReader::FromBuffer(&buf)?;
-            while let Ok(uuid) = read_uuid(&reader, kind) {
-                solicited_services.push(uuid);
-            }
-        }
-    }
-
-    Ok(solicited_services)
 }
 
 fn to_service_data(

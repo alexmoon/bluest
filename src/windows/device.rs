@@ -64,11 +64,7 @@ impl std::fmt::Debug for Device {
 
 impl std::fmt::Display for Device {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(name) = self.name() {
-            f.write_str(&name)
-        } else {
-            f.write_str("(Unknown)")
-        }
+        f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
 }
 
@@ -137,7 +133,7 @@ impl Device {
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this function may either perform service discovery or return an empty
+    /// If no services have been discovered yet, this method may either perform service discovery or return an empty
     /// set.
     pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
         let res = self

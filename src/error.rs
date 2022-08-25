@@ -96,6 +96,7 @@ impl From<ErrorKind> for Error {
 
 /// Bluetooth Attribute Protocol error codes. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
 #[repr(u8)]
+#[non_exhaustive]
 #[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, TryFromPrimitive)]
 pub enum AttErrorCode {
     /// The operation completed successfully.

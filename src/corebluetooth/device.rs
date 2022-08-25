@@ -49,11 +49,7 @@ impl std::fmt::Debug for Device {
 
 impl std::fmt::Display for Device {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(name) = self.name() {
-            f.write_str(&name)
-        } else {
-            f.write_str("(Unknown)")
-        }
+        f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
 }
 
@@ -120,7 +116,7 @@ impl Device {
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this function may either perform service discovery or return an error.
+    /// If no services have been discovered yet, this method may either perform service discovery or return an error.
     pub async fn services(&self) -> Result<SmallVec<[Service; 2]>> {
         self.peripheral
             .services()
@@ -149,7 +145,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// This function is available on MacOS/iOS only.
+    /// This method is available on Linux and MacOS/iOS only.
     pub async fn rssi(&self) -> Result<i16> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.read_rssi();

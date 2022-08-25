@@ -47,6 +47,7 @@ use std::collections::HashMap;
 pub use ::bluer::Uuid;
 pub use btuuid::BluetoothUuidExt;
 use enumflags2::bitflags;
+pub use enumflags2::BitFlags;
 pub use error::Error;
 pub use smallvec::SmallVec;
 pub use sys::adapter::Adapter;
@@ -96,8 +97,6 @@ pub struct AdvertisementData {
     pub manufacturer_data: Option<ManufacturerData>,
     /// Advertised GATT service UUIDs (CSS §A.1.1)
     pub services: SmallVec<[Uuid; 1]>,
-    /// Solicited GATT service UUIDs (CSS §A.1.10)
-    pub solicited_services: SmallVec<[Uuid; 1]>,
     /// Service associated data (CSS §A.1.11)
     pub service_data: HashMap<Uuid, SmallVec<[u8; 16]>>,
     /// Transmitted power level (CSS §A.1.5)

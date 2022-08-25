@@ -7,27 +7,9 @@ use super::error::check_communication_status;
 use crate::{Result, SmallVec, Uuid};
 
 /// A Bluetooth GATT service
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Service {
     inner: GattDeviceService,
-}
-
-impl PartialEq for Service {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner.DeviceId() == other.inner.DeviceId()
-    }
-}
-
-impl Eq for Service {}
-
-impl std::hash::Hash for Service {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner
-            .DeviceId()
-            .expect("DeviceId missing on GattDeviceService")
-            .to_os_string()
-            .hash(state);
-    }
 }
 
 impl std::fmt::Debug for Service {
@@ -83,7 +65,7 @@ impl Service {
 
     /// Get previously discovered characteristics.
     ///
-    /// If no characteristics have been discovered yet, this function may either perform characteristic discovery or
+    /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
     /// return an empty set.
     pub async fn characteristics(&self) -> Result<SmallVec<[Characteristic; 2]>> {
         let res = self
@@ -122,7 +104,7 @@ impl Service {
 
     /// Get previously discovered included services.
     ///
-    /// If no included services have been discovered yet, this function may either perform included service discovery
+    /// If no included services have been discovered yet, this method may either perform included service discovery
     /// or return an empty set.
     pub async fn included_services(&self) -> Result<SmallVec<[Service; 2]>> {
         let res = self
