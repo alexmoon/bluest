@@ -25,7 +25,7 @@ impl crate::Error {
     pub(super) fn from_nserror(err: ShareId<NSError>) -> Self {
         crate::Error::new(
             kind_from_nserror(&*err),
-            Some(Box::new(OsError { inner: err })),
+            Some(Box::new(NSErrorError(err))),
             String::new(),
         )
     }
@@ -60,28 +60,26 @@ fn kind_from_nserror(value: &NSError) -> ErrorKind {
     }
 }
 
-pub struct OsError {
-    inner: ShareId<NSError>,
-}
+struct NSErrorError(ShareId<NSError>);
 
-impl std::fmt::Debug for OsError {
+impl std::fmt::Debug for NSErrorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.inner, f)
+        std::fmt::Debug::fmt(&self.0, f)
     }
 }
 
-impl std::fmt::Display for OsError {
+impl std::fmt::Display for NSErrorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.localized_description().as_str())
     }
 }
 
-impl std::error::Error for OsError {}
+impl std::error::Error for NSErrorError {}
 
-impl std::ops::Deref for OsError {
+impl std::ops::Deref for NSErrorError {
     type Target = NSError;
 
     fn deref(&self) -> &Self::Target {
-        &*self.inner
+        &*self.0
     }
 }

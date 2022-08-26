@@ -4,25 +4,9 @@ use windows::Foundation::IReference;
 use crate::error::ErrorKind;
 use crate::Result;
 
-/// Platform specific error type
-pub type OsError = windows::core::Error;
-
-impl TryFrom<&OsError> for ErrorKind {
-    type Error = ();
-
-    fn try_from(_value: &OsError) -> Result<Self, Self::Error> {
-        // No conversions from windows::core::Error to bluest::Error are currently known
-        Err(())
-    }
-}
-
-impl From<OsError> for crate::Error {
-    fn from(err: OsError) -> Self {
-        crate::Error::new(
-            (&err).try_into().unwrap_or(ErrorKind::Other),
-            Some(Box::new(err)),
-            String::new(),
-        )
+impl From<windows::core::Error> for crate::Error {
+    fn from(err: windows::core::Error) -> Self {
+        crate::Error::new(ErrorKind::Other, Some(Box::new(err)), String::new())
     }
 }
 

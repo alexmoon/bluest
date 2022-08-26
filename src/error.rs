@@ -1,7 +1,5 @@
 //! Bluest errors
 
-use num_enum::TryFromPrimitive;
-
 /// The error type for Bluetooth operations
 #[derive(Debug)]
 pub struct Error {
@@ -94,85 +92,121 @@ impl From<ErrorKind> for Error {
     }
 }
 
-/// Bluetooth Attribute Protocol error codes. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
-#[repr(u8)]
-#[non_exhaustive]
-#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, TryFromPrimitive)]
-pub enum AttErrorCode {
+/// Bluetooth Attribute Protocol error. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AttError(u8);
+
+impl AttError {
     /// The operation completed successfully.
-    Success = 0x00,
+    pub const SUCCESS: AttError = AttError(0x00);
     /// The attribute handle given was not valid on this server.
-    InvalidHandle = 0x01,
+    pub const INVALID_HANDLE: AttError = AttError(0x01);
     /// The attribute cannot be read.
-    ReadNotPermitted = 0x02,
+    pub const READ_NOT_PERMITTED: AttError = AttError(0x02);
     /// The attribute cannot be written.
-    WriteNotPermitted = 0x03,
+    pub const WRITE_NOT_PERMITTED: AttError = AttError(0x03);
     /// The attribute PDU was invalid.
-    InvalidPdu = 0x04,
+    pub const INVALID_PDU: AttError = AttError(0x04);
     /// The attribute requires authentication before it can be read or written.
-    InsufficientAuthentication = 0x05,
+    pub const INSUFFICIENT_AUTHENTICATION: AttError = AttError(0x05);
     /// Attribute server does not support the request received from the client.
-    RequestNotSupported = 0x06,
+    pub const REQUEST_NOT_SUPPORTED: AttError = AttError(0x06);
     /// Offset specified was past the end of the attribute.
-    InvalidOffset = 0x07,
+    pub const INVALID_OFFSET: AttError = AttError(0x07);
     /// The attribute requires authorization before it can be read or written.
-    InsufficientAuthorization = 0x08,
+    pub const INSUFFICIENT_AUTHORIZATION: AttError = AttError(0x08);
     /// Too many prepare writes have been queued.
-    PrepareQueueFull = 0x09,
+    pub const PREPARE_QUEUE_FULL: AttError = AttError(0x09);
     /// No attribute found within the given attribute handle range.
-    AttributeNotFound = 0x0a,
+    pub const ATTRIBUTE_NOT_FOUND: AttError = AttError(0x0a);
     /// The attribute cannot be read or written using the Read Blob Request.
-    AttributeNotLong = 0x0b,
+    pub const ATTRIBUTE_NOT_LONG: AttError = AttError(0x0b);
     /// The Encryption Key Size used for encrypting this link is insufficient.
-    InsufficientEncryptionKeySize = 0x0c,
+    pub const INSUFFICIENT_ENCRYPTION_KEY_SIZE: AttError = AttError(0x0c);
     /// The attribute value length is invalid for the operation.
-    InvalidAttributeValueLength = 0x0d,
+    pub const INVALID_ATTRIBUTE_VALUE_LENGTH: AttError = AttError(0x0d);
     /// The attribute request that was requested has encountered an error that was unlikely, and therefore could not be completed as requested.
-    UnlikelyError = 0x0e,
+    pub const UNLIKELY_ERROR: AttError = AttError(0x0e);
     /// The attribute requires encryption before it can be read or written.
-    InsufficientEncryption = 0x0f,
+    pub const INSUFFICIENT_ENCRYPTION: AttError = AttError(0x0f);
     /// The attribute type is not a supported grouping attribute as defined by a higher layer specification.
-    UnsupportedGroupType = 0x10,
+    pub const UNSUPPORTED_GROUP_TYPE: AttError = AttError(0x10);
     /// Insufficient Resources to complete the request.
-    InsufficientResources = 0x11,
+    pub const INSUFFICIENT_RESOURCES: AttError = AttError(0x11);
     /// The server requests the client to rediscover the database.
-    DatabaseOutOfSync = 0x12,
+    pub const DATABASE_OUT_OF_SYNC: AttError = AttError(0x12);
     /// The attribute parameter value was not allowed.
-    ValueNotAllowed = 0x13,
+    pub const VALUE_NOT_ALLOWED: AttError = AttError(0x13);
     /// Write Request Rejected
-    WriteRequestRejected = 0xfc,
+    pub const WRITE_REQUEST_REJECTED: AttError = AttError(0xfc);
     /// Client Characteristic Configuration Descriptor Improperly Configured
-    CccdImproperlyConfigured = 0xfd,
+    pub const CCCD_IMPROPERLY_CONFIGURED: AttError = AttError(0xfd);
     /// Procedure Already in Progress
-    ProcedureAlreadyInProgress = 0xfe,
+    pub const PROCEDURE_ALREADY_IN_PROGRESS: AttError = AttError(0xfe);
     /// Out of Range
-    OutOfRange = 0xff,
+    pub const OUT_OF_RANGE: AttError = AttError(0xff);
+
+    /// Converts a [`u8`] value to an [`AttError`].
+    pub const fn from_u8(val: u8) -> Self {
+        AttError(val)
+    }
+
+    /// Converts an [`AttError`] to a [`u8`] value.
+    pub const fn as_u8(self) -> u8 {
+        self.0
+    }
+
+    /// Checks if the error code is in the application error range.
+    pub fn is_application(&self) -> bool {
+        (0x80..0xa0).contains(&self.0)
+    }
+
+    /// Checks if the error code is in the common profile and service range.
+    pub fn is_common_profile_or_service(&self) -> bool {
+        self.0 >= 0xe0
+    }
 }
 
-/// Bluetooth Attribute Protocol error. See the Bluetooth Core Specification, Vol 3, Part F, §3.4.1.1
-#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum AttError {
-    /// (unknown)
-    Unknown,
-    /// {0}
-    Known(AttErrorCode),
-    /// application specific error: {0}
-    Application(u8),
-    /// unknown error: {0}
-    Reserved(u8),
+impl std::fmt::Display for AttError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            AttError::SUCCESS => f.write_str("The operation completed successfully."),
+            AttError::INVALID_HANDLE => f.write_str("The attribute handle given was not valid on this server."),
+            AttError::READ_NOT_PERMITTED => f.write_str("The attribute cannot be read."),
+            AttError::WRITE_NOT_PERMITTED => f.write_str("The attribute cannot be written."),
+            AttError::INVALID_PDU => f.write_str("The attribute PDU was invalid."),
+            AttError::INSUFFICIENT_AUTHENTICATION => f.write_str("The attribute requires authentication before it can be read or written."),
+            AttError::REQUEST_NOT_SUPPORTED => f.write_str("Attribute server does not support the request received from the client."),
+            AttError::INVALID_OFFSET => f.write_str("Offset specified was past the end of the attribute."),
+            AttError::INSUFFICIENT_AUTHORIZATION => f.write_str("The attribute requires authorization before it can be read or written."),
+            AttError::PREPARE_QUEUE_FULL => f.write_str("Too many prepare writes have been queued."),
+            AttError::ATTRIBUTE_NOT_FOUND => f.write_str("No attribute found within the given attribute handle range."),
+            AttError::ATTRIBUTE_NOT_LONG => f.write_str("The attribute cannot be read or written using the Read Blob Request."),
+            AttError::INSUFFICIENT_ENCRYPTION_KEY_SIZE => f.write_str("The Encryption Key Size used for encrypting this link is insufficient."),
+            AttError::INVALID_ATTRIBUTE_VALUE_LENGTH => f.write_str("The attribute value length is invalid for the operation."),
+            AttError::UNLIKELY_ERROR => f.write_str("The attribute request that was requested has encountered an error that was unlikely, and therefore could not be completed as requested."),
+            AttError::INSUFFICIENT_ENCRYPTION => f.write_str("The attribute requires encryption before it can be read or written."),
+            AttError::UNSUPPORTED_GROUP_TYPE => f.write_str("The attribute type is not a supported grouping attribute as defined by a higher layer specification."),
+            AttError::INSUFFICIENT_RESOURCES => f.write_str("Insufficient Resources to complete the request."),
+            AttError::DATABASE_OUT_OF_SYNC => f.write_str("The server requests the client to rediscover the database."),
+            AttError::VALUE_NOT_ALLOWED => f.write_str("The attribute parameter value was not allowed."),
+            AttError::WRITE_REQUEST_REJECTED => f.write_str("Write Request Rejected"),
+            AttError::CCCD_IMPROPERLY_CONFIGURED => f.write_str("Client Characteristic Configuration Descriptor Improperly Configured"),
+            AttError::PROCEDURE_ALREADY_IN_PROGRESS => f.write_str("Procedure Already in Progress"),
+            AttError::OUT_OF_RANGE => f.write_str("Out of Range"),
+            _ => f.write_str(&format!("Unknown error 0x{:02x}", self.0)),
+        }
+    }
 }
 
 impl From<u8> for AttError {
     fn from(number: u8) -> Self {
-        match AttErrorCode::try_from(number) {
-            Ok(code) => AttError::Known(code),
-            Err(_) => {
-                if (0x80..0xa0).contains(&number) {
-                    AttError::Application(number)
-                } else {
-                    AttError::Reserved(number)
-                }
-            }
-        }
+        AttError(number)
+    }
+}
+
+impl From<AttError> for u8 {
+    fn from(val: AttError) -> Self {
+        val.0
     }
 }

@@ -9,7 +9,7 @@ impl From<bluer::Error> for crate::Error {
 fn kind_from_bluer(err: &bluer::Error) -> ErrorKind {
     match err.kind {
         bluer::ErrorKind::ConnectionAttemptFailed => ErrorKind::ConnectionFailed,
-        bluer::ErrorKind::Failed => ErrorKind::Protocol(AttError::Unknown),
+        bluer::ErrorKind::Failed => ErrorKind::Other,
         bluer::ErrorKind::InvalidArguments => ErrorKind::InvalidParameter,
         bluer::ErrorKind::InvalidLength => ErrorKind::InvalidParameter,
         bluer::ErrorKind::NotAuthorized => ErrorKind::NotAuthorized,
