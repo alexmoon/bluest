@@ -8,8 +8,10 @@
 //! ## Usage
 //!
 //! ```rust,no_run
+//!# use bluest::Adapter;
+//!# use futures::stream::StreamExt;
 //!# #[tokio::main]
-//!# async fn main() -> Result<(), Box<dyn Error>> {
+//!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!let adapter = Adapter::default().await.unwrap();
 //!adapter.wait_available().await?;
 //!

@@ -46,13 +46,13 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets
+          args: --all-targets -- -D warnings
 
       - name: Clippy (all features)
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features
+          args: --all-targets --all-features -- -D warnings
 
       - name: Test
         run: cargo test --all

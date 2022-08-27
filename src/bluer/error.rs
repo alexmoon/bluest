@@ -1,4 +1,4 @@
-use crate::error::{AttError, ErrorKind};
+use crate::error::ErrorKind;
 
 impl From<bluer::Error> for crate::Error {
     fn from(err: bluer::Error) -> Self {
