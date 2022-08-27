@@ -38,6 +38,10 @@ jobs:
 
       - run: rustup component add clippy
 
+      - name: Install dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get install libdbus-1-dev
+
       - name: Clippy (default)
         uses: actions-rs/clippy-check@v1
         with:
