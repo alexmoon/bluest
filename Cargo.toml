@@ -1,6 +1,6 @@
 [package]
 name = "bluest"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Alex Moon"]
 edition = "2021"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
