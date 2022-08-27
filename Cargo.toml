@@ -14,7 +14,8 @@ categories = ["asynchronous", "hardware-support", "os"]
 [package.metadata.docs.rs]
 features = ["serde"]
 default-target = "x86_64-apple-darwin"
-targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
+targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 
 [features]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
