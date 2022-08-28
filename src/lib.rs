@@ -9,7 +9,7 @@
 //!
 //! ```rust,no_run
 //!# use bluest::Adapter;
-//!# use futures::stream::StreamExt;
+//!# use tokio_stream::StreamExt;
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!let adapter = Adapter::default().await.unwrap();
@@ -35,6 +35,7 @@
 
 pub mod btuuid;
 pub mod error;
+mod util;
 
 #[cfg(target_os = "linux")]
 mod bluer;

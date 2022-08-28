@@ -4,17 +4,17 @@ use std::ffi::CStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use futures::Stream;
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 use tracing::debug;
 
 use super::delegates::{self, CentralDelegate};
 use super::device::Device;
 use super::types::{dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerState, CBUUID, NSUUID};
 use crate::error::ErrorKind;
+use crate::util::defer;
 use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
@@ -165,7 +165,7 @@ impl Adapter {
             NSArray::from_vec(vec)
         });
 
-        let guard = scopeguard::guard((), |_| {
+        let guard = defer(|| {
             self.central.stop_scan();
             self.scanning.store(false, Ordering::Release);
         });

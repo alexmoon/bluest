@@ -1,5 +1,4 @@
-use futures::Stream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 use tracing::warn;
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::{
@@ -12,6 +11,7 @@ use windows::Storage::Streams::{DataReader, DataWriter};
 use super::descriptor::Descriptor;
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
+use crate::util::defer;
 use crate::{CharacteristicProperties, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
@@ -165,7 +165,7 @@ impl Characteristic {
             },
         ))?;
 
-        let guard = scopeguard::guard((), move |_| {
+        let guard = defer(move || {
             if let Err(err) = self.inner.RemoveValueChanged(token) {
                 warn!("Error removing value change event handler: {:?}", err);
             }
@@ -178,7 +178,7 @@ impl Characteristic {
 
         check_communication_status(res.Status()?, res.ProtocolError(), "enabling notifications")?;
 
-        let guard = scopeguard::guard((), move |_| {
+        let guard = defer(move || {
             let _guard = guard;
             match self
                 .inner

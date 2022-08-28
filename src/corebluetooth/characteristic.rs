@@ -1,13 +1,13 @@
-use futures::Stream;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 
 use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
 use super::types::{CBCharacteristic, CBCharacteristicWriteType};
 use crate::error::ErrorKind;
+use crate::util::defer;
 use crate::{CharacteristicProperties, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
@@ -127,7 +127,7 @@ impl Characteristic {
             ));
         };
 
-        let guard = scopeguard::guard((), move |_| {
+        let guard = defer(move || {
             let peripheral = self.inner.service().peripheral();
             peripheral.set_notify(&self.inner, false);
         });

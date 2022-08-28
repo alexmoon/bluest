@@ -24,9 +24,22 @@ impl Descriptor {
     }
 
     /// The [`Uuid`] identifying the type of this GATT descriptor
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Descriptor::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
-        // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
-        futures::executor::block_on(async { self.uuid_async().await.unwrap() })
+        // Call an async function from a synchronous context
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.uuid_async())),
+            Err(_) => tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(self.uuid_async()),
+        }
+        .unwrap()
     }
 
     /// The [`Uuid`] identifying the type of this GATT descriptor

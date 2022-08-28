@@ -50,7 +50,7 @@ impl std::error::Error for Error {
 
 /// A list of general categories of Bluetooth error.
 #[non_exhaustive]
-#[derive(Debug, displaydoc::Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorKind {
     /// the Bluetooth adapter is not available
     AdapterUnavailable,
@@ -80,6 +80,27 @@ pub enum ErrorKind {
     ServiceChanged,
     /// error
     Other,
+}
+
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ErrorKind::AdapterUnavailable => f.write_str("the Bluetooth adapter is not available"),
+            ErrorKind::AlreadyScanning => f.write_str("the Bluetooth adapter is already scanning"),
+            ErrorKind::ConnectionFailed => f.write_str("connection failed"),
+            ErrorKind::NotConnected => f.write_str("the Bluetooth device isn't connected"),
+            ErrorKind::NotSupported => f.write_str("the Bluetooth operation is unsupported"),
+            ErrorKind::NotAuthorized => f.write_str("permission denied"),
+            ErrorKind::NotReady => f.write_str("not ready"),
+            ErrorKind::NotFound => f.write_str("not found"),
+            ErrorKind::InvalidParameter => f.write_str("invalid paramter"),
+            ErrorKind::Timeout => f.write_str("timed out"),
+            ErrorKind::Protocol(err) => write!(f, "protocol error: {}", err),
+            ErrorKind::Internal => f.write_str("an internal error has occured"),
+            ErrorKind::ServiceChanged => f.write_str("the service changed and is no longer valid"),
+            ErrorKind::Other => f.write_str("error"),
+        }
+    }
 }
 
 impl From<ErrorKind> for Error {

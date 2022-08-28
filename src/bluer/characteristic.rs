@@ -1,7 +1,6 @@
 use bluer::gatt::remote::CharacteristicWriteRequest;
 use bluer::gatt::WriteOp;
-use futures::Stream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 
 use super::descriptor::Descriptor;
 use crate::{CharacteristicProperties, Result, Uuid};
@@ -29,9 +28,22 @@ impl Characteristic {
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
-        // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
-        futures::executor::block_on(async { self.uuid_async().await.unwrap() })
+        // Call an async function from a synchronous context
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.uuid_async())),
+            Err(_) => tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(self.uuid_async()),
+        }
+        .unwrap()
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
@@ -45,11 +57,21 @@ impl Characteristic {
 
     /// The properties of this this GATT characteristic.
     ///
-    /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
-    /// characteristic.
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::properties_async()`]
+    /// method fails.
     pub fn properties(&self) -> CharacteristicProperties {
-        // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
-        futures::executor::block_on(async { self.properties_async().await.unwrap() })
+        // Call an async function from a synchronous context
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.properties_async())),
+            Err(_) => tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(self.properties_async()),
+        }
+        .unwrap()
     }
 
     /// The properties of this this GATT characteristic.

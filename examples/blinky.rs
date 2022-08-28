@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
-use futures::future::Either;
+use futures::future::{select, Either};
 use futures::pin_mut;
 use futures::stream::StreamExt;
 use tracing::metadata::LevelFilter;
@@ -98,14 +98,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     pin_mut!(blink_fut);
 
     type R = Result<(), Box<dyn Error>>;
-    let res: Either<(R, _), (R, _)> = futures::future::select(blink_fut, button_fut).await;
+    let res: Either<(R, _), (R, _)> = select(blink_fut, button_fut).await;
     match res {
-        futures::future::Either::Left((res, button_fut)) => {
+        Either::Left((res, button_fut)) => {
             error!("Blink task exited: {:?}", res);
             let res = button_fut.await;
             error!("Button task exited: {:?}", res);
         }
-        futures::future::Either::Right((res, blink_fut)) => {
+        Either::Right((res, blink_fut)) => {
             error!("Button task exited: {:?}", res);
             let res = blink_fut.await;
             error!("Blink task exited: {:?}", res);

@@ -5,8 +5,6 @@
 use std::collections::HashMap;
 use std::os::raw::{c_char, c_void};
 
-use enumflags2::{bitflags, BitFlags};
-use num_enum::{FromPrimitive, TryFromPrimitive};
 use objc::runtime::{Object, BOOL, NO};
 use objc::{msg_send, sel, sel_impl};
 use objc_foundation::{
@@ -28,9 +26,8 @@ pub type NSUInteger = usize;
 #[allow(non_upper_case_globals)]
 pub const nil: *mut Object = std::ptr::null_mut();
 
-#[repr(isize)]
 #[non_exhaustive]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, FromPrimitive)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CBManagerState {
     #[default]
     Unknown = 0,
@@ -41,9 +38,22 @@ pub enum CBManagerState {
     PoweredOn = 5,
 }
 
-#[repr(isize)]
+impl From<NSInteger> for CBManagerState {
+    fn from(val: NSInteger) -> Self {
+        match val {
+            0 => CBManagerState::Unknown,
+            1 => CBManagerState::Resetting,
+            2 => CBManagerState::Unsupported,
+            3 => CBManagerState::Unauthorized,
+            4 => CBManagerState::PoweredOff,
+            5 => CBManagerState::PoweredOn,
+            _ => Default::default(),
+        }
+    }
+}
+
 #[non_exhaustive]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, FromPrimitive)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CBManagerAuthorization {
     #[default]
     NotDetermined = 0,
@@ -52,8 +62,18 @@ pub enum CBManagerAuthorization {
     AllowedAlways = 3,
 }
 
-#[repr(u32)]
-#[bitflags]
+impl From<NSInteger> for CBManagerAuthorization {
+    fn from(val: NSInteger) -> Self {
+        match val {
+            0 => CBManagerAuthorization::NotDetermined,
+            1 => CBManagerAuthorization::Restricted,
+            2 => CBManagerAuthorization::Denied,
+            3 => CBManagerAuthorization::AllowedAlways,
+            _ => Default::default(),
+        }
+    }
+}
+
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CBCentralManagerFeature {
@@ -77,8 +97,7 @@ pub enum CBPeripheralState {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, FromPrimitive)]
-#[repr(isize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CBError {
     #[default]
     Unknown = 0,
@@ -100,9 +119,33 @@ pub enum CBError {
     TooManyLEPairedDevices = 16,
 }
 
+impl From<NSInteger> for CBError {
+    fn from(val: NSInteger) -> Self {
+        match val {
+            0 => CBError::Unknown,
+            1 => CBError::InvalidParameters,
+            2 => CBError::InvalidHandle,
+            3 => CBError::NotConnected,
+            4 => CBError::OutOfSpace,
+            5 => CBError::OperationCancelled,
+            6 => CBError::ConnectionTimeout,
+            7 => CBError::PeripheralDisconnected,
+            8 => CBError::UuidNotAllowed,
+            9 => CBError::AlreadyAdvertising,
+            10 => CBError::ConnectionFailed,
+            11 => CBError::ConnectionLimitReached,
+            12 => CBError::UnkownDevice,
+            13 => CBError::OperationNotSupported,
+            14 => CBError::PeerRemovedPairingInformation,
+            15 => CBError::EncryptionTimedOut,
+            16 => CBError::TooManyLEPairedDevices,
+            _ => Default::default(),
+        }
+    }
+}
+
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
-#[repr(isize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CBATTError {
     Success = 0,
     InvalidHandle = 1,
@@ -339,8 +382,7 @@ impl CBCentralManager {
         res != NO
     }
 
-    pub fn supports_features(&self, features: BitFlags<CBCentralManagerFeature>) -> bool {
-        let features = features.bits() as NSUInteger;
+    pub fn supports_features(&self, features: NSUInteger) -> bool {
         let res: BOOL = unsafe { msg_send![self, supportsFeatures: features] };
         res != NO
     }

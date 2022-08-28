@@ -1,4 +1,4 @@
-use futures::pin_mut;
+use tokio::pin;
 use tokio_stream::StreamExt;
 
 use super::service::Service;
@@ -50,9 +50,20 @@ impl Device {
     }
 
     /// The local name for this device, if available
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Option<String> {
-        // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
-        futures::executor::block_on(self.name_async())
+        // Call an async function from a synchronous context
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.name_async())),
+            Err(_) => tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(self.name_async()),
+        }
     }
 
     /// The local name for this device, if available
@@ -65,9 +76,20 @@ impl Device {
     }
 
     /// The connection status for this device
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn is_connected(&self) -> bool {
-        // This may block the current async executor, but we need this method to be sync for cross-platform compatibility
-        futures::executor::block_on(self.is_connected_async())
+        // Call an async function from a synchronous context
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.is_connected_async())),
+            Err(_) => tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(self.is_connected_async()),
+        }
     }
 
     /// The connection status for this device
@@ -104,7 +126,7 @@ impl Device {
                 for characteristic in service.characteristics().await? {
                     if characteristic.uuid_async().await? == btuuid::characteristics::SERVICE_CHANGED {
                         let notifications = characteristic.notify().await?;
-                        pin_mut!(notifications);
+                        pin!(notifications);
                         return match notifications.next().await {
                             Some(Ok(_)) => Ok(()),
                             Some(Err(err)) => Err(err),

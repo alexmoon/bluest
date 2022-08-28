@@ -9,6 +9,7 @@ use windows::Foundation::TypedEventHandler;
 
 use super::error::check_communication_status;
 use super::service::Service;
+use crate::util::defer;
 use crate::{Result, Uuid};
 
 /// A platform-specific device identifier.
@@ -156,7 +157,7 @@ impl Device {
             Ok(())
         }))?;
 
-        let _guard = scopeguard::guard((), move |_| {
+        let _guard = defer(move || {
             if let Err(err) = self.device.RemoveGattServicesChanged(token) {
                 error!("Error removing state changed handler: {:?}", err);
             }

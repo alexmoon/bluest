@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
+use std::sync::Arc;
 
-use futures::Stream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::{InParam, HSTRING};
 use windows::Devices::Bluetooth::Advertisement::{
@@ -19,6 +19,7 @@ use windows::Storage::Streams::DataReader;
 use super::device::{Device, DeviceId};
 use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
+use crate::util::defer;
 use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ManufacturerData, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
@@ -72,7 +73,7 @@ impl Adapter {
             Ok(())
         }))?;
 
-        let guard = scopeguard::guard((), move |_| {
+        let guard = defer(move || {
             if let Err(err) = radio.RemoveStateChanged(token) {
                 error!("Error removing state changed handler: {:?}", err);
             }
@@ -237,28 +238,33 @@ impl Adapter {
         watcher.SetAllowExtendedAdvertisements(true)?;
 
         let (sender, receiver) = tokio::sync::mpsc::channel(16);
+        let sender = Arc::new(sender);
 
+        let weak_sender = Arc::downgrade(&sender);
         watcher.Received(&TypedEventHandler::new(
             move |_watcher, event_args: &Option<BluetoothLEAdvertisementReceivedEventArgs>| {
-                if let Some(event_args) = event_args {
-                    let _ = sender.blocking_send(event_args.clone());
+                if let Some(sender) = weak_sender.upgrade() {
+                    if let Some(event_args) = event_args {
+                        let _ = sender.blocking_send(event_args.clone());
+                    }
                 }
                 Ok(())
             },
         ))?;
 
         let received_events = tokio_stream::wrappers::ReceiverStream::new(receiver);
-        let (received_events, abort_handle) = futures::stream::abortable(received_events);
 
+        let mut sender = Some(sender);
         watcher.Stopped(&TypedEventHandler::new(
             move |_watcher, _event_args: &Option<BluetoothLEAdvertisementWatcherStoppedEventArgs>| {
-                abort_handle.abort();
+                // Drop the sender, ending the stream
+                let _sender = sender.take();
                 Ok(())
             },
         ))?;
 
         watcher.Start()?;
-        let guard = scopeguard::guard((), move |_| {
+        let guard = defer(move || {
             if let Err(err) = watcher.Stop() {
                 error!("Error stopping scan: {:?}", err);
             }

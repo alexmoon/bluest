@@ -1,7 +1,6 @@
 use bluer::{AdapterProperty, Session};
-use futures::Stream;
 use once_cell::sync::OnceCell;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 
 use super::device::{Device, DeviceId};
 use crate::error::ErrorKind;
