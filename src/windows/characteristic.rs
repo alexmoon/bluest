@@ -1,4 +1,4 @@
-use tokio_stream::{Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
 use tracing::warn;
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::{

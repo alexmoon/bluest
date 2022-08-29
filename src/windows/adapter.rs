@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
+use std::future::ready;
 use std::sync::Arc;
 
-use tokio_stream::{Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::{InParam, HSTRING};
 use windows::Devices::Bluetooth::Advertisement::{
@@ -92,7 +93,7 @@ impl Adapter {
         let state = radio.State()?;
         if state != RadioState::On {
             events
-                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
+                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -282,7 +283,7 @@ impl Adapter {
                 let _guard = &guard;
 
                 // Filter by result and services
-                match res {
+                ready(match res {
                     Ok((addr, rssi, adv_data)) => (services.is_empty()
                         || services.iter().any(|x| adv_data.services.contains(x)))
                     .then(|| (addr, rssi, adv_data)),
@@ -290,7 +291,7 @@ impl Adapter {
                         warn!("Error getting bluetooth address from event: {:?}", err);
                         None
                     }
-                }
+                })
             })
             .then(|(addr, rssi, adv_data)| {
                 // Create the Device
@@ -300,13 +301,39 @@ impl Adapter {
                         .map(|device| AdvertisingDevice { device, rssi, adv_data })
                 })
             })
-            .filter_map(move |res| match res {
-                Ok(dev) => Some(dev),
-                Err(err) => {
-                    warn!("Error creating device: {:?}", err);
-                    None
-                }
+            .filter_map(move |res| {
+                ready(match res {
+                    Ok(dev) => Some(dev),
+                    Err(err) => {
+                        warn!("Error creating device: {:?}", err);
+                        None
+                    }
+                })
             }))
+    }
+
+    /// Finds Bluetooth devices providing any service in `services`.
+    ///
+    /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
+    /// dropped before all matching connected devices are consumed then scanning will begin for devices advertising any
+    /// of the `services`. Scanning will continue until the stream is dropped. Inclusion of duplicate devices is a
+    /// platform-specific implementation detail.
+    pub async fn discover_devices<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
+        use futures_util::TryFutureExt;
+
+        let connected = self.connected_devices_with_services(services).await?;
+        let advertising = Box::pin(async {
+            match self.scan(services).await {
+                Ok(stream) => Ok(stream.map(|x| Ok(x.device))),
+                Err(err) => Err(err),
+            }
+        })
+        .try_flatten_stream();
+
+        Ok(futures_util::stream::iter(connected).map(Ok).chain(advertising))
     }
 
     /// Connects to the [`Device`]

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use bluest::{btuuid, Adapter};
-use tokio_stream::StreamExt;
+use futures::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await.unwrap();
+    let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
     adapter.wait_available().await?;
 
     let discovered_device = {
@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let services = &[btuuid::services::USER_DATA];
         let mut scan = adapter.scan(services).await?;
         info!("scan started");
-        scan.next().await.unwrap() // this will never timeout
+        scan.next().await.ok_or("scan terminated")? // this will never timeout
     };
 
     info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);

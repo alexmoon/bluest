@@ -21,13 +21,14 @@ cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
+futures-util = { version = "0.3.24", default-features = false }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tokio = { version = "1.20.1", features = ["sync"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }
 tracing = "0.1.36"
 
 [dev-dependencies]
-futures = "0.3.23"
+futures = "0.3.24"
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 

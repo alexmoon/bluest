@@ -1,7 +1,9 @@
+use std::future::ready;
+
+use futures_util::{Stream, StreamExt};
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_stream::{Stream, StreamExt};
 
 use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
@@ -127,14 +129,15 @@ impl Characteristic {
             ));
         };
 
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
+        let mut receiver = peripheral.subscribe()?;
+
+        peripheral.set_notify(&self.inner, true);
         let guard = defer(move || {
             let peripheral = self.inner.service().peripheral();
             peripheral.set_notify(&self.inner, false);
         });
-
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
@@ -156,7 +159,7 @@ impl Characteristic {
         let updates = BroadcastStream::new(receiver)
             .filter_map(move |x| {
                 let _guard = &guard;
-                match x {
+                ready(match x {
                     Ok(PeripheralEvent::CharacteristicValueUpdate { characteristic, error })
                         if characteristic == self.inner =>
                     {
@@ -171,7 +174,7 @@ impl Characteristic {
                         Some(Err(ErrorKind::ServiceChanged.into()))
                     }
                     _ => None,
-                }
+                })
             })
             .then(move |x| {
                 Box::pin(async move {
@@ -181,8 +184,6 @@ impl Characteristic {
                     }
                 })
             });
-
-        peripheral.set_notify(&self.inner, true);
 
         Ok(updates)
     }

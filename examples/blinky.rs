@@ -3,8 +3,7 @@ use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
 use futures::future::{select, Either};
-use futures::pin_mut;
-use futures::stream::StreamExt;
+use futures::{pin_mut, StreamExt};
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -26,23 +25,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await.unwrap();
+    let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
     adapter.wait_available().await?;
 
-    let discovered_device = {
-        info!("starting scan");
-        let services = &[NORDIC_LED_AND_BUTTON_SERVICE];
-        let mut scan = adapter.scan(services).await?;
-        info!("scan started");
-        scan.next().await.unwrap() // this will never timeout
-    };
-
+    info!("looking for device");
+    let device = adapter
+        .discover_devices(&[NORDIC_LED_AND_BUTTON_SERVICE])
+        .await?
+        .next()
+        .await
+        .ok_or("Failed to discover device")??;
     info!(
-        "found device: {:?}dBm {:?}",
-        discovered_device.rssi.unwrap(),
-        discovered_device.adv_data.services
+        "found device: {} ({:?})",
+        device.name().as_deref().unwrap_or("(unknown)"),
+        device.id()
     );
-    let device = discovered_device.device;
+
     adapter.connect_device(&device).await?; // this will never timeout
     info!("connected!");
 

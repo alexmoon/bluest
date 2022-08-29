@@ -1,13 +1,14 @@
 #![allow(clippy::let_unit_value)]
 
 use std::ffi::CStr;
+use std::future::ready;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use futures_util::{Stream, StreamExt};
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_stream::{Stream, StreamExt};
 use tracing::debug;
 
 use super::delegates::{self, CentralDelegate};
@@ -72,22 +73,24 @@ impl Adapter {
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let receiver = self.sender.subscribe();
-        Ok(BroadcastStream::new(receiver).filter_map(|x| match x {
-            Ok(delegates::CentralEvent::StateChanged) => {
-                // TODO: Check CBCentralManager::authorization()?
-                let state = self.central.state();
-                debug!("Central state is now {:?}", state);
-                match state {
-                    CBManagerState::POWERED_ON => Some(Ok(AdapterEvent::Available)),
-                    _ => Some(Ok(AdapterEvent::Unavailable)),
+        Ok(BroadcastStream::new(receiver).filter_map(|x| {
+            ready(match x {
+                Ok(delegates::CentralEvent::StateChanged) => {
+                    // TODO: Check CBCentralManager::authorization()?
+                    let state = self.central.state();
+                    debug!("Central state is now {:?}", state);
+                    match state {
+                        CBManagerState::POWERED_ON => Some(Ok(AdapterEvent::Available)),
+                        _ => Some(Ok(AdapterEvent::Unavailable)),
+                    }
                 }
-            }
-            Err(err) => Some(Err(Error::new(
-                ErrorKind::Internal,
-                Some(Box::new(err)),
-                "adapter event stream".to_string(),
-            ))),
-            _ => None,
+                Err(err) => Some(Err(Error::new(
+                    ErrorKind::Internal,
+                    Some(Box::new(err)),
+                    "adapter event stream".to_string(),
+                ))),
+                _ => None,
+            })
         }))
     }
 
@@ -97,7 +100,7 @@ impl Adapter {
         if self.central.state() != CBManagerState::POWERED_ON {
             events
                 .await?
-                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
+                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -171,10 +174,10 @@ impl Adapter {
         });
 
         let events = BroadcastStream::new(self.sender.subscribe())
-            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
+            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
             .filter_map(move |x| {
                 let _guard = &guard;
-                match x {
+                ready(match x {
                     Ok(delegates::CentralEvent::Discovered {
                         peripheral,
                         adv_data,
@@ -185,12 +188,36 @@ impl Adapter {
                         rssi: Some(rssi),
                     }),
                     _ => None,
-                }
+                })
             });
 
         self.central.scan_for_peripherals_with_services(services, None);
 
         Ok(events)
+    }
+
+    /// Finds Bluetooth devices providing any service in `services`.
+    ///
+    /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
+    /// dropped before all matching connected devices are consumed then scanning will begin for devices advertising any
+    /// of the `services`. Scanning will continue until the stream is dropped. Inclusion of duplicate devices is a
+    /// platform-specific implementation detail.
+    pub async fn discover_devices<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
+        use futures_util::TryFutureExt;
+
+        let connected = self.connected_devices_with_services(services).await?;
+        let advertising = Box::pin(async {
+            match self.scan(services).await {
+                Ok(stream) => Ok(stream.map(|x| Ok(x.device))),
+                Err(err) => Err(err),
+            }
+        })
+        .try_flatten_stream();
+
+        Ok(futures_util::stream::iter(connected).map(Ok).chain(advertising))
     }
 
     /// Connects to the [`Device`]

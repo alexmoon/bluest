@@ -9,10 +9,10 @@
 //!
 //! ```rust,no_run
 //!# use bluest::Adapter;
-//!# use tokio_stream::StreamExt;
+//!# use futures::StreamExt;
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!let adapter = Adapter::default().await.unwrap();
+//!let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
 //!adapter.wait_available().await?;
 //!
 //!println!("starting scan");
@@ -20,12 +20,15 @@
 //!println!("scan started");
 //!while let Some(discovered_device) = scan.next().await {
 //!    if discovered_device.adv_data.local_name.is_some() {
-//!        println!(
-//!            "{} ({}dBm): {:?}",
-//!            discovered_device.adv_data.local_name.as_ref().unwrap(),
-//!            discovered_device.rssi.unwrap(),
-//!            discovered_device.adv_data.services
-//!        );
+//!         println!(
+//!             "{}{}: {:?}",
+//!             discovered_device.adv_data.local_name.as_deref().unwrap_or("(unknown)"),
+//!             discovered_device
+//!                 .rssi
+//!                 .map(|x| format!(" ({}dBm)", x))
+//!                 .unwrap_or_default(),
+//!             discovered_device.adv_data.services
+//!         );
 //!    }
 //!}
 //!#

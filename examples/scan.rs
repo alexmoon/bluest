@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use bluest::Adapter;
-use tokio_stream::StreamExt;
+use futures::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await.unwrap();
+    let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
     adapter.wait_available().await?;
 
     info!("starting scan");
@@ -28,9 +28,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     while let Some(discovered_device) = scan.next().await {
         if discovered_device.adv_data.local_name.is_some() {
             info!(
-                "{} ({}dBm): {:?}",
-                discovered_device.adv_data.local_name.as_ref().unwrap(),
-                discovered_device.rssi.unwrap(),
+                "{}{}: {:?}",
+                discovered_device.adv_data.local_name.as_deref().unwrap_or("(unknown)"),
+                discovered_device
+                    .rssi
+                    .map(|x| format!(" ({}dBm)", x))
+                    .unwrap_or_default(),
                 discovered_device.adv_data.services
             );
         }

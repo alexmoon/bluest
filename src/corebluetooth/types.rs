@@ -277,7 +277,7 @@ impl NSUUID {
     pub fn from_uuid(uuid: Uuid) -> Id<Self> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
-            Id::from_retained_ptr(msg_send![obj, initWithBytes: uuid.as_bytes()])
+            Id::from_retained_ptr(msg_send![obj, initWithUUIDBytes: uuid.as_bytes()])
         }
     }
 

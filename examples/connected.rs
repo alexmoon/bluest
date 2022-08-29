@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bluest::{btuuid, Adapter};
+use bluest::Adapter;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 
@@ -18,14 +18,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await.unwrap();
+    let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
     adapter.wait_available().await?;
 
     info!("getting connected devices");
     // let devices = adapter.connected_devices().await?;
-    let devices = adapter
-        .connected_devices_with_services(&[btuuid::services::BATTERY])
-        .await?;
+    let devices = adapter.connected_devices().await?;
     for device in devices {
         info!("found {:?}", device);
         adapter.connect_device(&device).await?;

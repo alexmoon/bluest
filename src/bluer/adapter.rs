@@ -1,6 +1,8 @@
+use std::future::ready;
+
 use bluer::{AdapterProperty, Session};
+use futures_util::{Stream, StreamExt};
 use once_cell::sync::OnceCell;
-use tokio_stream::{Stream, StreamExt};
 
 use super::device::{Device, DeviceId};
 use crate::error::ErrorKind;
@@ -56,12 +58,16 @@ impl Adapter {
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
         let stream = self.inner.events().await?;
-        Ok(stream.filter_map(|event| match event {
-            bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(true)) => Some(Ok(AdapterEvent::Available)),
-            bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(false)) => {
-                Some(Ok(AdapterEvent::Unavailable))
-            }
-            _ => None,
+        Ok(stream.filter_map(|event| {
+            ready(match event {
+                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(true)) => {
+                    Some(Ok(AdapterEvent::Available))
+                }
+                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(false)) => {
+                    Some(Ok(AdapterEvent::Unavailable))
+                }
+                _ => None,
+            })
         }))
     }
 
@@ -71,7 +77,7 @@ impl Adapter {
         if !self.inner.is_powered().await? {
             events
                 .await?
-                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
+                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -140,7 +146,7 @@ impl Adapter {
             .inner
             .discover_devices()
             .await?
-            .then(move |event| {
+            .filter_map(move |event| {
                 Box::pin(async move {
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
@@ -153,8 +159,46 @@ impl Adapter {
                     }
                 })
             })
-            .filter_map(|x| x)
-            .filter(|x| services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))))
+            .filter(|x| ready(services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y)))))
+    }
+
+    /// Finds Bluetooth devices providing any service in `services`.
+    ///
+    /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
+    /// dropped before all matching connected devices are consumed then scanning will begin for devices advertising any
+    /// of the `services`. Scanning will continue until the stream is dropped. Inclusion of duplicate devices is a
+    /// platform-specific implementation detail.
+    pub async fn discover_devices<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
+        Ok(self.inner.discover_devices().await?.filter_map(move |event| {
+            Box::pin(async move {
+                match event {
+                    bluer::AdapterEvent::DeviceAdded(addr) => match Device::new(&self.inner, addr) {
+                        Ok(device) => {
+                            if services.is_empty() {
+                                Some(Ok(device))
+                            } else {
+                                match device.inner.uuids().await {
+                                    Ok(uuids) => {
+                                        let uuids = uuids.unwrap_or_default();
+                                        if services.iter().any(|x| uuids.contains(x)) {
+                                            Some(Ok(device))
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    Err(err) => Some(Err(err.into())),
+                                }
+                            }
+                        }
+                        Err(err) => Some(Err(err)),
+                    },
+                    _ => None,
+                }
+            })
+        }))
     }
 
     /// Connects to the [`Device`]

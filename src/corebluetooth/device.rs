@@ -96,7 +96,8 @@ impl Device {
             NSArray::from_vec(vec)
         };
 
-        self.discover_services_inner(Some(uuids)).await
+        let services = self.discover_services_inner(Some(uuids)).await?;
+        Ok(services.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
     async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {

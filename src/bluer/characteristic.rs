@@ -1,6 +1,6 @@
 use bluer::gatt::remote::CharacteristicWriteRequest;
 use bluer::gatt::WriteOp;
-use tokio_stream::{Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
 
 use super::descriptor::Descriptor;
 use crate::{CharacteristicProperties, Result, Uuid};
