@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use bluest::Adapter;
-use futures::StreamExt;
+use futures_util::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 

@@ -1,5 +1,5 @@
-use tokio::pin;
 use futures_util::StreamExt;
+use tokio::pin;
 
 use super::service::Service;
 use crate::error::ErrorKind;

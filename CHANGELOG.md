@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.3.4
+
+- Add `Adapter::discover_devices`
+- Add reconnect example
+
 ## 0.3.3
 
 - Reduce dependencies

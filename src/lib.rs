@@ -9,7 +9,7 @@
 //!
 //! ```rust,no_run
 //!# use bluest::Adapter;
-//!# use futures::StreamExt;
+//!# use futures_util::StreamExt;
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;

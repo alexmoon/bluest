@@ -1,6 +1,6 @@
 [package]
 name = "bluest"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["Alex Moon"]
 edition = "2021"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
@@ -28,7 +28,6 @@ tokio-stream = { version = "0.1.9", features = ["sync"] }
 tracing = "0.1.36"
 
 [dev-dependencies]
-futures = "0.3.24"
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 

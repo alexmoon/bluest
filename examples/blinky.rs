@@ -2,8 +2,8 @@ use std::error::Error;
 use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
-use futures::future::{select, Either};
-use futures::{pin_mut, StreamExt};
+use futures_util::future::{select, Either};
+use futures_util::{pin_mut, StreamExt};
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
