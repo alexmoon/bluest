@@ -33,20 +33,22 @@ impl crate::Error {
 
 fn kind_from_nserror(value: &NSError) -> ErrorKind {
     if value.domain().as_str() == "CBErrorDomain" {
-        match CBError::from(value.code()) {
-            CBError::OperationNotSupported => ErrorKind::NotSupported,
-            CBError::NotConnected | CBError::PeripheralDisconnected => ErrorKind::NotConnected,
-            CBError::ConnectionTimeout | CBError::EncryptionTimedOut => ErrorKind::Timeout,
-            CBError::InvalidParameters | CBError::InvalidHandle | CBError::UuidNotAllowed | CBError::UnkownDevice => {
-                ErrorKind::InvalidParameter
-            }
-            CBError::ConnectionFailed
-            | CBError::PeerRemovedPairingInformation
-            | CBError::ConnectionLimitReached
-            | CBError::TooManyLEPairedDevices => ErrorKind::ConnectionFailed,
-            CBError::Unknown | CBError::OutOfSpace | CBError::OperationCancelled | CBError::AlreadyAdvertising => {
+        match CBError(value.code()) {
+            CBError::OPERATION_NOT_SUPPORTED => ErrorKind::NotSupported,
+            CBError::NOT_CONNECTED | CBError::PERIPHERAL_DISCONNECTED => ErrorKind::NotConnected,
+            CBError::CONNECTION_TIMEOUT | CBError::ENCRYPTION_TIMED_OUT => ErrorKind::Timeout,
+            CBError::INVALID_PARAMETERS
+            | CBError::INVALID_HANDLE
+            | CBError::UUID_NOT_ALLOWED
+            | CBError::UNKOWN_DEVICE => ErrorKind::InvalidParameter,
+            CBError::CONNECTION_FAILED
+            | CBError::PEER_REMOVED_PAIRING_INFORMATION
+            | CBError::CONNECTION_LIMIT_REACHED
+            | CBError::TOO_MANY_LE_PAIRED_DEVICES => ErrorKind::ConnectionFailed,
+            CBError::UNKNOWN | CBError::OUT_OF_SPACE | CBError::OPERATION_CANCELLED | CBError::ALREADY_ADVERTISING => {
                 ErrorKind::Other
             }
+            _ => ErrorKind::Other,
         }
     } else if value.domain().as_str() == "CBATTErrorDomain" {
         let n = value.code();

@@ -33,7 +33,7 @@ impl Characteristic {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub fn properties(&self) -> CharacteristicProperties {
-        CharacteristicProperties::from_bits(self.inner.properties() as u32)
+        self.inner.properties().into()
     }
 
     /// The cached value of this characteristic

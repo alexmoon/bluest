@@ -15,7 +15,7 @@ use objc_id::{Id, ShareId};
 
 use super::delegates::{CentralDelegate, PeripheralDelegate};
 use crate::btuuid::BluetoothUuidExt;
-use crate::{AdvertisementData, ManufacturerData, Uuid};
+use crate::{AdvertisementData, CharacteristicProperties, ManufacturerData, Uuid};
 
 #[allow(non_camel_case_types)]
 pub type id = *mut Object;
@@ -26,145 +26,120 @@ pub type NSUInteger = usize;
 #[allow(non_upper_case_globals)]
 pub const nil: *mut Object = std::ptr::null_mut();
 
-#[non_exhaustive]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBManagerState {
-    #[default]
-    Unknown = 0,
-    Resetting = 1,
-    Unsupported = 2,
-    Unauthorized = 3,
-    PoweredOff = 4,
-    PoweredOn = 5,
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBManagerState(pub NSInteger);
+
+impl CBManagerState {
+    pub const UNKNOWN: CBManagerState = CBManagerState(0);
+    pub const RESETTING: CBManagerState = CBManagerState(1);
+    pub const UNSUPPORTED: CBManagerState = CBManagerState(2);
+    pub const UNAUTHORIZED: CBManagerState = CBManagerState(3);
+    pub const POWERED_OFF: CBManagerState = CBManagerState(4);
+    pub const POWERED_ON: CBManagerState = CBManagerState(5);
 }
 
-impl From<NSInteger> for CBManagerState {
-    fn from(val: NSInteger) -> Self {
-        match val {
-            0 => CBManagerState::Unknown,
-            1 => CBManagerState::Resetting,
-            2 => CBManagerState::Unsupported,
-            3 => CBManagerState::Unauthorized,
-            4 => CBManagerState::PoweredOff,
-            5 => CBManagerState::PoweredOn,
-            _ => Default::default(),
-        }
-    }
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBManagerAuthorization(pub NSInteger);
+
+impl CBManagerAuthorization {
+    pub const NOT_DETERMINED: CBManagerAuthorization = CBManagerAuthorization(0);
+    pub const RESTRICTED: CBManagerAuthorization = CBManagerAuthorization(1);
+    pub const DENIED: CBManagerAuthorization = CBManagerAuthorization(2);
+    pub const ALLOWED_ALWAYS: CBManagerAuthorization = CBManagerAuthorization(3);
 }
 
-#[non_exhaustive]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBManagerAuthorization {
-    #[default]
-    NotDetermined = 0,
-    Restricted = 1,
-    Denied = 2,
-    AllowedAlways = 3,
-}
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBCentralManagerFeatures(pub NSUInteger);
 
-impl From<NSInteger> for CBManagerAuthorization {
-    fn from(val: NSInteger) -> Self {
-        match val {
-            0 => CBManagerAuthorization::NotDetermined,
-            1 => CBManagerAuthorization::Restricted,
-            2 => CBManagerAuthorization::Denied,
-            3 => CBManagerAuthorization::AllowedAlways,
-            _ => Default::default(),
-        }
-    }
+impl CBCentralManagerFeatures {
+    pub const EXTENDED_SCAN_AND_CONNECT: CBCentralManagerFeatures = CBCentralManagerFeatures(1);
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBCentralManagerFeature {
-    ExtendedScanAndConnect = 1,
-}
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CBCharacteristicWriteType {
+    #[default]
     WithResponse = 0,
     WithoutResponse = 1,
 }
 
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBPeripheralState {
-    Disconnected = 0,
-    Connecting = 1,
-    Connected = 2,
-    Disconnecting = 3,
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBPeripheralState(pub NSInteger);
+
+impl CBPeripheralState {
+    pub const DISCONNECTED: CBPeripheralState = CBPeripheralState(0);
+    pub const CONNECTING: CBPeripheralState = CBPeripheralState(1);
+    pub const CONNECTED: CBPeripheralState = CBPeripheralState(2);
+    pub const DISCONNECTING: CBPeripheralState = CBPeripheralState(3);
 }
 
-#[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum CBError {
-    #[default]
-    Unknown = 0,
-    InvalidParameters = 1,
-    InvalidHandle = 2,
-    NotConnected = 3,
-    OutOfSpace = 4,
-    OperationCancelled = 5,
-    ConnectionTimeout = 6,
-    PeripheralDisconnected = 7,
-    UuidNotAllowed = 8,
-    AlreadyAdvertising = 9,
-    ConnectionFailed = 10,
-    ConnectionLimitReached = 11,
-    UnkownDevice = 12,
-    OperationNotSupported = 13,
-    PeerRemovedPairingInformation = 14,
-    EncryptionTimedOut = 15,
-    TooManyLEPairedDevices = 16,
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBCharacteristicProperties(pub NSUInteger);
+
+impl CBCharacteristicProperties {
+    pub const BROADCAST: CBCharacteristicProperties = CBCharacteristicProperties(0b0000_0001);
+    pub const READ: CBCharacteristicProperties = CBCharacteristicProperties(0b0000_0010);
+    pub const WRITE_WITHOUT_RESPONSE: CBCharacteristicProperties = CBCharacteristicProperties(0b0000_0100);
+    pub const WRITE: CBCharacteristicProperties = CBCharacteristicProperties(0b0000_1000);
+    pub const NOTIFY: CBCharacteristicProperties = CBCharacteristicProperties(0b0001_0000);
+    pub const INDICATE: CBCharacteristicProperties = CBCharacteristicProperties(0b0010_0000);
+    pub const AUTHENTICATED_SIGNED_WRITES: CBCharacteristicProperties = CBCharacteristicProperties(0b0100_0000);
+    pub const EXTENDED_PROPERTIES: CBCharacteristicProperties = CBCharacteristicProperties(0b1000_0000);
+    pub const NOTIFY_ENCRYPTION_REQUIRED: CBCharacteristicProperties = CBCharacteristicProperties(0b0001_0000_0000);
+    pub const INDICATE_ENCRYPTION_REQUIRED: CBCharacteristicProperties = CBCharacteristicProperties(0b0010_0000_0000);
 }
 
-impl From<NSInteger> for CBError {
-    fn from(val: NSInteger) -> Self {
-        match val {
-            0 => CBError::Unknown,
-            1 => CBError::InvalidParameters,
-            2 => CBError::InvalidHandle,
-            3 => CBError::NotConnected,
-            4 => CBError::OutOfSpace,
-            5 => CBError::OperationCancelled,
-            6 => CBError::ConnectionTimeout,
-            7 => CBError::PeripheralDisconnected,
-            8 => CBError::UuidNotAllowed,
-            9 => CBError::AlreadyAdvertising,
-            10 => CBError::ConnectionFailed,
-            11 => CBError::ConnectionLimitReached,
-            12 => CBError::UnkownDevice,
-            13 => CBError::OperationNotSupported,
-            14 => CBError::PeerRemovedPairingInformation,
-            15 => CBError::EncryptionTimedOut,
-            16 => CBError::TooManyLEPairedDevices,
-            _ => Default::default(),
-        }
+impl From<CBCharacteristicProperties> for CharacteristicProperties {
+    fn from(val: CBCharacteristicProperties) -> Self {
+        CharacteristicProperties::from_bits((val.0 & 0xff) as u32)
     }
 }
 
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBATTError {
-    Success = 0,
-    InvalidHandle = 1,
-    ReadNotPermitted = 2,
-    WriteNotPermitted = 3,
-    InvalidPdu = 4,
-    InsufficientAuthentication = 5,
-    RequestNotSupported = 6,
-    InvalidOffset = 7,
-    InsufficientAuthorization = 8,
-    PrepareQueueFull = 9,
-    AttributeNotFound = 10,
-    AttributeNotLong = 11,
-    InsufficientEncryptionKeySize = 12,
-    InvalidAttributeValueLength = 13,
-    UnlikelyError = 14,
-    InsufficientEncryption = 15,
-    UnsupportedGroupType = 16,
-    InsufficientResources = 17,
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBError(pub NSInteger);
+
+impl CBError {
+    pub const UNKNOWN: CBError = CBError(0);
+    pub const INVALID_PARAMETERS: CBError = CBError(1);
+    pub const INVALID_HANDLE: CBError = CBError(2);
+    pub const NOT_CONNECTED: CBError = CBError(3);
+    pub const OUT_OF_SPACE: CBError = CBError(4);
+    pub const OPERATION_CANCELLED: CBError = CBError(5);
+    pub const CONNECTION_TIMEOUT: CBError = CBError(6);
+    pub const PERIPHERAL_DISCONNECTED: CBError = CBError(7);
+    pub const UUID_NOT_ALLOWED: CBError = CBError(8);
+    pub const ALREADY_ADVERTISING: CBError = CBError(9);
+    pub const CONNECTION_FAILED: CBError = CBError(10);
+    pub const CONNECTION_LIMIT_REACHED: CBError = CBError(11);
+    pub const UNKOWN_DEVICE: CBError = CBError(12);
+    pub const OPERATION_NOT_SUPPORTED: CBError = CBError(13);
+    pub const PEER_REMOVED_PAIRING_INFORMATION: CBError = CBError(14);
+    pub const ENCRYPTION_TIMED_OUT: CBError = CBError(15);
+    pub const TOO_MANY_LE_PAIRED_DEVICES: CBError = CBError(16);
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CBATTError(pub NSInteger);
+
+impl CBATTError {
+    pub const SUCCESS: CBATTError = CBATTError(0);
+    pub const INVALID_HANDLE: CBATTError = CBATTError(1);
+    pub const READ_NOT_PERMITTED: CBATTError = CBATTError(2);
+    pub const WRITE_NOT_PERMITTED: CBATTError = CBATTError(3);
+    pub const INVALID_PDU: CBATTError = CBATTError(4);
+    pub const INSUFFICIENT_AUTHENTICATION: CBATTError = CBATTError(5);
+    pub const REQUEST_NOT_SUPPORTED: CBATTError = CBATTError(6);
+    pub const INVALID_OFFSET: CBATTError = CBATTError(7);
+    pub const INSUFFICIENT_AUTHORIZATION: CBATTError = CBATTError(8);
+    pub const PREPARE_QUEUE_FULL: CBATTError = CBATTError(9);
+    pub const ATTRIBUTE_NOT_FOUND: CBATTError = CBATTError(10);
+    pub const ATTRIBUTE_NOT_LONG: CBATTError = CBATTError(11);
+    pub const INSUFFICIENT_ENCRYPTION_KEY_SIZE: CBATTError = CBATTError(12);
+    pub const INVALID_ATTRIBUTE_VALUE_LENGTH: CBATTError = CBATTError(13);
+    pub const UNLIKELY_ERROR: CBATTError = CBATTError(14);
+    pub const INSUFFICIENT_ENCRYPTION: CBATTError = CBATTError(15);
+    pub const UNSUPPORTED_GROUP_TYPE: CBATTError = CBATTError(16);
+    pub const INSUFFICIENT_RESOURCES: CBATTError = CBATTError(17);
 }
 
 impl AdvertisementData {
@@ -337,13 +312,11 @@ impl CBCentralManager {
     }
 
     pub fn state(&self) -> CBManagerState {
-        let state: NSInteger = unsafe { msg_send![self, state] };
-        state.into()
+        CBManagerState(unsafe { msg_send![self, state] })
     }
 
     pub fn authorization() -> CBManagerAuthorization {
-        let authorization: NSInteger = unsafe { msg_send![Self::class(), authorization] };
-        authorization.into()
+        CBManagerAuthorization(unsafe { msg_send![Self::class(), authorization] })
     }
 
     pub fn connect_peripheral(&self, peripheral: &CBPeripheral, options: Option<Id<NSDictionary<NSString, NSObject>>>) {
@@ -382,8 +355,8 @@ impl CBCentralManager {
         res != NO
     }
 
-    pub fn supports_features(&self, features: NSUInteger) -> bool {
-        let res: BOOL = unsafe { msg_send![self, supportsFeatures: features] };
+    pub fn supports_features(&self, features: CBCentralManagerFeatures) -> bool {
+        let res: BOOL = unsafe { msg_send![self, supportsFeatures: features.0] };
         res != NO
     }
 
@@ -470,14 +443,7 @@ impl CBPeripheral {
     }
 
     pub fn state(&self) -> CBPeripheralState {
-        let n: NSInteger = unsafe { msg_send![self, state] };
-        match n {
-            0 => CBPeripheralState::Disconnected,
-            1 => CBPeripheralState::Connecting,
-            2 => CBPeripheralState::Connected,
-            3 => CBPeripheralState::Disconnecting,
-            _ => panic!("Unexpected peripheral state"),
-        }
+        CBPeripheralState(unsafe { msg_send![self, state] })
     }
 
     pub fn read_rssi(&self) {
@@ -525,8 +491,8 @@ impl CBCharacteristic {
         unsafe { option_from_ptr(msg_send![self, descriptors]) }
     }
 
-    pub fn properties(&self) -> NSUInteger {
-        unsafe { msg_send![self, properties] }
+    pub fn properties(&self) -> CBCharacteristicProperties {
+        CBCharacteristicProperties(unsafe { msg_send![self, properties] })
     }
 
     pub fn is_notifying(&self) -> bool {

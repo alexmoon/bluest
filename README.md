@@ -1,7 +1,14 @@
 # Bluest — Cross-platform Bluetooth LE crate for Rust
 
-[![crates.io page](https://img.shields.io/crates/v/bluest)](https://crates.io/crates/bluest)
-[![docs.rs page](https://docs.rs/bluest/badge.svg)](https://docs.rs/bluest)
+[![crates.io][crates-badge]][crates-url] [![docs.rs][docs-badge]][docs-url]
+[![Build Status][actions-badge]][actions-url]
+
+[crates-badge]: https://img.shields.io/crates/v/bluest
+[crates-url]: https://crates.io/crates/bluest
+[docs-badge]: https://docs.rs/bluest/badge.svg
+[docs-url]: https://docs.rs/bluest
+[actions-badge]: https://github.com/alexmoon/bluest/workflows/CI/badge.svg
+[actions-url]: https://github.com/alexmoon/bluest/actions?query=workflow%3ACI+branch%3Amain
 
 **Bluest** is a cross-platform [Bluetooth] Low Energy (BLE) crate for [Rust]. It
 supports the GAP Central and GATT Client roles, allowing you to access BLE

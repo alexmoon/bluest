@@ -78,7 +78,7 @@ impl Adapter {
                 let state = self.central.state();
                 debug!("Central state is now {:?}", state);
                 match state {
-                    CBManagerState::PoweredOn => Some(Ok(AdapterEvent::Available)),
+                    CBManagerState::POWERED_ON => Some(Ok(AdapterEvent::Available)),
                     _ => Some(Ok(AdapterEvent::Unavailable)),
                 }
             }
@@ -94,7 +94,7 @@ impl Adapter {
     /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
         let events = self.events();
-        if self.central.state() != CBManagerState::PoweredOn {
+        if self.central.state() != CBManagerState::POWERED_ON {
             events
                 .await?
                 .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
@@ -152,7 +152,7 @@ impl Adapter {
     /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
-        if self.central.state() != CBManagerState::PoweredOn {
+        if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
@@ -171,7 +171,7 @@ impl Adapter {
         });
 
         let events = BroadcastStream::new(self.sender.subscribe())
-            .take_while(|_| self.central.state() == CBManagerState::PoweredOn)
+            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
             .filter_map(move |x| {
                 let _guard = &guard;
                 match x {
@@ -195,7 +195,7 @@ impl Adapter {
 
     /// Connects to the [`Device`]
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
-        if self.central.state() != CBManagerState::PoweredOn {
+        if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
@@ -203,7 +203,7 @@ impl Adapter {
         debug!("Connecting to {:?}", device);
         self.central.connect_peripheral(&*device.peripheral, None);
         while let Some(event) = events.next().await {
-            if self.central.state() != CBManagerState::PoweredOn {
+            if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
@@ -220,7 +220,7 @@ impl Adapter {
 
     /// Disconnects from the [`Device`]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
-        if self.central.state() != CBManagerState::PoweredOn {
+        if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
@@ -228,7 +228,7 @@ impl Adapter {
         debug!("Disconnecting from {:?}", device);
         self.central.cancel_peripheral_connection(&*device.peripheral);
         while let Some(event) = events.next().await {
-            if self.central.state() != CBManagerState::PoweredOn {
+            if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {

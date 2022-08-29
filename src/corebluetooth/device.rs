@@ -81,7 +81,7 @@ impl Device {
 
     /// The connection status for this device
     pub fn is_connected(&self) -> bool {
-        self.peripheral.state() == CBPeripheralState::Connected
+        self.peripheral.state() == CBPeripheralState::CONNECTED
     }
 
     /// Discover the primary services of this device.
