@@ -102,12 +102,20 @@ impl Device {
 
     async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
         let mut receiver = self.sender.subscribe();
+
+        if !self.is_connected() {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         self.peripheral.discover_services(uuids);
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
                 PeripheralEvent::DiscoveredServices { error: None } => break,
                 PeripheralEvent::DiscoveredServices { error: Some(err) } => return Err(Error::from_nserror(err)),
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                }
                 _ => (),
             }
         }
@@ -134,10 +142,20 @@ impl Device {
     /// Asynchronously blocks until a GATT services changed packet is received
     pub async fn services_changed(&self) -> Result<()> {
         let mut receiver = self.sender.subscribe();
-        while !matches!(
-            receiver.recv().await.map_err(Error::from_recv_error)?,
-            PeripheralEvent::ServicesChanged { .. }
-        ) {}
+
+        if !self.is_connected() {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
+        loop {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::ServicesChanged { .. } => break,
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error))
+                }
+                _ => (),
+            }
+        }
 
         Ok(())
     }

@@ -7,7 +7,7 @@ use tokio_stream::wrappers::BroadcastStream;
 
 use super::delegates::PeripheralEvent;
 use super::descriptor::Descriptor;
-use super::types::{CBCharacteristic, CBCharacteristicWriteType};
+use super::types::{CBCharacteristic, CBCharacteristicWriteType, CBPeripheralState};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{CharacteristicProperties, Error, Result, Uuid};
@@ -57,6 +57,10 @@ impl Characteristic {
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
 
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         peripheral.read_characteristic_value(&self.inner);
 
         loop {
@@ -68,6 +72,9 @@ impl Characteristic {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => return self.value().await,
                     }
+                }
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -85,6 +92,11 @@ impl Characteristic {
         let service = self.inner.service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
+
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         let data = INSData::from_vec(value.to_vec());
         peripheral.write_characteristic_value(&self.inner, &data, CBCharacteristicWriteType::WithResponse);
 
@@ -95,6 +107,9 @@ impl Characteristic {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => return Ok(()),
                     }
+                }
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -133,6 +148,10 @@ impl Characteristic {
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
 
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         peripheral.set_notify(&self.inner, true);
         let guard = defer(move || {
             let peripheral = self.inner.service().peripheral();
@@ -146,6 +165,9 @@ impl Characteristic {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
+                }
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -167,6 +189,9 @@ impl Characteristic {
                             Some(err) => Some(Err(Error::from_nserror(err))),
                             None => Some(Ok(())),
                         }
+                    }
+                    Ok(PeripheralEvent::Disconnected { error }) => {
+                        Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
                     }
                     Ok(PeripheralEvent::ServicesChanged { invalidated_services })
                         if invalidated_services.contains(&service) =>
@@ -201,6 +226,11 @@ impl Characteristic {
         let service = self.inner.service();
         let peripheral = service.peripheral();
         let mut receiver = peripheral.subscribe()?;
+
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         peripheral.discover_descriptors(&self.inner);
 
         loop {
@@ -210,6 +240,9 @@ impl Characteristic {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
+                }
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>

@@ -29,6 +29,13 @@ impl crate::Error {
             String::new(),
         )
     }
+
+    pub(super) fn from_kind_and_nserror(kind: ErrorKind, err: Option<ShareId<NSError>>) -> Self {
+        match err {
+            Some(err) => crate::Error::new(kind, Some(Box::new(NSErrorError(err))), String::new()),
+            None => kind.into(),
+        }
+    }
 }
 
 fn kind_from_nserror(value: &NSError) -> ErrorKind {

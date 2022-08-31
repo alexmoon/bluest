@@ -3,7 +3,7 @@ use objc_id::{Id, ShareId};
 
 use super::characteristic::Characteristic;
 use super::delegates::PeripheralEvent;
-use super::types::{CBService, CBUUID};
+use super::types::{CBPeripheralState, CBService, CBUUID};
 use crate::error::ErrorKind;
 use crate::{Error, Result, Uuid};
 
@@ -52,6 +52,11 @@ impl Service {
 
     async fn discover_characteristics_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Characteristic>> {
         let peripheral = self.inner.peripheral();
+
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_characteristics(&self.inner, uuids);
 
@@ -61,6 +66,9 @@ impl Service {
                     Some(err) => return Err(Error::from_nserror(err)),
                     None => break,
                 },
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&self.inner) =>
                 {
@@ -108,6 +116,11 @@ impl Service {
 
     async fn discover_included_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
         let peripheral = self.inner.peripheral();
+
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
         let mut receiver = peripheral.subscribe()?;
         peripheral.discover_included_services(&self.inner, uuids);
 
@@ -118,6 +131,9 @@ impl Service {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => break,
                     }
+                }
+                PeripheralEvent::Disconnected { error } => {
+                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&self.inner) =>

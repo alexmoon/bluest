@@ -68,6 +68,10 @@ impl std::fmt::Debug for CentralEvent {
 
 #[derive(Debug, Clone)]
 pub enum PeripheralEvent {
+    Connected,
+    Disconnected {
+        error: Option<ShareId<NSError>>,
+    },
     DiscoveredServices {
         error: Option<ShareId<NSError>>,
     },
@@ -277,10 +281,43 @@ impl CentralDelegate {
         };
     }
 
-    delegate_method!(did_connect<Connect>(central, peripheral: Object));
-    delegate_method!(did_disconnect<Disconnect>(central, peripheral: Object, error: Option));
     delegate_method!(did_fail_to_connect<ConnectFailed>(central, peripheral: Object, error: Option));
     delegate_method!(did_update_state<StateChanged>(central));
+
+    extern "C" fn did_connect(this: &mut Object, _sel: Sel, _central: id, peripheral: id) {
+        unsafe {
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            if !ptr.is_null() {
+                let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
+                if let Some(delegate) = peripheral.delegate() {
+                    if let Some(sender) = delegate.sender() {
+                        let _res = sender.send(PeripheralEvent::Connected);
+                    }
+                }
+                let event = CentralEvent::Connect { peripheral };
+                debug!("CentralDelegate received {:?}", event);
+                let _res = (*ptr).send(event);
+            }
+        }
+    }
+
+    extern "C" fn did_disconnect(this: &mut Object, _sel: Sel, _central: id, peripheral: id, error: id) {
+        unsafe {
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            if !ptr.is_null() {
+                let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
+                let error: Option<Id<NSError, _>> = (!error.is_null()).then(|| ShareId::from_ptr(error.cast()));
+                if let Some(delegate) = peripheral.delegate() {
+                    if let Some(sender) = delegate.sender() {
+                        let _res = sender.send(PeripheralEvent::Disconnected { error: error.clone() });
+                    }
+                }
+                let event = CentralEvent::Disconnect { peripheral, error };
+                debug!("CentralDelegate received {:?}", event);
+                let _res = (*ptr).send(event);
+            }
+        }
+    }
 
     extern "C" fn did_discover_peripheral(
         this: &mut Object,
@@ -294,11 +331,13 @@ impl CentralDelegate {
             let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
             if !ptr.is_null() {
                 let rssi: i16 = msg_send![rssi, charValue];
-                let _res = (*ptr).send(CentralEvent::Discovered {
+                let event = CentralEvent::Discovered {
                     peripheral: ShareId::from_ptr(peripheral.cast()),
                     adv_data: ShareId::from_ptr(adv_data.cast()),
                     rssi,
-                });
+                };
+                debug!("CentralDelegate received {:?}", event);
+                let _res = (*ptr).send(event);
             }
         }
     }
@@ -315,10 +354,12 @@ impl CentralDelegate {
             if !ptr.is_null() {
                 match connection_event.try_into() {
                     Ok(event) => {
-                        let _res = (*ptr).send(CentralEvent::ConnectionEvent {
+                        let event = CentralEvent::ConnectionEvent {
                             peripheral: ShareId::from_ptr(peripheral.cast()),
                             event,
-                        });
+                        };
+                        debug!("CentralDelegate received {:?}", event);
+                        let _res = (*ptr).send(event);
                     }
                     Err(err) => {
                         error!("Invalid value for CBConnectionEvent: {}", err);
