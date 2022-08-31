@@ -92,7 +92,7 @@ impl Adapter {
     }
 
     /// Attempts to create the device identified by `id`
-    pub async fn open_device(&self, id: DeviceId) -> Result<Device> {
+    pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         Device::new(&self.inner, id.0)
     }
 

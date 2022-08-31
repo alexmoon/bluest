@@ -115,7 +115,7 @@ impl Adapter {
     }
 
     /// Attempts to create the device identified by `id`
-    pub async fn open_device(&self, id: DeviceId) -> Result<Device> {
+    pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         let identifiers = NSArray::from_vec(vec![NSUUID::from_uuid(id.0)]);
         let peripherals = self.central.retrieve_peripherals_with_identifiers(identifiers);
         peripherals

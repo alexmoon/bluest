@@ -57,11 +57,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let characteristics = service.discover_characteristics().await?;
     info!("discovered characteristics");
 
-    let res: Result<_, Box<dyn Error>> = characteristics
+    let button_characteristic = characteristics
         .iter()
         .find(|x| x.uuid() == BLINKY_BUTTON_STATE_CHARACTERISTIC)
-        .ok_or_else(|| "button characteristic not found".into());
-    let button_characteristic = res?;
+        .ok_or("button characteristic not found")?;
 
     let button_fut = async {
         info!("enabling button notifications");
@@ -75,11 +74,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     pin_mut!(button_fut);
 
-    let res: Result<_, Box<dyn Error>> = characteristics
+    let led_characteristic = characteristics
         .iter()
         .find(|x| x.uuid() == BLINKY_LED_STATE_CHARACTERISTIC)
-        .ok_or_else(|| "led characteristic not found".into());
-    let led_characteristic = res?;
+        .ok_or("led characteristic not found")?;
 
     let blink_fut = async {
         info!("blinking LED");

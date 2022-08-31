@@ -108,8 +108,8 @@ impl Adapter {
     }
 
     /// Attempts to create the device identified by `id`
-    pub async fn open_device(&self, id: DeviceId) -> Result<Device> {
-        Device::from_id(&id.0.into()).await.map_err(Into::into)
+    pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
+        Device::from_id(&id.0.as_os_str().into()).await.map_err(Into::into)
     }
 
     /// Finds all connected Bluetooth LE devices

@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         adapter.wait_available().await?;
 
         info!("re-opening previously found device");
-        let device = adapter.open_device(device_id).await?;
+        let device = adapter.open_device(&device_id).await?;
         info!(
             "re-opened device: {} ({:?})",
             device.name().as_deref().unwrap_or("(unknown)"),
