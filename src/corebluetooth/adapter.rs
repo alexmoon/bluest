@@ -9,11 +9,14 @@ use futures_util::{Stream, StreamExt};
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::debug;
+use tracing::{debug, error, info, warn};
 
 use super::delegates::{self, CentralDelegate};
 use super::device::Device;
-use super::types::{dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerState, CBUUID, NSUUID};
+use super::types::{
+    dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID,
+    NSUUID,
+};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result, Uuid};
@@ -51,6 +54,14 @@ impl std::fmt::Debug for Adapter {
 impl Adapter {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
+        match CBCentralManager::authorization() {
+            CBManagerAuthorization::ALLOWED_ALWAYS => info!("Bluetooth authorization is allowed"),
+            CBManagerAuthorization::DENIED => error!("Bluetooth authorization is denied"),
+            CBManagerAuthorization::NOT_DETERMINED => warn!("Bluetooth authorization is undetermined"),
+            CBManagerAuthorization::RESTRICTED => warn!("Bluetooth authorization is restricted"),
+            val => error!("Bluetooth authorization returned unknown value {:?}", val),
+        }
+
         let (sender, _) = tokio::sync::broadcast::channel(16);
         let delegate = CentralDelegate::with_sender(sender.clone())?;
         let central = unsafe {
