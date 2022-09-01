@@ -62,7 +62,7 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// This method is available on Linux only.
+    /// This method is available on Linux and MacOS/iOS only.
     pub async fn is_primary(&self) -> Result<bool> {
         self.inner.primary().await.map_err(Into::into)
     }

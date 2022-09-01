@@ -53,8 +53,8 @@ impl Service {
     }
 
     /// The [`Uuid`] identifying the type of service
-    pub fn uuid(&self) -> Result<Uuid> {
-        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
+    pub fn uuid(&self) -> Uuid {
+        Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDeviceService").to_u128())
     }
 
     /// Discover the characteristics associated with this service.

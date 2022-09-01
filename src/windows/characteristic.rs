@@ -1,11 +1,11 @@
 use futures_util::{Stream, StreamExt};
-use tracing::warn;
+use tracing::{error, warn};
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::{
     GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattValueChangedEventArgs,
     GattWriteOption, GattWriteResult,
 };
-use windows::Foundation::TypedEventHandler;
+use windows::Foundation::{AsyncOperationCompletedHandler, TypedEventHandler};
 use windows::Storage::Streams::{DataReader, DataWriter};
 
 use super::descriptor::Descriptor;
@@ -105,23 +105,22 @@ impl Characteristic {
 
     /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        self.write_kind(value, GattWriteOption::WriteWithoutResponse).await
-    }
-
-    /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
-    /// a successful write.
-    pub async fn write_with_response(&self, value: &[u8]) -> Result<()> {
         self.write_kind(value, GattWriteOption::WriteWithResponse).await
     }
 
+    /// Write the value of this descriptor on the device to `value` without requesting a response.
+    pub async fn write_without_response(&self, value: &[u8]) {
+        let _res = self.write_kind(value, GattWriteOption::WriteWithoutResponse).await;
+    }
+
     async fn write_kind(&self, value: &[u8], writeoption: GattWriteOption) -> Result<()> {
-        let writer = DataWriter::new()?;
-        writer.WriteBytes(value)?;
-        let buf = writer.DetachBuffer()?;
-        let res = self
-            .inner
-            .WriteValueWithResultAndOptionAsync(&buf, writeoption)?
-            .await?;
+        let op = {
+            let writer = DataWriter::new()?;
+            writer.WriteBytes(value)?;
+            let buf = writer.DetachBuffer()?;
+            self.inner.WriteValueWithResultAndOptionAsync(&buf, writeoption)?
+        };
+        let res = op.await?;
 
         check_communication_status(res.Status()?, res.ProtocolError(), "writing characteristic")
     }
@@ -143,7 +142,7 @@ impl Characteristic {
             ));
         };
 
-        let (sender, receiver) = tokio::sync::mpsc::channel(16);
+        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
         let token = self.inner.ValueChanged(&TypedEventHandler::new(
             move |_characteristic, event_args: &Option<GattValueChangedEventArgs>| {
                 let event_args = event_args
@@ -159,7 +158,9 @@ impl Characteristic {
                     Ok(data)
                 }
 
-                let _ = sender.blocking_send(get_value(event_args));
+                if let Err(err) = sender.try_send(get_value(event_args)) {
+                    error!("Error sending characteristic value changed notification: {:?}", err);
+                }
 
                 Ok(())
             },
@@ -180,13 +181,13 @@ impl Characteristic {
 
         let guard = defer(move || {
             let _guard = guard;
-            match self
+            let res = self
                 .inner
                 .WriteClientCharacteristicConfigurationDescriptorWithResultAsync(
                     GattClientCharacteristicConfigurationDescriptorValue::None,
-                ) {
-                Ok(fut) => {
-                    tokio::task::spawn(async move {
+                )
+                .and_then(|op| {
+                    op.SetCompleted(&AsyncOperationCompletedHandler::new(move |op, _status| {
                         fn check_status(res: windows::core::Result<GattWriteResult>) -> Result<()> {
                             let res = res?;
                             check_communication_status(
@@ -196,18 +197,20 @@ impl Characteristic {
                             )
                         }
 
-                        if let Err(err) = check_status(fut.await) {
-                            warn!("{:?}", err);
+                        if let Err(err) = check_status(op.as_ref().unwrap().GetResults()) {
+                            warn!("Error disabling characteristic notifications {:?}", err);
                         }
-                    });
-                }
-                Err(err) => {
-                    warn!("Error disabling characteristic notifications: {:?}", err);
-                }
+
+                        Ok(())
+                    }))
+                });
+
+            if let Err(err) = res {
+                warn!("Error disabling characteristic notifications: {:?}", err);
             }
         });
 
-        Ok(tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |x| {
+        Ok(receiver.map(move |x| {
             let _guard = &guard;
             x
         }))

@@ -60,16 +60,20 @@ impl Adapter {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
-        let (sender, receiver) = tokio::sync::mpsc::channel(16);
+        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
         let radio = self.inner.GetRadioAsync()?.await?;
         let token = radio.StateChanged(&TypedEventHandler::new(move |radio: &Option<Radio>, _| {
             let radio = radio.as_ref().expect("radio is null in StateChanged event");
             let state = radio.State().expect("radio state getter failed in StateChanged event");
-            let _ = sender.blocking_send(if state == RadioState::On {
+            let res = sender.try_send(if state == RadioState::On {
                 Ok(AdapterEvent::Available)
             } else {
                 Ok(AdapterEvent::Unavailable)
             });
+
+            if let Err(err) = res {
+                error!("Unable to send AdapterEvent: {:?}", err);
+            }
 
             Ok(())
         }))?;
@@ -80,7 +84,7 @@ impl Adapter {
             }
         });
 
-        Ok(tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |x| {
+        Ok(receiver.map(move |x| {
             let _guard = &guard;
             x
         }))
@@ -116,16 +120,19 @@ impl Adapter {
     pub async fn connected_devices(&self) -> Result<Vec<Device>> {
         let aqsfilter = BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected)?;
 
-        let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+        let op = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
             InParam::null(),
             DeviceInformationKind::AssociationEndpoint,
-        )?
-        .await?;
+        )?;
+        let devices = op.await?;
+        let device_ids: Vec<HSTRING> = devices
+            .into_iter()
+            .map(|x| x.Id())
+            .collect::<windows::core::Result<_>>()?;
 
-        let mut res = Vec::with_capacity(devices.Size()? as usize);
-        for device in devices {
-            let id = device.Id()?;
+        let mut res = Vec::with_capacity(device_ids.len());
+        for id in device_ids {
             res.push(Device::from_id(&id).await?);
         }
 
@@ -145,12 +152,12 @@ impl Adapter {
 
         debug!("aqs filter = {:?}", aqsfilter);
 
-        let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+        let op = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
             InParam::null(),
             DeviceInformationKind::AssociationEndpoint,
-        )?
-        .await?;
+        )?;
+        let devices = op.await?;
 
         trace!("found {} connected devices", devices.Size()?);
 
@@ -198,12 +205,12 @@ impl Adapter {
         // Find all associated endpoint services matching the filter
         let aep_id = HSTRING::from("System.Devices.AepService.AepId");
         let additional_properties = StringVec::new(vec![aep_id.clone()]);
-        let services = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+        let op = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
             &IIterable::from(additional_properties),
             DeviceInformationKind::AssociationEndpointService,
-        )?
-        .await?;
+        )?;
+        let services = op.await?;
 
         trace!("found {} matching services of connected devices", services.Size()?);
 
@@ -238,22 +245,23 @@ impl Adapter {
         let watcher = BluetoothLEAdvertisementWatcher::new()?;
         watcher.SetAllowExtendedAdvertisements(true)?;
 
-        let (sender, receiver) = tokio::sync::mpsc::channel(16);
-        let sender = Arc::new(sender);
+        let (sender, receiver) = futures_channel::mpsc::channel(16);
+        let sender = Arc::new(std::sync::Mutex::new(sender));
 
         let weak_sender = Arc::downgrade(&sender);
         watcher.Received(&TypedEventHandler::new(
             move |_watcher, event_args: &Option<BluetoothLEAdvertisementReceivedEventArgs>| {
                 if let Some(sender) = weak_sender.upgrade() {
                     if let Some(event_args) = event_args {
-                        let _ = sender.blocking_send(event_args.clone());
+                        let res = sender.lock().unwrap().try_send(event_args.clone());
+                        if let Err(err) = res {
+                            error!("Unable to send AdvertisingDevice: {:?}", err);
+                        }
                     }
                 }
                 Ok(())
             },
         ))?;
-
-        let received_events = tokio_stream::wrappers::ReceiverStream::new(receiver);
 
         let mut sender = Some(sender);
         watcher.Stopped(&TypedEventHandler::new(
@@ -271,7 +279,7 @@ impl Adapter {
             }
         });
 
-        Ok(received_events
+        Ok(receiver
             .map(|event_args| -> windows::core::Result<_> {
                 // Parse relevant fields from event_args
                 let addr = (event_args.BluetoothAddress()?, event_args.BluetoothAddressType()?);

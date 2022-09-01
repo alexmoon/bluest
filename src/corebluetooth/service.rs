@@ -29,9 +29,9 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// This method is available on MacOS/iOS only.
-    pub fn is_primary(&self) -> bool {
-        self.inner.is_primary()
+    /// This method is available on Linux and MacOS/iOS only.
+    pub async fn is_primary(&self) -> Result<bool> {
+        Ok(self.inner.is_primary())
     }
 
     /// Discover all characteristics associated with this service.

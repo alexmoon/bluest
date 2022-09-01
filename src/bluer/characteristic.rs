@@ -90,20 +90,12 @@ impl Characteristic {
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<Vec<u8>> {
-        self.inner
-            .cached_value()
-            .await
-            .map_err(Into::into)
-            .map(|x| x.into_iter().collect())
+        self.inner.cached_value().await.map_err(Into::into)
     }
 
     /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<Vec<u8>> {
-        self.inner
-            .read()
-            .await
-            .map_err(Into::into)
-            .map(|x| x.into_iter().collect())
+        self.inner.read().await.map_err(Into::into)
     }
 
     /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
@@ -130,7 +122,7 @@ impl Characteristic {
     ///
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
-        Ok(self.inner.notify().await?.map(|x| Ok(x.into_iter().collect())))
+        Ok(Box::pin(self.inner.notify().await?.map(Ok)))
     }
 
     /// Is the device currently sending notifications for this characteristic?

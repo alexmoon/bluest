@@ -1,4 +1,4 @@
-use tokio::sync::Mutex;
+use futures_util::lock::Mutex;
 use tracing::error;
 use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
@@ -148,7 +148,7 @@ impl Device {
 
     /// Asynchronously blocks until a GATT services changed packet is received
     pub async fn services_changed(&self) -> Result<()> {
-        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let (sender, receiver) = futures_channel::oneshot::channel();
         let mut sender = Some(sender);
         let token = self.device.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
             if let Some(sender) = sender.take() {

@@ -55,20 +55,12 @@ impl Descriptor {
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<Vec<u8>> {
-        self.inner
-            .cached_value()
-            .await
-            .map_err(Into::into)
-            .map(|x| x.into_iter().collect())
+        self.inner.cached_value().await.map_err(Into::into)
     }
 
     /// Read the value of this descriptor from the device
     pub async fn read(&self) -> Result<Vec<u8>> {
-        self.inner
-            .read()
-            .await
-            .map_err(Into::into)
-            .map(|x| x.into_iter().collect())
+        self.inner.read().await.map_err(Into::into)
     }
 
     /// Write the value of this descriptor on the device to `value`

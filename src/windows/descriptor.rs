@@ -26,8 +26,8 @@ impl Descriptor {
     }
 
     /// The [`Uuid`] identifying the type of descriptor
-    pub fn uuid(&self) -> Result<Uuid> {
-        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
+    pub fn uuid(&self) -> Uuid {
+        Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDescriptor").to_u128())
     }
 
     /// The cached value of this descriptor
@@ -56,10 +56,13 @@ impl Descriptor {
 
     /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let writer = DataWriter::new()?;
-        writer.WriteBytes(value)?;
-        let buf = writer.DetachBuffer()?;
-        let res = self.inner.WriteValueWithResultAsync(&buf)?.await?;
+        let op = {
+            let writer = DataWriter::new()?;
+            writer.WriteBytes(value)?;
+            let buf = writer.DetachBuffer()?;
+            self.inner.WriteValueWithResultAsync(&buf)?
+        };
+        let res = op.await?;
 
         check_communication_status(res.Status()?, res.ProtocolError(), "writing descriptor value")
     }
