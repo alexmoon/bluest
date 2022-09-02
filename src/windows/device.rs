@@ -1,7 +1,5 @@
-use futures_util::lock::Mutex;
 use tracing::error;
 use windows::core::{GUID, HSTRING};
-use windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
 use windows::Devices::Bluetooth::{
     BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
 };
@@ -26,14 +24,12 @@ impl std::fmt::Display for DeviceId {
 /// A Bluetooth LE device
 pub struct Device {
     device: BluetoothLEDevice,
-    session: Mutex<Option<GattSession>>,
 }
 
 impl Clone for Device {
     fn clone(&self) -> Self {
         Self {
             device: self.device.clone(),
-            session: Mutex::new(None),
         }
     }
 }
@@ -72,18 +68,12 @@ impl std::fmt::Display for Device {
 impl Device {
     pub(super) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
         let device = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
-        Ok(Device {
-            device,
-            session: Mutex::new(None),
-        })
+        Ok(Device { device })
     }
 
     pub(super) async fn from_id(id: &HSTRING) -> windows::core::Result<Self> {
         let device = BluetoothLEDevice::FromIdAsync(id)?.await?;
-        Ok(Device {
-            device,
-            session: Mutex::new(None),
-        })
+        Ok(Device { device })
     }
 
     /// This device's unique identifier
@@ -164,28 +154,6 @@ impl Device {
         });
 
         receiver.await.unwrap();
-        Ok(())
-    }
-
-    pub(super) async fn connect(&self) -> Result<()> {
-        let mut guard = self.session.lock().await;
-
-        if guard.is_none() {
-            let session = GattSession::FromDeviceIdAsync(&self.device.BluetoothDeviceId()?)?.await?;
-            session.SetMaintainConnection(true)?;
-            *guard = Some(session);
-        }
-
-        Ok(())
-    }
-
-    pub(super) async fn disconnect(&self) -> Result<()> {
-        let mut guard = self.session.lock().await;
-
-        if let Some(session) = guard.take() {
-            session.Close()?;
-        }
-
         Ok(())
     }
 }

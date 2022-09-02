@@ -7,8 +7,9 @@ use futures_util::{Stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::{InParam, HSTRING};
 use windows::Devices::Bluetooth::Advertisement::{
-    BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementWatcher,
-    BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData,
+    BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType,
+    BluetoothLEAdvertisementWatcher, BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData,
+    BluetoothLEScanningMode,
 };
 use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
 use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
@@ -243,6 +244,7 @@ impl Adapter {
     /// `services`. Otherwise returns all advertisements.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         let watcher = BluetoothLEAdvertisementWatcher::new()?;
+        watcher.SetScanningMode(BluetoothLEScanningMode::Active)?;
         watcher.SetAllowExtendedAdvertisements(true)?;
 
         let (sender, receiver) = futures_channel::mpsc::channel(16);
@@ -279,45 +281,37 @@ impl Adapter {
             }
         });
 
-        Ok(receiver
-            .map(|event_args| -> windows::core::Result<_> {
-                // Parse relevant fields from event_args
-                let addr = (event_args.BluetoothAddress()?, event_args.BluetoothAddressType()?);
+        Ok(receiver.filter_map(move |event_args| {
+            let _guard = &guard;
+
+            Box::pin(async move {
+                if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
+                    // Device cannot be created from a non-connectable advertisement
+                    return None;
+                }
+
+                let addr = event_args.BluetoothAddress().ok()?;
+                let kind = event_args.BluetoothAddressType().ok()?;
                 let rssi = event_args.RawSignalStrengthInDBm().ok();
                 let adv_data = AdvertisementData::from(event_args);
-                Ok((addr, rssi, adv_data))
-            })
-            .filter_map(move |res| {
-                let _guard = &guard;
 
-                // Filter by result and services
-                ready(match res {
-                    Ok((addr, rssi, adv_data)) => (services.is_empty()
-                        || services.iter().any(|x| adv_data.services.contains(x)))
-                    .then(|| (addr, rssi, adv_data)),
+                if !services.is_empty() && !services.iter().any(|x| adv_data.services.contains(x)) {
+                    return None;
+                }
+
+                match Device::from_addr(addr, kind).await {
+                    Ok(device) => Some(AdvertisingDevice { device, rssi, adv_data }),
                     Err(err) => {
-                        warn!("Error getting bluetooth address from event: {:?}", err);
+                        if err.code().is_err() {
+                            warn!("Error creating device: {:?}", err);
+                        } else {
+                            warn!("Device::from_addr returned null");
+                        }
                         None
                     }
-                })
+                }
             })
-            .then(|(addr, rssi, adv_data)| {
-                // Create the Device
-                Box::pin(async move {
-                    Device::from_addr(addr.0, addr.1)
-                        .await
-                        .map(|device| AdvertisingDevice { device, rssi, adv_data })
-                })
-            })
-            .filter_map(move |res| {
-                ready(match res {
-                    Ok(dev) => Some(dev),
-                    Err(err) => {
-                        warn!("Error creating device: {:?}", err);
-                        None
-                    }
-                })
-            }))
+        }))
     }
 
     /// Finds Bluetooth devices providing any service in `services`.
@@ -345,13 +339,15 @@ impl Adapter {
     }
 
     /// Connects to the [`Device`]
-    pub async fn connect_device(&self, device: &Device) -> Result<()> {
-        device.connect().await
+    pub async fn connect_device(&self, _device: &Device) -> Result<()> {
+        // Windows manages the device connection automatically
+        Ok(())
     }
 
     /// Disconnects from [`Device`]
-    pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
-        device.disconnect().await
+    pub async fn disconnect_device(&self, _device: &Device) -> Result<()> {
+        // Windows manages the device connection automatically
+        Ok(())
     }
 }
 
