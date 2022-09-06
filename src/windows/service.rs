@@ -14,7 +14,7 @@ pub struct Service {
 
 impl PartialEq for Service {
     fn eq(&self, other: &Self) -> bool {
-        self.inner.DeviceId().unwrap() == other.inner.DeviceId().unwrap()
+        self.inner.Session().unwrap() == other.inner.Session().unwrap()
             && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
     }
 }
@@ -23,7 +23,15 @@ impl Eq for Service {}
 
 impl std::hash::Hash for Service {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.DeviceId().unwrap().to_os_string().hash(state);
+        self.inner
+            .Session()
+            .unwrap()
+            .DeviceId()
+            .unwrap()
+            .Id()
+            .unwrap()
+            .to_os_string()
+            .hash(state);
         self.inner.AttributeHandle().unwrap().hash(state);
     }
 }
@@ -33,7 +41,15 @@ impl std::fmt::Debug for Service {
         f.debug_struct("Service")
             .field(
                 "device_id",
-                &self.inner.DeviceId().expect("DeviceId missing on GattDeviceService"),
+                &self
+                    .inner
+                    .Session()
+                    .expect("Session missing on GattDeviceService")
+                    .DeviceId()
+                    .expect("DeviceId missing on GattSession")
+                    .Id()
+                    .expect("Id missing on BluetoothDeviceId")
+                    .to_os_string(),
             )
             .field("uuid", &self.inner.Uuid().expect("UUID missing on GattDeviceService"))
             .field(

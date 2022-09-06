@@ -22,7 +22,7 @@ pub struct Characteristic {
 
 impl PartialEq for Characteristic {
     fn eq(&self, other: &Self) -> bool {
-        self.inner.Service().unwrap().DeviceId().unwrap() == other.inner.Service().unwrap().DeviceId().unwrap()
+        self.inner.Service().unwrap().Session().unwrap() == other.inner.Service().unwrap().Session().unwrap()
             && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
     }
 }
@@ -34,7 +34,11 @@ impl std::hash::Hash for Characteristic {
         self.inner
             .Service()
             .unwrap()
+            .Session()
+            .unwrap()
             .DeviceId()
+            .unwrap()
+            .Id()
             .unwrap()
             .to_os_string()
             .hash(state);
