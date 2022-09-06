@@ -22,21 +22,14 @@ impl std::fmt::Display for DeviceId {
 }
 
 /// A Bluetooth LE device
+#[derive(Clone)]
 pub struct Device {
-    device: BluetoothLEDevice,
-}
-
-impl Clone for Device {
-    fn clone(&self) -> Self {
-        Self {
-            device: self.device.clone(),
-        }
-    }
+    inner: BluetoothLEDevice,
 }
 
 impl PartialEq for Device {
     fn eq(&self, other: &Self) -> bool {
-        self.device.DeviceId() == other.device.DeviceId()
+        self.inner.DeviceId() == other.inner.DeviceId()
     }
 }
 
@@ -44,7 +37,7 @@ impl Eq for Device {}
 
 impl std::hash::Hash for Device {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.device.DeviceId().unwrap().to_os_string().hash(state);
+        self.inner.DeviceId().unwrap().to_os_string().hash(state);
     }
 }
 
@@ -67,19 +60,19 @@ impl std::fmt::Display for Device {
 
 impl Device {
     pub(super) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
-        let device = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
-        Ok(Device { device })
+        let inner = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
+        Ok(Device { inner })
     }
 
     pub(super) async fn from_id(id: &HSTRING) -> windows::core::Result<Self> {
-        let device = BluetoothLEDevice::FromIdAsync(id)?.await?;
-        Ok(Device { device })
+        let inner = BluetoothLEDevice::FromIdAsync(id)?.await?;
+        Ok(Device { inner })
     }
 
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
         DeviceId(
-            self.device
+            self.inner
                 .DeviceId()
                 .expect("error getting DeviceId for BluetoothLEDevice")
                 .to_os_string(),
@@ -88,7 +81,7 @@ impl Device {
 
     /// The local name for this device, if available
     pub fn name(&self) -> Option<String> {
-        self.device
+        self.inner
             .Name()
             .ok()
             .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()))
@@ -96,13 +89,13 @@ impl Device {
 
     /// The connection status for this device
     pub fn is_connected(&self) -> bool {
-        self.device.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
+        self.inner.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
     }
 
     /// Discover the primary services of this device.
     pub async fn discover_services(&self) -> Result<Vec<Service>> {
         let res = self
-            .device
+            .inner
             .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Uncached)?
             .await?;
         check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
@@ -113,7 +106,7 @@ impl Device {
     /// Discover the primary service(s) of this device with the given [`Uuid`].
     pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
-            .device
+            .inner
             .GetGattServicesForUuidWithCacheModeAsync(GUID::from_u128(uuid.as_u128()), BluetoothCacheMode::Uncached)?
             .await?;
 
@@ -128,7 +121,7 @@ impl Device {
     /// set.
     pub async fn services(&self) -> Result<Vec<Service>> {
         let res = self
-            .device
+            .inner
             .GetGattServicesWithCacheModeAsync(BluetoothCacheMode::Cached)?
             .await?;
         check_communication_status(res.Status()?, res.ProtocolError(), "discovering services")?;
@@ -140,7 +133,7 @@ impl Device {
     pub async fn services_changed(&self) -> Result<()> {
         let (sender, receiver) = futures_channel::oneshot::channel();
         let mut sender = Some(sender);
-        let token = self.device.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
+        let token = self.inner.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
             if let Some(sender) = sender.take() {
                 let _ = sender.send(());
             }
@@ -148,7 +141,7 @@ impl Device {
         }))?;
 
         let _guard = defer(move || {
-            if let Err(err) = self.device.RemoveGattServicesChanged(token) {
+            if let Err(err) = self.inner.RemoveGattServicesChanged(token) {
                 error!("Error removing state changed handler: {:?}", err);
             }
         });
