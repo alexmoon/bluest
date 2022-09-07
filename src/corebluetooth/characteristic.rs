@@ -26,6 +26,12 @@ impl Characteristic {
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }
@@ -34,6 +40,12 @@ impl Characteristic {
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::properties_async()`]
+    /// method fails.
     pub fn properties(&self) -> CharacteristicProperties {
         self.inner.properties().into()
     }
@@ -218,10 +230,7 @@ impl Characteristic {
         Ok(self.inner.is_notifying())
     }
 
-    /// Discover the descriptors associated with this service.
-    ///
-    /// If a [`Uuid`] is provided, only descriptors with that [`Uuid`] will be discovered. If `uuid` is `None` then all
-    /// descriptors for this characteristic will be discovered.
+    /// Discover the descriptors associated with this characteristic.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();

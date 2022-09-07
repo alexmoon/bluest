@@ -7,6 +7,7 @@ use windows::Foundation::TypedEventHandler;
 
 use super::error::check_communication_status;
 use super::service::Service;
+use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{Result, Uuid};
 
@@ -80,6 +81,13 @@ impl Device {
     }
 
     /// The local name for this device, if available
+    ///
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Option<String> {
         self.inner
             .Name()
@@ -88,6 +96,11 @@ impl Device {
     }
 
     /// The connection status for this device
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn is_connected(&self) -> bool {
         self.inner.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
     }
@@ -148,5 +161,14 @@ impl Device {
 
         receiver.await.unwrap();
         Ok(())
+    }
+
+    /// Get the current signal strength from the device in dBm.
+    ///
+    /// # Platform specific
+    ///
+    /// Returns [ErrorKind::NotSupported] on Windows.
+    pub async fn rssi(&self) -> Result<i16> {
+        Err(ErrorKind::NotSupported.into())
     }
 }

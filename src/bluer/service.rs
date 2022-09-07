@@ -62,7 +62,7 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// This method is available on Linux and MacOS/iOS only.
+    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn is_primary(&self) -> Result<bool> {
         self.inner.primary().await.map_err(Into::into)
     }

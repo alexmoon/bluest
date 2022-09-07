@@ -21,6 +21,12 @@ impl Service {
     }
 
     /// The [`Uuid`] identifying the type of this GATT service
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Service::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }
@@ -29,7 +35,7 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// This method is available on Linux and MacOS/iOS only.
+    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn is_primary(&self) -> Result<bool> {
         Ok(self.inner.is_primary())
     }

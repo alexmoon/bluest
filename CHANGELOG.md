@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.4.0
+
+- Breaking change: take `id` by reference in `Adapter::open_device`
+- Improve CoreBluetooth error handling on disconnection
+- Remove dependency on the Tokio runtime on non-Linux platforms
+- Bug fixes
+
 ## 0.3.4
 
 - Add `Adapter::discover_devices`

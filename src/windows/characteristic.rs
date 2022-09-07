@@ -67,6 +67,12 @@ impl Characteristic {
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattCharacteristic").to_u128())
     }
@@ -75,6 +81,12 @@ impl Characteristic {
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::properties_async()`]
+    /// method fails.
     pub fn properties(&self) -> CharacteristicProperties {
         let props = self
             .inner

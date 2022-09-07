@@ -51,6 +51,8 @@ impl Device {
 
     /// The local name for this device, if available
     ///
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    ///
     /// # Panics
     ///
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
@@ -148,7 +150,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// This method is available on Linux and MacOS/iOS only.
+    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn rssi(&self) -> Result<i16> {
         self.inner.rssi().await?.ok_or_else(|| ErrorKind::NotFound.into())
     }

@@ -75,11 +75,23 @@ impl Device {
     }
 
     /// The local name for this device, if available
+    ///
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Option<String> {
         self.peripheral.name().map(|x| x.as_str().to_string())
     }
 
     /// The connection status for this device
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
+    /// no current Tokio runtime and creating one fails.
     pub fn is_connected(&self) -> bool {
         self.peripheral.state() == CBPeripheralState::CONNECTED
     }
@@ -164,7 +176,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// This method is available on Linux and MacOS/iOS only.
+    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn rssi(&self) -> Result<i16> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.read_rssi();

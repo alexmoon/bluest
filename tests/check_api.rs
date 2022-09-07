@@ -48,7 +48,6 @@ async fn check_device_apis(device: Device) -> Result<Service> {
 
     let _services_changed: Result<()> = assert_send(device.services_changed()).await;
 
-    #[cfg(not(target_os = "windows"))]
     let _rssi: Result<i16> = assert_send(device.rssi()).await;
 
     Ok(services?.into_iter().next().unwrap())
@@ -56,12 +55,10 @@ async fn check_device_apis(device: Device) -> Result<Service> {
 
 async fn check_service_apis(service: Service) -> Result<Characteristic> {
     let _uuid: Uuid = service.uuid();
+    let _is_primary: Result<bool> = assert_send(service.is_primary()).await;
 
     #[cfg(target_os = "linux")]
     let _uuid: Result<Uuid> = assert_send(service.uuid_async()).await;
-
-    #[cfg(not(target_os = "windows"))]
-    let _is_primary: Result<bool> = assert_send(service.is_primary()).await;
 
     let _discovery: Result<Vec<Characteristic>> = assert_send(service.discover_characteristics()).await;
     let _discovery: Result<Vec<Characteristic>> =

@@ -165,6 +165,9 @@ impl Adapter {
     /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
     /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
+    ///
+    /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
+    /// `services`. Otherwise returns all advertisements.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());

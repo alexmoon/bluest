@@ -5,6 +5,7 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 use super::characteristic::Characteristic;
 use super::error::check_communication_status;
 use crate::{Result, Uuid};
+use crate::error::ErrorKind;
 
 /// A Bluetooth GATT service
 #[derive(Clone)]
@@ -69,11 +70,26 @@ impl Service {
     }
 
     /// The [`Uuid`] identifying the type of service
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Service::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDeviceService").to_u128())
     }
 
-    /// Discover the characteristics associated with this service.
+    /// Whether this is a primary service of the device.
+    ///
+    /// # Platform specific
+    ///
+    /// Returns [ErrorKind::NotSupported] on Windows.
+    pub async fn is_primary(&self) -> Result<bool> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
+    /// Discover all characteristics associated with this service.
     pub async fn discover_characteristics(&self) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
@@ -84,7 +100,7 @@ impl Service {
         Ok(characteristics.into_iter().map(Characteristic::new).collect())
     }
 
-    /// Discover the characteristics(s) of this service with the given [`Uuid`].
+    /// Discover the characteristic(s) with the given [`Uuid`].
     pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
@@ -120,7 +136,7 @@ impl Service {
         Ok(services.into_iter().map(Service::new).collect())
     }
 
-    /// Discover the included service(s) of this service with the given [`Uuid`].
+    /// Discover the included service(s) with the given [`Uuid`].
     pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
         let res = self
             .inner

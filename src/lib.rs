@@ -57,11 +57,18 @@
 //!     [notify/indicate][Characteristic::notify] operations on remote characteristics
 //!   - [Read][Descriptor::read] and [write][Descriptor::write] operations on characteristic descriptors
 //!
+//! # Asynchronous runtimes
+//!
+//! On non-linux platforms, Bluest should work with any asynchronous runtime. On linux the underlying `bluer` crate
+//! requires the Tokio runtime and Bluest makes use of Tokio's `block_in_place` API (which requires Tokio's
+//! multi-threaded runtime) to make a few methods synchronous. Linux-only asynchronous versions of those methods are
+//! also provided, which should be preferred in platform-specific code.
+//!
 //! # Platform specifics
 //!
 //! Because Bluest aims to provide a thin abstraction over the platform-specific APIs, the available APIs represent the
 //! lowest common denominator of APIs among the supported platforms. In most cases Apple's CoreBluetooth API is the
-//! most restricted and therefore impose the limit on what can be supported in a cross platform library. For example,
+//! most restricted and therefore imposes the limit on what can be supported in a cross platform library. For example,
 //! CoreBluetooth never exposes the Bluetooth address of devices to applications, therefore there is no method on
 //! `Device` for retrieving an address or even any Bluetooth address struct in the crate.
 //!

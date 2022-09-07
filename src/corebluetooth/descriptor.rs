@@ -51,6 +51,12 @@ impl Descriptor {
     }
 
     /// The [`Uuid`] identifying the type of this GATT descriptor
+    ///
+    /// # Panics
+    ///
+    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
+    /// current Tokio runtime and creating one fails, or if the underlying [`Descriptor::uuid_async()`] method
+    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }

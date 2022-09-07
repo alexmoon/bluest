@@ -141,6 +141,9 @@ impl Adapter {
     /// Returns a stream of [`AdvertisingDevice`] structs which contain the data from the advertising packet and the
     /// [`Device`] which sent it. Scanning is automatically stopped when the stream is dropped. Inclusion of duplicate
     /// packets is a platform-specific implementation detail.
+    ///
+    /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
+    /// `services`. Otherwise returns all advertisements.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
         Ok(self
             .inner
@@ -202,11 +205,38 @@ impl Adapter {
     }
 
     /// Connects to the [`Device`]
+    ///
+    /// # Platform specifics
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// This method must be called before any methods on the [`Device`] which require a connection are called. After a
+    /// successful return from this method a connection has been established with the device (if one did not already
+    /// exist) and the application can then interact with the device.
+    ///
+    /// ## Windows
+    ///
+    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, a
+    /// connection will automatically be established, if necessary, when methods on the device requiring a connection
+    /// are called.
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         device.inner.connect().await.map_err(Into::into)
     }
 
     /// Disconnects from the [`Device`]
+    ///
+    /// # Platform specifics
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Once this method is called, the application will no longer have access to the [`Device`] and any methods
+    /// which would require a connection will fail. If no other application has a connection to the same device,
+    /// the underlying Bluetooth connection will be closed.
+    ///
+    /// ## Windows
+    ///
+    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, the
+    /// connection will be closed only when the [`Device`] and all its child objects are dropped.
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         device.inner.disconnect().await.map_err(Into::into)
     }

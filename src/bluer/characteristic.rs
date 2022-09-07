@@ -57,6 +57,9 @@ impl Characteristic {
 
     /// The properties of this this GATT characteristic.
     ///
+    /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
+    /// characteristic.
+    ///
     /// # Panics
     ///
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
@@ -130,10 +133,7 @@ impl Characteristic {
         self.inner.notifying().await.map_err(Into::into)
     }
 
-    /// Discover the descriptors associated with this service.
-    ///
-    /// If a [`Uuid`] is provided, only descriptors with that [`Uuid`] will be discovered. If `uuid` is `None` then all
-    /// descriptors for this characteristic will be discovered.
+    /// Discover the descriptors associated with this characteristic.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         self.descriptors().await
     }
