@@ -4,8 +4,8 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 
 use super::characteristic::Characteristic;
 use super::error::check_communication_status;
-use crate::{Result, Uuid};
 use crate::error::ErrorKind;
+use crate::{Result, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Clone)]
