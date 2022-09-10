@@ -77,45 +77,30 @@ most restricted and therefore imposes the limit on what can be supported in a cr
 CoreBluetooth never exposes the Bluetooth address of devices to applications, therefore there is no method on
 `Device` for retrieving an address or even any Bluetooth address struct in the crate.
 
-The underlying APIs for accessing services, characteristics, and descriptors are all pretty similar and should
-behave consistently across platforms. However errors may not be consistent from platform to platform. For example,
+Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
+in behavior are summarized in the table below.
+
+| Method | MacOS/iOS | Windows | Linux |
+|--------|:---------:|:-------:|:-----:|
+| [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
+| [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
+| [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
+| [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
+| [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
+| [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
+| [`Characteristic::uuid`][Characteristic::uuid] | ✅ | ✅ | ⌛️ |
+| [`Descriptor::uuid`][Descriptor::uuid] | ✅ | ✅ | ⌛️ |
+
+✅ = supported  
+✨ = managed automatically by the OS, this method is a no-op  
+⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
+❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
+
+Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,
 Linux's bluez API does not return the underlying Bluetooth protocol error in a useful way, whereas the other
 platforms do. Where it is possible to return a meaningful error, Bluest will attempt to do so. In other cases,
 Bluest may return an error with a [`kind`][Error::kind] of [`Other`][error::ErrorKind::Other] and you would need to
 look at the platform-specific [`source`][std::error::Error::source] of the error for more information.
-
-The more significant area of platform differences is in discovering and connecting to devices.
-
-Each platform has its own methods for identifying, scanning for, and connecting to devices. Again, since
-CoreBluetooth is the most restrictive in the methods it provides for filtering scan results and identifying devices
-to connect to, the Bluest API largely follows those limitations (e.g. scanning can be filtered only by a set of
-service UUIDs). The implementations for other platforms have been poly-filled to match those APIs.
-
-Connecting and disconnecting from devices is another area of API differences that cannot be as easily poly-filled.
-To ensure proper cross-platform behavior, you should always call [`connect_device`][Adapter::connect_device] before
-calling any methods which may require a connection. When you have finished using a device you should call
-[`disconnect_device`][Adapter::disconnect_device] and then drop the `Device` and all its child objects to ensure
-the OS will properly release any associated resources.
-
-### MacOS/iOS (CoreBluetooth)
-
-Connections to devices are managed by the `Adapter` instance. You must call
-[`connect_device`][Adapter::connect_device] before calling any methods on a `Device` (or child objects)
-that require a connection or an error will be returned. Because the `Adapter` manages the connections, all
-connections will be closed when the `Adapter` is dropped, therefore you must ensure the `Adapter` lives as long as
-you need a connection to any of its devices.
-
-When you call [`disconnect_device`][Adapter::disconnect_device], access to that device will be terminated
-for the application. If no other applications running on the system have connected to the device, the underlying
-hardware connection will be closed.
-
-### Windows (WinRT)
-
-Connections to devices are managed automatically by the OS. Calls to [`connect_device`][Adapter::connect_device]
-and [`disconnect_device`][Adapter::disconnect_device] are no-ops that immediately return success. The actual
-connection will be made as soon as a method is called on a `Device` that requires a connection (typically
-[`discover_services`][Device::discover_services]). That connection will be maintained as long as the `Device`
-instance or any child instance lives.
 
 ## Feature flags
 
@@ -138,15 +123,24 @@ Refer to the [API documentation] for more details.
 [Adapter::open_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.open_device
 [Adapter::connect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.connect_device
 [Adapter::disconnect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.disconnect_device
+[Device::name]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.name
+[Device::is_connected]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_connected
 [Device::discover_services]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.discover_services
+[Device::rssi]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.rssi
+[Service::uuid]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.uuid
+[Service::is_primary]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.is_primary
 [Service::discover_characteristics]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.discover_characteristics
+[Characteristic::uuid]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.uuid
+[Characteristic::properties]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.properties
 [Characteristic::discover_descriptors]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.discover_descriptors
 [Characteristic::read]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.read
 [Characteristic::write]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.write
 [Characteristic::write_without_response]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.write_without_response
 [Characteristic::notify]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.notify
+[Descriptor::uuid]: https://docs.rs/bluest/latest/bluest/struct.Descriptor.html#method.uuid
 [Descriptor::read]: https://docs.rs/bluest/latest/bluest/struct.Descriptor.html#method.read
 [Descriptor::write]: https://docs.rs/bluest/latest/bluest/struct.Descriptor.html#method.write
 [Error::kind]: https://docs.rs/bluest/latest/bluest/error/struct.Error.html#method.kind
+[error::ErrorKind::NotSupported]: https://docs.rs/bluest/latest/bluest/error/enum.ErrorKind.html#variant.NotSupported
 [error::ErrorKind::Other]: https://docs.rs/bluest/latest/bluest/error/enum.ErrorKind.html#variant.Other
 [std::error::Error::source]: https://doc.rust-lang.org/stable/std/error/trait.Error.html#method.source

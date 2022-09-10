@@ -33,13 +33,9 @@ async fn check_adapter_apis(adapter: Adapter) -> Result<Device> {
 
 async fn check_device_apis(device: Device) -> Result<Service> {
     let _id: DeviceId = device.id();
-    let _name: Option<String> = device.name();
-    let _is_connected: bool = device.is_connected();
-
-    #[cfg(target_os = "linux")]
-    let _name: Option<String> = assert_send(device.name_async()).await;
-    #[cfg(target_os = "linux")]
-    let _is_connected: bool = assert_send(device.is_connected_async()).await;
+    let _name: Result<String> = device.name();
+    let _name: Result<String> = assert_send(device.name_async()).await;
+    let _is_connected: bool = assert_send(device.is_connected()).await;
 
     let _discovery: Result<Vec<Service>> = assert_send(device.discover_services()).await;
     let _discovery: Result<Vec<Service>> =
@@ -55,10 +51,8 @@ async fn check_device_apis(device: Device) -> Result<Service> {
 
 async fn check_service_apis(service: Service) -> Result<Characteristic> {
     let _uuid: Uuid = service.uuid();
-    let _is_primary: Result<bool> = assert_send(service.is_primary()).await;
-
-    #[cfg(target_os = "linux")]
     let _uuid: Result<Uuid> = assert_send(service.uuid_async()).await;
+    let _is_primary: Result<bool> = assert_send(service.is_primary()).await;
 
     let _discovery: Result<Vec<Characteristic>> = assert_send(service.discover_characteristics()).await;
     let _discovery: Result<Vec<Characteristic>> =
@@ -75,12 +69,8 @@ async fn check_service_apis(service: Service) -> Result<Characteristic> {
 
 async fn check_characteristic_apis(characteristic: Characteristic) -> Result<Descriptor> {
     let _uuid: Uuid = characteristic.uuid();
-    let _props: CharacteristicProperties = characteristic.properties();
-
-    #[cfg(target_os = "linux")]
     let _uuid: Result<Uuid> = assert_send(characteristic.uuid_async()).await;
-    #[cfg(target_os = "linux")]
-    let _props: Result<CharacteristicProperties> = assert_send(characteristic.properties_async()).await;
+    let _props: Result<CharacteristicProperties> = assert_send(characteristic.properties()).await;
 
     let _value: Result<Vec<u8>> = assert_send(characteristic.value()).await;
     let _value: Result<Vec<u8>> = assert_send(characteristic.read()).await;
@@ -99,8 +89,6 @@ async fn check_characteristic_apis(characteristic: Characteristic) -> Result<Des
 
 async fn check_descriptor_apis(descriptor: Descriptor) -> Result<()> {
     let _uuid: Uuid = descriptor.uuid();
-
-    #[cfg(target_os = "linux")]
     let _uuid: Result<Uuid> = assert_send(descriptor.uuid_async()).await;
 
     let _value: Result<Vec<u8>> = assert_send(descriptor.value()).await;

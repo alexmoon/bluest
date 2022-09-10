@@ -50,10 +50,6 @@ impl Service {
     }
 
     /// The [`Uuid`] identifying the type of this GATT service
-    ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only.
     pub async fn uuid_async(&self) -> Result<Uuid> {
         self.inner.uuid().await.map_err(Into::into)
     }

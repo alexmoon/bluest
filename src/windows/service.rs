@@ -80,6 +80,11 @@ impl Service {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDeviceService").to_u128())
     }
 
+    /// The [`Uuid`] identifying the type of this GATT service
+    pub async fn uuid_async(&self) -> Result<Uuid> {
+        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
+    }
+
     /// Whether this is a primary service of the device.
     ///
     /// # Platform specific

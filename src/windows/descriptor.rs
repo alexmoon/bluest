@@ -36,6 +36,11 @@ impl Descriptor {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDescriptor").to_u128())
     }
 
+    /// The [`Uuid`] identifying the type of this GATT descriptor
+    pub async fn uuid_async(&self) -> Result<Uuid> {
+        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
+    }
+
     /// The cached value of this descriptor
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.

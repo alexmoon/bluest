@@ -82,17 +82,22 @@ impl Device {
     ///
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
     /// no current Tokio runtime and creating one fails.
-    pub fn name(&self) -> Option<String> {
-        self.peripheral.name().map(|x| x.as_str().to_string())
+    pub fn name(&self) -> Result<String> {
+        match self.peripheral.name() {
+            Some(name) => Ok(name.as_str().to_owned()),
+            None => Err(ErrorKind::NotFound.into()),
+        }
+    }
+
+    /// The local name for this device, if available
+    ///
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    pub async fn name_async(&self) -> Result<String> {
+        self.name()
     }
 
     /// The connection status for this device
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
-    pub fn is_connected(&self) -> bool {
+    pub async fn is_connected(&self) -> bool {
         self.peripheral.state() == CBPeripheralState::CONNECTED
     }
 
@@ -115,7 +120,7 @@ impl Device {
     async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
         let mut receiver = self.sender.subscribe();
 
-        if !self.is_connected() {
+        if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
         }
 
@@ -155,7 +160,7 @@ impl Device {
     pub async fn services_changed(&self) -> Result<()> {
         let mut receiver = self.sender.subscribe();
 
-        if !self.is_connected() {
+        if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
         }
 
@@ -176,7 +181,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
+    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
     pub async fn rssi(&self) -> Result<i16> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.read_rssi();

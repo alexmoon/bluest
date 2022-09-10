@@ -47,10 +47,6 @@ impl Characteristic {
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
-    ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only.
     pub async fn uuid_async(&self) -> Result<Uuid> {
         self.inner.uuid().await.map_err(Into::into)
     }
@@ -59,34 +55,8 @@ impl Characteristic {
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::properties_async()`]
-    /// method fails.
-    pub fn properties(&self) -> CharacteristicProperties {
-        // Call an async function from a synchronous context
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.properties_async())),
-            Err(_) => tokio::runtime::Builder::new_current_thread()
-                .build()
-                .unwrap()
-                .block_on(self.properties_async()),
-        }
-        .unwrap()
-    }
-
-    /// The properties of this this GATT characteristic.
-    ///
-    /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
-    /// characteristic.
-    ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only.
-    pub async fn properties_async(&self) -> Result<CharacteristicProperties> {
-        self.inner.flags().await.map(Into::into).map_err(Into::into)
+    pub async fn properties(&self) -> Result<CharacteristicProperties> {
+        self.inner.flags().await.map(Into::into)
     }
 
     /// The cached value of this characteristic

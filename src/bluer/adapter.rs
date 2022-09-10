@@ -211,8 +211,9 @@ impl Adapter {
     /// ## MacOS/iOS
     ///
     /// This method must be called before any methods on the [`Device`] which require a connection are called. After a
-    /// successful return from this method a connection has been established with the device (if one did not already
-    /// exist) and the application can then interact with the device.
+    /// successful return from this method, a connection has been established with the device (if one did not already
+    /// exist) and the application can then interact with the device. This connection will be maintained until either
+    /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
     ///
     /// ## Windows
     ///

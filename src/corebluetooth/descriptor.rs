@@ -61,6 +61,11 @@ impl Descriptor {
         self.inner.uuid().to_uuid()
     }
 
+    /// The [`Uuid`] identifying the type of this GATT descriptor
+    pub async fn uuid_async(&self) -> Result<Uuid> {
+        Ok(self.uuid())
+    }
+
     /// The cached value of this descriptor
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.

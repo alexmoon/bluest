@@ -57,7 +57,7 @@ impl Device {
     ///
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
     /// no current Tokio runtime and creating one fails.
-    pub fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Result<String> {
         // Call an async function from a synchronous context
         match tokio::runtime::Handle::try_current() {
             Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.name_async())),
@@ -70,36 +70,13 @@ impl Device {
 
     /// The local name for this device, if available
     ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only.
-    pub async fn name_async(&self) -> Option<String> {
-        self.inner.alias().await.ok()
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    pub async fn name_async(&self) -> Result<String> {
+        self.inner.alias().await.map_err(Into::into)
     }
 
     /// The connection status for this device
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
-    pub fn is_connected(&self) -> bool {
-        // Call an async function from a synchronous context
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => tokio::task::block_in_place(move || handle.block_on(self.is_connected_async())),
-            Err(_) => tokio::runtime::Builder::new_current_thread()
-                .build()
-                .unwrap()
-                .block_on(self.is_connected_async()),
-        }
-    }
-
-    /// The connection status for this device
-    ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only .
-    pub async fn is_connected_async(&self) -> bool {
+    pub async fn is_connected(&self) -> bool {
         self.inner.is_connected().await.unwrap_or(false)
     }
 
@@ -150,9 +127,9 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
+    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
     pub async fn rssi(&self) -> Result<i16> {
-        self.inner.rssi().await?.ok_or_else(|| ErrorKind::NotFound.into())
+        Err(ErrorKind::NotSupported.into())
     }
 
     pub(super) async fn adv_data(&self) -> AdvertisementData {

@@ -31,6 +31,11 @@ impl Service {
         self.inner.uuid().to_uuid()
     }
 
+    /// The [`Uuid`] identifying the type of this GATT service
+    pub async fn uuid_async(&self) -> Result<Uuid> {
+        Ok(self.uuid())
+    }
+
     /// Whether this is a primary service of the device.
     ///
     /// # Platform specific

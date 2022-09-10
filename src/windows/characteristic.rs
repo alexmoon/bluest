@@ -77,22 +77,20 @@ impl Characteristic {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattCharacteristic").to_u128())
     }
 
+    /// The [`Uuid`] identifying the type of this GATT characteristic
+    pub async fn uuid_async(&self) -> Result<Uuid> {
+        Ok(Uuid::from_u128(self.inner.Uuid()?.to_u128()))
+    }
+
     /// The properties of this this GATT characteristic.
     ///
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::properties_async()`]
-    /// method fails.
-    pub fn properties(&self) -> CharacteristicProperties {
+    pub async fn properties(&self) -> Result<CharacteristicProperties> {
         let props = self
             .inner
-            .CharacteristicProperties()
-            .expect("CharacteristicProperties missing on GattCharacteristic");
-        CharacteristicProperties::from_bits(props.0)
+            .CharacteristicProperties()?;
+        Ok(CharacteristicProperties::from_bits(props.0))
     }
 
     /// The cached value of this characteristic
@@ -145,7 +143,7 @@ impl Characteristic {
     ///
     /// Returns a stream of values for the characteristic sent from the device.
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
-        let props = self.properties();
+        let props = self.properties().await?;
         let value = if props.notify {
             GattClientCharacteristicConfigurationDescriptorValue::Notify
         } else if props.indicate {

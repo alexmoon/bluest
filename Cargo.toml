@@ -5,7 +5,6 @@ authors = ["Alex Moon"]
 edition = "2021"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
 documentation = "https://docs.rs/bluest"
-homepage = "https://github.com/alexmoon/bluest/"
 repository = "https://github.com/alexmoon/bluest/"
 license = "BSD-2-Clause OR Apache-2.0"
 keywords = ["bluetooth", "BLE", "gatt", "bluez", "corebluetooth"]

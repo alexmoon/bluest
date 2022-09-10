@@ -46,7 +46,7 @@ impl std::fmt::Debug for Device {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut f = f.debug_struct("Device");
         f.field("id", &self.id());
-        if let Some(name) = self.name() {
+        if let Ok(name) = self.name() {
             f.field("name", &name);
         }
         f.finish()
@@ -88,20 +88,21 @@ impl Device {
     ///
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
     /// no current Tokio runtime and creating one fails.
-    pub fn name(&self) -> Option<String> {
-        self.inner
-            .Name()
-            .ok()
-            .and_then(|x| (!x.is_empty()).then(|| x.to_string_lossy()))
+    pub fn name(&self) -> Result<String> {
+        let name = self.inner
+            .Name()?;
+        Ok(name.to_string_lossy())
     }
 
+    /// The local name for this device, if available
+    ///
+    /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
+    pub async fn name_async(&self) -> Result<String> {
+        self.name()
+    }
+    
     /// The connection status for this device
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
-    pub fn is_connected(&self) -> bool {
+    pub async fn is_connected(&self) -> bool {
         self.inner.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
     }
 
@@ -167,7 +168,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
+    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
     pub async fn rssi(&self) -> Result<i16> {
         Err(ErrorKind::NotSupported.into())
     }
