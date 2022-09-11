@@ -7,6 +7,7 @@ use super::delegates::{self, PeripheralDelegate, PeripheralEvent};
 use super::service::Service;
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
 use crate::error::ErrorKind;
+use crate::pairing::PairingAgent;
 use crate::{Error, Result, Uuid};
 
 /// A platform-specific device identifier.
@@ -99,6 +100,37 @@ impl Device {
     /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
         self.peripheral.state() == CBPeripheralState::CONNECTED
+    }
+
+    /// The pairing status for this device
+    pub async fn is_paired(&self) -> Result<bool> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
+    /// method is a no-op.
+    ///
+    /// ## Windows
+    ///
+    /// This will fail unless it is called from a UWP application.
+    pub async fn pair(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
+    /// accessed. This method is a no-op.
+    pub async fn pair_with_agent<T: PairingAgent>(&self, _agent: &T) -> Result<()> {
+        Ok(())
     }
 
     /// Discover the primary services of this device.

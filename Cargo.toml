@@ -20,6 +20,7 @@ cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
+async-trait = "0.1.57"
 futures-util = { version = "0.3.24" }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = "0.1.36"

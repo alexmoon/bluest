@@ -36,6 +36,10 @@ async fn check_device_apis(device: Device) -> Result<Service> {
     let _name: Result<String> = device.name();
     let _name: Result<String> = assert_send(device.name_async()).await;
     let _is_connected: bool = assert_send(device.is_connected()).await;
+    let _is_paired: Result<bool> = assert_send(device.is_paired()).await;
+
+    let _pair: Result<()> = assert_send(device.pair()).await;
+    let _pair: Result<()> = assert_send(device.pair_with_agent(&pairing::NoInputOutputPairingAgent)).await;
 
     let _discovery: Result<Vec<Service>> = assert_send(device.discover_services()).await;
     let _discovery: Result<Vec<Service>> =

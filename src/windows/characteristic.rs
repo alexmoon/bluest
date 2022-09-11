@@ -87,9 +87,7 @@ impl Characteristic {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub async fn properties(&self) -> Result<CharacteristicProperties> {
-        let props = self
-            .inner
-            .CharacteristicProperties()?;
+        let props = self.inner.CharacteristicProperties()?;
         Ok(CharacteristicProperties::from_bits(props.0))
     }
 

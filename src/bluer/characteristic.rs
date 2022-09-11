@@ -56,7 +56,7 @@ impl Characteristic {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub async fn properties(&self) -> Result<CharacteristicProperties> {
-        self.inner.flags().await.map(Into::into)
+        self.inner.flags().await.map(Into::into).map_err(Into::into)
     }
 
     /// The cached value of this characteristic

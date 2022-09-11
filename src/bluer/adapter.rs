@@ -106,7 +106,7 @@ impl Adapter {
             .into_iter()
             .filter_map(|addr| Device::new(&self.inner, addr).ok())
         {
-            if device.is_connected_async().await {
+            if device.is_connected().await {
                 devices.push(device);
             }
         }

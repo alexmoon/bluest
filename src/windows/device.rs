@@ -1,13 +1,18 @@
+use futures_channel::mpsc;
+use futures_util::future::{select, Either};
+use futures_util::{pin_mut, StreamExt};
 use tracing::error;
 use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::{
     BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
 };
+use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEventArgs};
 use windows::Foundation::TypedEventHandler;
 
-use super::error::check_communication_status;
+use super::error::{check_communication_status, check_pairing_status};
 use super::service::Service;
 use crate::error::ErrorKind;
+use crate::pairing::{IoCapability, PairingAgent, Passkey};
 use crate::util::defer;
 use crate::{Result, Uuid};
 
@@ -89,8 +94,7 @@ impl Device {
     /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
     /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Result<String> {
-        let name = self.inner
-            .Name()?;
+        let name = self.inner.Name()?;
         Ok(name.to_string_lossy())
     }
 
@@ -100,10 +104,127 @@ impl Device {
     pub async fn name_async(&self) -> Result<String> {
         self.name()
     }
-    
+
     /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
         self.inner.ConnectionStatus() == Ok(BluetoothConnectionStatus::Connected)
+    }
+
+    /// The pairing status for this device
+    pub async fn is_paired(&self) -> Result<bool> {
+        self.inner
+            .DeviceInformation()?
+            .Pairing()?
+            .IsPaired()
+            .map_err(Into::into)
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
+    /// method is a no-op.
+    ///
+    /// ## Windows
+    ///
+    /// This will fail unless it is called from a UWP application.
+    pub async fn pair(&self) -> Result<()> {
+        let op = self.inner.DeviceInformation()?.Pairing()?.PairAsync()?;
+        let res = op.await?;
+        check_pairing_status(res.Status()?)
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
+    /// accessed. This method is a no-op.
+    pub async fn pair_with_agent<T: PairingAgent + Sync>(&self, agent: &T) -> Result<()> {
+        let pairing_kinds_supported = match agent.io_capability() {
+            IoCapability::DisplayOnly => DevicePairingKinds::DisplayPin,
+            IoCapability::DisplayYesNo => {
+                DevicePairingKinds::ConfirmOnly | DevicePairingKinds::DisplayPin | DevicePairingKinds::ConfirmPinMatch
+            }
+            IoCapability::KeyboardOnly => DevicePairingKinds::ConfirmOnly | DevicePairingKinds::ProvidePin,
+            IoCapability::NoInputNoOutput => DevicePairingKinds::ConfirmOnly,
+            IoCapability::KeyboardDisplay => {
+                DevicePairingKinds::ConfirmOnly
+                    | DevicePairingKinds::DisplayPin
+                    | DevicePairingKinds::ProvidePin
+                    | DevicePairingKinds::ConfirmPinMatch
+            }
+        };
+
+        let (mut tx, mut rx) = mpsc::channel(1);
+        let id = self.id();
+        let custom = self.inner.DeviceInformation()?.Pairing()?.Custom()?;
+        custom.PairingRequested(&TypedEventHandler::new(
+            move |_custom, event_args: &Option<DevicePairingRequestedEventArgs>| {
+                if let Some(event_args) = event_args.clone() {
+                    let deferral = event_args.GetDeferral()?;
+                    let _ = tx.try_send((event_args, deferral));
+                }
+                Ok(())
+            },
+        ))?;
+
+        let mut op = custom.PairAsync(pairing_kinds_supported)?;
+        let res = loop {
+            match select(op, rx.next()).await {
+                Either::Left((res, _)) => break res,
+                Either::Right((Some((event_args, deferral)), pair_op)) => {
+                    let id = id.clone();
+                    let agent_fut = async move {
+                        match event_args.PairingKind()? {
+                            DevicePairingKinds::ConfirmOnly => {
+                                if agent.confirm(&id).await.is_ok() {
+                                    event_args.Accept()?;
+                                }
+                            }
+                            DevicePairingKinds::DisplayPin => {
+                                if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
+                                    agent.display_passkey(&id, passkey);
+                                }
+                            }
+                            DevicePairingKinds::ProvidePin => {
+                                if let Ok(passkey) = agent.request_passkey(&id).await {
+                                    event_args.AcceptWithPin(&passkey.to_string().into())?;
+                                }
+                            }
+                            DevicePairingKinds::ConfirmPinMatch => {
+                                if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
+                                    if let Ok(()) = agent.confirm_passkey(&id, passkey).await {
+                                        event_args.Accept()?;
+                                    }
+                                }
+                            }
+                            _ => (),
+                        }
+
+                        deferral.Complete().map_err(Into::into)
+                    };
+                    pin_mut!(agent_fut);
+
+                    match select(pair_op, agent_fut).await {
+                        Either::Left((res, _)) => break res,
+                        Either::Right((Ok(()), pair_op)) => {
+                            op = pair_op;
+                        }
+                        Either::Right((Err(err), pair_op)) => {
+                            let _ = pair_op.Cancel();
+                            return Err(err);
+                        }
+                    }
+                }
+                Either::Right((None, op)) => break op.await,
+            }
+        }?;
+
+        check_pairing_status(res.Status()?)
     }
 
     /// Discover the primary services of this device.

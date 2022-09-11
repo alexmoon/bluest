@@ -85,6 +85,9 @@ in behavior are summarized in the table below.
 | [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
 | [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
 | [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
+| [`Device::is_paired`][Device::is_paired] | ❌ | ✅ | ✅ |
+| [`Device::pair`][Device::pair] | ✨ | ✅ | ✅ |
+| [`Device::pair_with_agent`][Device::pair_with_agent] | ✨ | ✅ | ✅ |
 | [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
 | [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
 | [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
@@ -125,6 +128,9 @@ Refer to the [API documentation] for more details.
 [Adapter::disconnect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.disconnect_device
 [Device::name]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.name
 [Device::is_connected]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_connected
+[Device::is_paired]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_paired
+[Device::pair]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.pair
+[Device::pair_with_agent]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.pair_with_agent
 [Device::discover_services]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.discover_services
 [Device::rssi]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.rssi
 [Service::uuid]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.uuid

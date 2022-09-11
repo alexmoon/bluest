@@ -80,6 +80,9 @@
 //! | [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
 //! | [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
 //! | [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
+//! | [`Device::is_paired`][Device::is_paired] | ❌ | ✅ | ✅ |
+//! | [`Device::pair`][Device::pair] | ✨ | ✅ | ✅ |
+//! | [`Device::pair_with_agent`][Device::pair_with_agent] | ✨ | ✅ | ✅ |
 //! | [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
 //! | [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
 //! | [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
@@ -110,6 +113,7 @@
 
 pub mod btuuid;
 pub mod error;
+pub mod pairing;
 mod util;
 
 #[cfg(target_os = "linux")]

@@ -1,8 +1,10 @@
 use futures_util::StreamExt;
 use tokio::pin;
 
+use super::adapter::session;
 use super::service::Service;
 use crate::error::ErrorKind;
+use crate::pairing::PairingAgent;
 use crate::{btuuid, AdvertisementData, Error, ManufacturerData, Result, Uuid};
 
 /// A platform-specific device identifier.
@@ -78,6 +80,85 @@ impl Device {
     /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
         self.inner.is_connected().await.unwrap_or(false)
+    }
+
+    /// The pairing status for this device
+    pub async fn is_paired(&self) -> Result<bool> {
+        self.inner.is_paired().await.map_err(Into::into)
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
+    /// method is a no-op.
+    ///
+    /// ## Windows
+    ///
+    /// This will fail unless it is called from a UWP application.
+    pub async fn pair(&self) -> Result<()> {
+        self.inner.pair().await.map_err(Into::into)
+    }
+
+    /// Attempt to pair this device using the system default pairing UI
+    ///
+    /// # Platform specific
+    ///
+    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
+    /// accessed. This method is a no-op.
+    pub async fn pair_with_agent<T: PairingAgent + Send + Sync + 'static>(&self, agent: &T) -> Result<()> {
+        let agent = {
+            // Safety: This `bluer::agent::Agent`, including the encapsulated closures and async blocks will be dropped
+            // when the `_handle` below is dropped. Therefore, the lifetime of the captures of `agent` will not
+            // out-live the lifetime of `agent`. Unfortunately, the compiler has no way to prove this, so we must cast
+            // `agent` to the static lifetime.
+            let agent: &'static T = unsafe { std::mem::transmute(agent) };
+
+            bluer::agent::Agent {
+                request_passkey: Some(Box::new(move |req: bluer::agent::RequestPasskey| {
+                    Box::pin(async move {
+                        let id = DeviceId(req.device);
+                        match agent.request_passkey(&id).await {
+                            Ok(passkey) => Ok(passkey.into()),
+                            Err(_) => Err(bluer::agent::ReqError::Rejected),
+                        }
+                    })
+                })),
+                display_passkey: Some(Box::new(move |req: bluer::agent::DisplayPasskey| {
+                    Box::pin(async move {
+                        let id = DeviceId(req.device);
+                        if let Ok(passkey) = req.passkey.try_into() {
+                            agent.display_passkey(&id, passkey);
+                            Ok(())
+                        } else {
+                            Err(bluer::agent::ReqError::Rejected)
+                        }
+                    })
+                })),
+                request_confirmation: Some(Box::new(move |req: bluer::agent::RequestConfirmation| {
+                    Box::pin(async move {
+                        let id = DeviceId(req.device);
+                        if let Ok(passkey) = req.passkey.try_into() {
+                            agent
+                                .confirm_passkey(&id, passkey)
+                                .await
+                                .map_err(|_| bluer::agent::ReqError::Rejected)
+                        } else {
+                            Err(bluer::agent::ReqError::Rejected)
+                        }
+                    })
+                })),
+                ..Default::default()
+            }
+        };
+
+        let session = session().await?;
+        let _handle = session.register_agent(agent).await?;
+
+        self.pair().await
     }
 
     /// Discover the primary services of this device.
