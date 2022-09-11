@@ -75,19 +75,19 @@
 //! Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
 //! in behavior are summarized in the table below.
 //!
-//! | Method | MacOS/iOS | Windows | Linux |
-//! |--------|:---------:|:-------:|:-----:|
-//! | [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
-//! | [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
-//! | [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
-//! | [`Device::is_paired`][Device::is_paired] | ❌ | ✅ | ✅ |
-//! | [`Device::pair`][Device::pair] | ✨ | ✅ | ✅ |
-//! | [`Device::pair_with_agent`][Device::pair_with_agent] | ✨ | ✅ | ✅ |
-//! | [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
-//! | [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
-//! | [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
-//! | [`Characteristic::uuid`][Characteristic::uuid] | ✅ | ✅ | ⌛️ |
-//! | [`Descriptor::uuid`][Descriptor::uuid] | ✅ | ✅ | ⌛️ |
+//!| Method | MacOS/iOS | Windows | Linux |
+//!|--------|:---------:|:-------:|:-----:|
+//!| [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
+//!| [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
+//!| [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
+//!| [`Device::is_paired`][Device::is_paired] | ❌ | ✅ | ✅ |
+//!| [`Device::pair`][Device::pair] | ✨ | ✅ | ✅ |
+//!| [`Device::pair_with_agent`][Device::pair_with_agent] | ✨ | ✅ | ✅ |
+//!| [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
+//!| [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
+//!| [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
+//!| [`Characteristic::uuid`][Characteristic::uuid] | ✅ | ✅ | ⌛️ |
+//!| [`Descriptor::uuid`][Descriptor::uuid] | ✅ | ✅ | ⌛️ |
 //!
 //! ✅ = supported  
 //! ✨ = managed automatically by the OS, this method is a no-op  
@@ -111,9 +111,14 @@
 //!
 //! [examples folder]: https://github.com/alexmoon/bluest/tree/master/bluest/examples
 
+mod adapter;
 pub mod btuuid;
+mod characteristic;
+mod descriptor;
+mod device;
 pub mod error;
 pub mod pairing;
+mod service;
 mod util;
 
 #[cfg(target_os = "linux")]
@@ -127,13 +132,14 @@ use std::collections::HashMap;
 
 #[cfg(target_os = "linux")]
 pub use ::bluer::Uuid;
+pub use adapter::Adapter;
 pub use btuuid::BluetoothUuidExt;
+pub use characteristic::Characteristic;
+pub use descriptor::Descriptor;
+pub use device::Device;
 pub use error::Error;
-pub use sys::adapter::Adapter;
-pub use sys::characteristic::Characteristic;
-pub use sys::descriptor::Descriptor;
-pub use sys::device::{Device, DeviceId};
-pub use sys::service::Service;
+pub use service::Service;
+pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]
 pub use uuid::Uuid;
 

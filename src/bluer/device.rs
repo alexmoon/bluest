@@ -2,50 +2,47 @@ use futures_util::StreamExt;
 use tokio::pin;
 
 use super::adapter::session;
-use super::service::Service;
+use super::DeviceId;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
-use crate::{btuuid, AdvertisementData, Error, ManufacturerData, Result, Uuid};
-
-/// A platform-specific device identifier.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeviceId(pub(super) bluer::Address);
+use crate::{btuuid, AdvertisementData, Device, Error, ManufacturerData, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Debug, Clone)]
-pub struct Device {
+pub struct DeviceImpl {
     pub(super) inner: bluer::Device,
 }
 
-impl PartialEq for Device {
+impl PartialEq for DeviceImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.adapter_name() == other.inner.adapter_name() && self.inner.address() == other.inner.address()
     }
 }
 
-impl Eq for Device {}
+impl Eq for DeviceImpl {}
 
-impl std::hash::Hash for Device {
+impl std::hash::Hash for DeviceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.adapter_name().hash(state);
         self.inner.address().hash(state);
     }
 }
 
-impl std::fmt::Display for Device {
+impl std::fmt::Display for DeviceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
 }
 
 impl Device {
-    pub(super) fn new(adapter: &bluer::Adapter, addr: bluer::Address) -> Result<Self> {
-        Ok(Device {
+    pub(super) fn new(adapter: &bluer::Adapter, addr: bluer::Address) -> Result<Device> {
+        Ok(Device(DeviceImpl {
             inner: adapter.device(addr)?,
-        })
+        }))
     }
+}
 
+impl DeviceImpl {
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
         DeviceId(self.inner.address())
@@ -57,8 +54,8 @@ impl Device {
     ///
     /// # Panics
     ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
+    /// This method will panic if there is a current Tokio runtime and it is single-threaded, if there is no current
+    /// Tokio runtime and creating one fails, or if the underlying [`DeviceImpl::name_async()`] method fails.
     pub fn name(&self) -> Result<String> {
         // Call an async function from a synchronous context
         match tokio::runtime::Handle::try_current() {
@@ -88,28 +85,12 @@ impl Device {
     }
 
     /// Attempt to pair this device using the system default pairing UI
-    ///
-    /// # Platform specific
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
-    /// method is a no-op.
-    ///
-    /// ## Windows
-    ///
-    /// This will fail unless it is called from a UWP application.
     pub async fn pair(&self) -> Result<()> {
         self.inner.pair().await.map_err(Into::into)
     }
 
     /// Attempt to pair this device using the system default pairing UI
-    ///
-    /// # Platform specific
-    ///
-    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
-    /// accessed. This method is a no-op.
-    pub async fn pair_with_agent<T: PairingAgent + Send + Sync + 'static>(&self, agent: &T) -> Result<()> {
+    pub async fn pair_with_agent<T: PairingAgent + 'static>(&self, agent: &T) -> Result<()> {
         let agent = {
             // Safety: This `bluer::agent::Agent`, including the encapsulated closures and async blocks will be dropped
             // when the `_handle` below is dropped. Therefore, the lifetime of the captures of `agent` will not
@@ -208,7 +189,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
+    /// Returns [ErrorKind::NotSupported].
     pub async fn rssi(&self) -> Result<i16> {
         Err(ErrorKind::NotSupported.into())
     }

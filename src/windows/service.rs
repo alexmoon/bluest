@@ -2,27 +2,26 @@ use windows::core::GUID;
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 
-use super::characteristic::Characteristic;
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
-use crate::{Result, Uuid};
+use crate::{Characteristic, Result, Service, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Clone)]
-pub struct Service {
+pub struct ServiceImpl {
     inner: GattDeviceService,
 }
 
-impl PartialEq for Service {
+impl PartialEq for ServiceImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.Session().unwrap() == other.inner.Session().unwrap()
             && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
     }
 }
 
-impl Eq for Service {}
+impl Eq for ServiceImpl {}
 
-impl std::hash::Hash for Service {
+impl std::hash::Hash for ServiceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner
             .Session()
@@ -37,7 +36,7 @@ impl std::hash::Hash for Service {
     }
 }
 
-impl std::fmt::Debug for Service {
+impl std::fmt::Debug for ServiceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Service")
             .field(
@@ -66,16 +65,12 @@ impl std::fmt::Debug for Service {
 
 impl Service {
     pub(super) fn new(service: GattDeviceService) -> Self {
-        Service { inner: service }
+        Service(ServiceImpl { inner: service })
     }
+}
 
+impl ServiceImpl {
     /// The [`Uuid`] identifying the type of service
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Service::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDeviceService").to_u128())
     }
@@ -87,9 +82,7 @@ impl Service {
 
     /// Whether this is a primary service of the device.
     ///
-    /// # Platform specific
-    ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
+    /// Returns [ErrorKind::NotSupported].
     pub async fn is_primary(&self) -> Result<bool> {
         Err(ErrorKind::NotSupported.into())
     }

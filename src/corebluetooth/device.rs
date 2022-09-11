@@ -4,51 +4,39 @@ use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::{Id, ShareId};
 
 use super::delegates::{self, PeripheralDelegate, PeripheralEvent};
-use super::service::Service;
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
-use crate::{Error, Result, Uuid};
-
-/// A platform-specific device identifier.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeviceId(pub(super) Uuid);
-
-impl std::fmt::Display for DeviceId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
-    }
-}
+use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Clone)]
-pub struct Device {
+pub struct DeviceImpl {
     pub(super) peripheral: ShareId<CBPeripheral>,
     sender: tokio::sync::broadcast::Sender<delegates::PeripheralEvent>,
 }
 
-impl PartialEq for Device {
+impl PartialEq for DeviceImpl {
     fn eq(&self, other: &Self) -> bool {
         self.peripheral == other.peripheral
     }
 }
 
-impl Eq for Device {}
+impl Eq for DeviceImpl {}
 
-impl std::hash::Hash for Device {
+impl std::hash::Hash for DeviceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.peripheral.hash(state);
     }
 }
 
-impl std::fmt::Debug for Device {
+impl std::fmt::Debug for DeviceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Device").field(&self.peripheral).finish()
     }
 }
 
-impl std::fmt::Display for Device {
+impl std::fmt::Display for DeviceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
@@ -67,22 +55,19 @@ impl Device {
                 sender
             });
 
-        Device { peripheral, sender }
+        Device(DeviceImpl { peripheral, sender })
     }
+}
 
+impl DeviceImpl {
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
-        DeviceId(self.peripheral.identifier().to_uuid())
+        super::DeviceId(self.peripheral.identifier().to_uuid())
     }
 
     /// The local name for this device, if available
     ///
     /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Result<String> {
         match self.peripheral.name() {
             Some(name) => Ok(name.as_str().to_owned()),
@@ -109,26 +94,16 @@ impl Device {
 
     /// Attempt to pair this device using the system default pairing UI
     ///
-    /// # Platform specific
-    ///
-    /// ## MacOS/iOS
-    ///
     /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
     /// method is a no-op.
-    ///
-    /// ## Windows
-    ///
-    /// This will fail unless it is called from a UWP application.
     pub async fn pair(&self) -> Result<()> {
         Ok(())
     }
 
     /// Attempt to pair this device using the system default pairing UI
     ///
-    /// # Platform specific
-    ///
-    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
-    /// accessed. This method is a no-op.
+    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
+    /// method is a no-op.
     pub async fn pair_with_agent<T: PairingAgent>(&self, _agent: &T) -> Result<()> {
         Ok(())
     }
@@ -210,10 +185,6 @@ impl Device {
     }
 
     /// Get the current signal strength from the device in dBm.
-    ///
-    /// # Platform specific
-    ///
-    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
     pub async fn rssi(&self) -> Result<i16> {
         let mut receiver = self.sender.subscribe();
         self.peripheral.read_rssi();

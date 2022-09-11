@@ -97,7 +97,7 @@ impl std::str::FromStr for Passkey {
 
 /// A custom pairing agent responsible for interacting with the user during the peripheral pairing process.
 #[async_trait]
-pub trait PairingAgent {
+pub trait PairingAgent: Send + Sync {
     /// The input/output capabilities of this agent
     fn io_capability(&self) -> IoCapability;
 

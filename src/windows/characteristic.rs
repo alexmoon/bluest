@@ -8,28 +8,27 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::{
 use windows::Foundation::{AsyncOperationCompletedHandler, TypedEventHandler};
 use windows::Storage::Streams::{DataReader, DataWriter};
 
-use super::descriptor::Descriptor;
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
 use crate::util::defer;
-use crate::{CharacteristicProperties, Error, Result, Uuid};
+use crate::{Characteristic, CharacteristicProperties, Descriptor, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Clone)]
-pub struct Characteristic {
+pub struct CharacteristicImpl {
     inner: GattCharacteristic,
 }
 
-impl PartialEq for Characteristic {
+impl PartialEq for CharacteristicImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.Service().unwrap().Session().unwrap() == other.inner.Service().unwrap().Session().unwrap()
             && self.inner.AttributeHandle().unwrap() == other.inner.AttributeHandle().unwrap()
     }
 }
 
-impl Eq for Characteristic {}
+impl Eq for CharacteristicImpl {}
 
-impl std::hash::Hash for Characteristic {
+impl std::hash::Hash for CharacteristicImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner
             .Service()
@@ -46,7 +45,7 @@ impl std::hash::Hash for Characteristic {
     }
 }
 
-impl std::fmt::Debug for Characteristic {
+impl std::fmt::Debug for CharacteristicImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Characteristic")
             .field("uuid", &self.inner.Uuid().expect("UUID missing on GattCharacteristic"))
@@ -63,16 +62,12 @@ impl std::fmt::Debug for Characteristic {
 
 impl Characteristic {
     pub(super) fn new(characteristic: GattCharacteristic) -> Self {
-        Characteristic { inner: characteristic }
+        Characteristic(CharacteristicImpl { inner: characteristic })
     }
+}
 
+impl CharacteristicImpl {
     /// The [`Uuid`] identifying the type of this GATT characteristic
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattCharacteristic").to_u128())
     }

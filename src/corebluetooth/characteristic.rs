@@ -6,32 +6,27 @@ use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
 
 use super::delegates::PeripheralEvent;
-use super::descriptor::Descriptor;
 use super::types::{CBCharacteristic, CBCharacteristicWriteType, CBPeripheralState};
 use crate::error::ErrorKind;
 use crate::util::defer;
-use crate::{CharacteristicProperties, Error, Result, Uuid};
+use crate::{Characteristic, CharacteristicProperties, Descriptor, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Characteristic {
+pub struct CharacteristicImpl {
     inner: ShareId<CBCharacteristic>,
 }
 
 impl Characteristic {
     pub(super) fn new(characteristic: &CBCharacteristic) -> Self {
-        Characteristic {
+        Characteristic(CharacteristicImpl {
             inner: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
-        }
+        })
     }
+}
 
+impl CharacteristicImpl {
     /// The [`Uuid`] identifying the type of this GATT characteristic
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }

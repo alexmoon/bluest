@@ -4,9 +4,8 @@ use bluer::{AdapterProperty, Session};
 use futures_util::{Stream, StreamExt};
 use once_cell::sync::OnceCell;
 
-use super::device::{Device, DeviceId};
 use crate::error::ErrorKind;
-use crate::{AdapterEvent, AdvertisingDevice, Error, Result, Uuid};
+use crate::{AdapterEvent, AdvertisingDevice, Device, DeviceId, Error, Result, Uuid};
 
 static SESSION: OnceCell<Session> = OnceCell::new();
 
@@ -25,25 +24,25 @@ pub(super) async fn session() -> bluer::Result<&'static Session> {
 ///
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Debug, Clone)]
-pub struct Adapter {
+pub struct AdapterImpl {
     inner: bluer::Adapter,
 }
 
-impl PartialEq for Adapter {
+impl PartialEq for AdapterImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.name() == other.inner.name()
     }
 }
 
-impl Eq for Adapter {}
+impl Eq for AdapterImpl {}
 
-impl std::hash::Hash for Adapter {
+impl std::hash::Hash for AdapterImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.name().hash(state);
     }
 }
 
-impl Adapter {
+impl AdapterImpl {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
         session()
@@ -52,7 +51,7 @@ impl Adapter {
             .default_adapter()
             .await
             .ok()
-            .map(|inner| Adapter { inner })
+            .map(|inner| AdapterImpl { inner })
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
@@ -125,7 +124,7 @@ impl Adapter {
         let devices = self.connected_devices().await?;
         let mut res = Vec::new();
         for device in devices {
-            for service in device.inner.services().await? {
+            for service in device.0.inner.services().await? {
                 if services.contains(&service.uuid().await?) {
                     res.push(device);
                     break;
@@ -154,7 +153,7 @@ impl Adapter {
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
                             let device = Device::new(&self.inner, addr).ok()?;
-                            let adv_data = device.adv_data().await;
+                            let adv_data = device.0.adv_data().await;
                             let rssi = device.rssi().await.ok();
                             Some(AdvertisingDevice { device, adv_data, rssi })
                         }
@@ -162,7 +161,9 @@ impl Adapter {
                     }
                 })
             })
-            .filter(|x| ready(services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y)))))
+            .filter(|x: &AdvertisingDevice| {
+                ready(services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y)))
+            }))
     }
 
     /// Finds Bluetooth devices providing any service in `services`.
@@ -183,7 +184,7 @@ impl Adapter {
                             if services.is_empty() {
                                 Some(Ok(device))
                             } else {
-                                match device.inner.uuids().await {
+                                match device.0.inner.uuids().await {
                                     Ok(uuids) => {
                                         let uuids = uuids.unwrap_or_default();
                                         if services.iter().any(|x| uuids.contains(x)) {
@@ -205,40 +206,12 @@ impl Adapter {
     }
 
     /// Connects to the [`Device`]
-    ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// This method must be called before any methods on the [`Device`] which require a connection are called. After a
-    /// successful return from this method, a connection has been established with the device (if one did not already
-    /// exist) and the application can then interact with the device. This connection will be maintained until either
-    /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, a
-    /// connection will automatically be established, if necessary, when methods on the device requiring a connection
-    /// are called.
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
-        device.inner.connect().await.map_err(Into::into)
+        device.0.inner.connect().await.map_err(Into::into)
     }
 
     /// Disconnects from the [`Device`]
-    ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// Once this method is called, the application will no longer have access to the [`Device`] and any methods
-    /// which would require a connection will fail. If no other application has a connection to the same device,
-    /// the underlying Bluetooth connection will be closed.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, the
-    /// connection will be closed only when the [`Device`] and all its child objects are dropped.
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
-        device.inner.disconnect().await.map_err(Into::into)
+        device.0.inner.disconnect().await.map_err(Into::into)
     }
 }

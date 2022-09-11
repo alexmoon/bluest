@@ -2,16 +2,15 @@ use bluer::gatt::remote::CharacteristicWriteRequest;
 use bluer::gatt::WriteOp;
 use futures_util::{Stream, StreamExt};
 
-use super::descriptor::Descriptor;
-use crate::{CharacteristicProperties, Result, Uuid};
+use crate::{Characteristic, CharacteristicProperties, Descriptor, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone)]
-pub struct Characteristic {
+pub struct CharacteristicImpl {
     inner: bluer::gatt::remote::Characteristic,
 }
 
-impl PartialEq for Characteristic {
+impl PartialEq for CharacteristicImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.adapter_name() == other.inner.adapter_name()
             && self.inner.device_address() == other.inner.device_address()
@@ -20,20 +19,30 @@ impl PartialEq for Characteristic {
     }
 }
 
-impl Eq for Characteristic {}
+impl Eq for CharacteristicImpl {}
+
+impl std::hash::Hash for CharacteristicImpl {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner.adapter_name().hash(state);
+        self.inner.device_address().hash(state);
+        self.inner.service_id().hash(state);
+        self.inner.id().hash(state);
+    }
+}
 
 impl Characteristic {
-    pub(super) fn new(inner: bluer::gatt::remote::Characteristic) -> Self {
-        Characteristic { inner }
+    pub(super) fn new(inner: bluer::gatt::remote::Characteristic) -> Characteristic {
+        Characteristic(CharacteristicImpl { inner })
     }
+}
 
+impl CharacteristicImpl {
     /// The [`Uuid`] identifying the type of this GATT characteristic
     ///
     /// # Panics
     ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Characteristic::uuid_async()`] method
-    /// fails.
+    /// This method will panic if there is a current Tokio runtime and it is single-threaded, if there is no current
+    /// Tokio runtime and creating one fails, or if the underlying [`CharacteristicImpl::uuid_async()`] method fails.
     pub fn uuid(&self) -> Uuid {
         // Call an async function from a synchronous context
         match tokio::runtime::Handle::try_current() {

@@ -1,32 +1,27 @@
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::{Id, ShareId};
 
-use super::characteristic::Characteristic;
 use super::delegates::PeripheralEvent;
 use super::types::{CBPeripheralState, CBService, CBUUID};
 use crate::error::ErrorKind;
-use crate::{Error, Result, Uuid};
+use crate::{Characteristic, Error, Result, Service, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Service {
+pub struct ServiceImpl {
     inner: ShareId<CBService>,
 }
 
 impl Service {
     pub(super) fn new(service: &CBService) -> Self {
-        Service {
+        Service(ServiceImpl {
             inner: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
-        }
+        })
     }
+}
 
+impl ServiceImpl {
     /// The [`Uuid`] identifying the type of this GATT service
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Service::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }
@@ -37,10 +32,6 @@ impl Service {
     }
 
     /// Whether this is a primary service of the device.
-    ///
-    /// # Platform specific
-    ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn is_primary(&self) -> Result<bool> {
         Ok(self.inner.is_primary())
     }

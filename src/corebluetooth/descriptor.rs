@@ -5,11 +5,11 @@ use objc_id::ShareId;
 use super::delegates::PeripheralEvent;
 use super::types::{CBDescriptor, CBPeripheralState, NSUInteger};
 use crate::error::ErrorKind;
-use crate::{Error, Result, Uuid};
+use crate::{Descriptor, Error, Result, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Descriptor {
+pub struct DescriptorImpl {
     inner: ShareId<CBDescriptor>,
 }
 
@@ -45,18 +45,14 @@ fn value_to_slice(val: &NSObject) -> Vec<u8> {
 
 impl Descriptor {
     pub(super) fn new(descriptor: &CBDescriptor) -> Self {
-        Descriptor {
+        Descriptor(DescriptorImpl {
             inner: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
-        }
+        })
     }
+}
 
+impl DescriptorImpl {
     /// The [`Uuid`] identifying the type of this GATT descriptor
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Descriptor::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid().to_uuid()
     }

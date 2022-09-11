@@ -1,12 +1,12 @@
-use crate::{Result, Uuid};
+use crate::{Descriptor, Result, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone)]
-pub struct Descriptor {
+pub struct DescriptorImpl {
     inner: bluer::gatt::remote::Descriptor,
 }
 
-impl PartialEq for Descriptor {
+impl PartialEq for DescriptorImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.adapter_name() == other.inner.adapter_name()
             && self.inner.device_address() == other.inner.device_address()
@@ -16,20 +16,21 @@ impl PartialEq for Descriptor {
     }
 }
 
-impl Eq for Descriptor {}
+impl Eq for DescriptorImpl {}
 
 impl Descriptor {
-    pub(super) fn new(inner: bluer::gatt::remote::Descriptor) -> Self {
-        Descriptor { inner }
+    pub(super) fn new(inner: bluer::gatt::remote::Descriptor) -> Descriptor {
+        Descriptor(DescriptorImpl { inner })
     }
+}
 
+impl DescriptorImpl {
     /// The [`Uuid`] identifying the type of this GATT descriptor
     ///
     /// # Panics
     ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Descriptor::uuid_async()`] method
-    /// fails.
+    /// This method will panic if there is a current Tokio runtime and it is single-threaded, if there is no current
+    /// Tokio runtime and creating one fails, or if the underlying [`DescriptorImpl::uuid_async()`] method fails.
     pub fn uuid(&self) -> Uuid {
         // Call an async function from a synchronous context
         match tokio::runtime::Handle::try_current() {
@@ -43,10 +44,6 @@ impl Descriptor {
     }
 
     /// The [`Uuid`] identifying the type of this GATT descriptor
-    ///
-    /// # Platform specific
-    ///
-    /// This method is available on Linux only.
     pub async fn uuid_async(&self) -> Result<Uuid> {
         self.inner.uuid().await.map_err(Into::into)
     }

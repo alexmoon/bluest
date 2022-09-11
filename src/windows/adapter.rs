@@ -18,45 +18,47 @@ use windows::Foundation::Collections::{IIterable, IVector};
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
 
-use super::device::{Device, DeviceId};
 use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
 use crate::util::defer;
-use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ManufacturerData, Result, Uuid};
+use crate::{
+    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, Device, DeviceId, ManufacturerData, Result,
+    Uuid,
+};
 
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be created with the [`Adapter::default()`] method.
 #[derive(Clone)]
-pub struct Adapter {
+pub struct AdapterImpl {
     inner: BluetoothAdapter,
 }
 
-impl PartialEq for Adapter {
+impl PartialEq for AdapterImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.DeviceId() == other.inner.DeviceId()
     }
 }
 
-impl Eq for Adapter {}
+impl Eq for AdapterImpl {}
 
-impl std::hash::Hash for Adapter {
+impl std::hash::Hash for AdapterImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.DeviceId().unwrap().to_os_string().hash(state);
     }
 }
 
-impl std::fmt::Debug for Adapter {
+impl std::fmt::Debug for AdapterImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Adapter").field(&self.inner.DeviceId().unwrap()).finish()
     }
 }
 
-impl Adapter {
+impl AdapterImpl {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
         let adapter = BluetoothAdapter::GetDefaultAsync().ok()?.await.ok()?;
-        Some(Adapter { inner: adapter })
+        Some(AdapterImpl { inner: adapter })
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
@@ -340,20 +342,8 @@ impl Adapter {
 
     /// Connects to the [`Device`]
     ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// This method must be called before any methods on the [`Device`] which require a connection are called. After a
-    /// successful return from this method, a connection has been established with the device (if one did not already
-    /// exist) and the application can then interact with the device. This connection will be maintained until either
-    /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, a
-    /// connection will automatically be established, if necessary, when methods on the device requiring a connection
-    /// are called.
+    /// Device connections are automatically managed by the OS. This method has no effect. Instead, a connection will
+    /// automatically be established, if necessary, when methods on the device requiring a connection are called.
     pub async fn connect_device(&self, _device: &Device) -> Result<()> {
         // Windows manages the device connection automatically
         Ok(())
@@ -361,18 +351,8 @@ impl Adapter {
 
     /// Disconnects from the [`Device`]
     ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// Once this method is called, the application will no longer have access to the [`Device`] and any methods
-    /// which would require a connection will fail. If no other application has a connection to the same device,
-    /// the underlying Bluetooth connection will be closed.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, the
-    /// connection will be closed only when the [`Device`] and all its child objects are dropped.
+    /// Device connections are automatically managed by the OS. This method has no effect. Instead, the connection will
+    /// be closed only when the [`Device`] and all its child objects are dropped.
     pub async fn disconnect_device(&self, _device: &Device) -> Result<()> {
         // Windows manages the device connection automatically
         Ok(())

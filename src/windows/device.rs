@@ -10,44 +10,32 @@ use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEv
 use windows::Foundation::TypedEventHandler;
 
 use super::error::{check_communication_status, check_pairing_status};
-use super::service::Service;
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
 use crate::util::defer;
-use crate::{Result, Uuid};
-
-/// A platform-specific device identifier.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeviceId(pub(super) std::ffi::OsString);
-
-impl std::fmt::Display for DeviceId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0.to_string_lossy(), f)
-    }
-}
+use crate::{Device, DeviceId, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Clone)]
-pub struct Device {
+pub struct DeviceImpl {
     inner: BluetoothLEDevice,
 }
 
-impl PartialEq for Device {
+impl PartialEq for DeviceImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.DeviceId() == other.inner.DeviceId()
     }
 }
 
-impl Eq for Device {}
+impl Eq for DeviceImpl {}
 
-impl std::hash::Hash for Device {
+impl std::hash::Hash for DeviceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.DeviceId().unwrap().to_os_string().hash(state);
     }
 }
 
-impl std::fmt::Debug for Device {
+impl std::fmt::Debug for DeviceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut f = f.debug_struct("Device");
         f.field("id", &self.id());
@@ -58,7 +46,7 @@ impl std::fmt::Debug for Device {
     }
 }
 
-impl std::fmt::Display for Device {
+impl std::fmt::Display for DeviceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
@@ -67,17 +55,19 @@ impl std::fmt::Display for Device {
 impl Device {
     pub(super) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
         let inner = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
-        Ok(Device { inner })
+        Ok(Device(DeviceImpl { inner }))
     }
 
     pub(super) async fn from_id(id: &HSTRING) -> windows::core::Result<Self> {
         let inner = BluetoothLEDevice::FromIdAsync(id)?.await?;
-        Ok(Device { inner })
+        Ok(Device(DeviceImpl { inner }))
     }
+}
 
+impl DeviceImpl {
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
-        DeviceId(
+        super::DeviceId(
             self.inner
                 .DeviceId()
                 .expect("error getting DeviceId for BluetoothLEDevice")
@@ -88,11 +78,6 @@ impl Device {
     /// The local name for this device, if available
     ///
     /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded or if there is
-    /// no current Tokio runtime and creating one fails.
     pub fn name(&self) -> Result<String> {
         let name = self.inner.Name()?;
         Ok(name.to_string_lossy())
@@ -121,15 +106,6 @@ impl Device {
 
     /// Attempt to pair this device using the system default pairing UI
     ///
-    /// # Platform specific
-    ///
-    /// ## MacOS/iOS
-    ///
-    /// Device pairing is performed automatically by the OS when a characteristic requiring security is accessed. This
-    /// method is a no-op.
-    ///
-    /// ## Windows
-    ///
     /// This will fail unless it is called from a UWP application.
     pub async fn pair(&self) -> Result<()> {
         let op = self.inner.DeviceInformation()?.Pairing()?.PairAsync()?;
@@ -138,12 +114,7 @@ impl Device {
     }
 
     /// Attempt to pair this device using the system default pairing UI
-    ///
-    /// # Platform specific
-    ///
-    /// On MacOS/iOS, device pairing is performed automatically by the OS when a characteristic requiring security is
-    /// accessed. This method is a no-op.
-    pub async fn pair_with_agent<T: PairingAgent + Sync>(&self, agent: &T) -> Result<()> {
+    pub async fn pair_with_agent<T: PairingAgent>(&self, agent: &T) -> Result<()> {
         let pairing_kinds_supported = match agent.io_capability() {
             IoCapability::DisplayOnly => DevicePairingKinds::DisplayPin,
             IoCapability::DisplayYesNo => {
@@ -287,9 +258,7 @@ impl Device {
 
     /// Get the current signal strength from the device in dBm.
     ///
-    /// # Platform specific
-    ///
-    /// Returns [ErrorKind::NotSupported] on Windows and Linux.
+    /// Returns [ErrorKind::NotSupported].
     pub async fn rssi(&self) -> Result<i16> {
         Err(ErrorKind::NotSupported.into())
     }

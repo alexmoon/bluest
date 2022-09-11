@@ -1,13 +1,12 @@
-use super::characteristic::Characteristic;
-use crate::{Result, Uuid};
+use crate::{Characteristic, Result, Service, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone)]
-pub struct Service {
+pub struct ServiceImpl {
     pub(super) inner: bluer::gatt::remote::Service,
 }
 
-impl PartialEq for Service {
+impl PartialEq for ServiceImpl {
     fn eq(&self, other: &Self) -> bool {
         self.inner.adapter_name() == other.inner.adapter_name()
             && self.inner.device_address() == other.inner.device_address()
@@ -15,9 +14,9 @@ impl PartialEq for Service {
     }
 }
 
-impl Eq for Service {}
+impl Eq for ServiceImpl {}
 
-impl std::hash::Hash for Service {
+impl std::hash::Hash for ServiceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.adapter_name().hash(state);
         self.inner.device_address().hash(state);
@@ -26,17 +25,18 @@ impl std::hash::Hash for Service {
 }
 
 impl Service {
-    pub(super) fn new(inner: bluer::gatt::remote::Service) -> Self {
-        Service { inner }
+    pub(super) fn new(inner: bluer::gatt::remote::Service) -> Service {
+        Service(ServiceImpl { inner })
     }
+}
 
+impl ServiceImpl {
     /// The [`Uuid`] identifying the type of this GATT service
     ///
     /// # Panics
     ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Service::uuid_async()`] method
-    /// fails.
+    /// This method will panic if there is a current Tokio runtime and it is single-threaded, if there is no current
+    /// Tokio runtime and creating one fails, or if the underlying [`ServiceImpl::uuid_async()`] method fails.
     pub fn uuid(&self) -> Uuid {
         // Call an async function from a synchronous context
         match tokio::runtime::Handle::try_current() {
@@ -55,10 +55,6 @@ impl Service {
     }
 
     /// Whether this is a primary service of the device.
-    ///
-    /// # Platform specific
-    ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
     pub async fn is_primary(&self) -> Result<bool> {
         self.inner.primary().await.map_err(Into::into)
     }

@@ -3,15 +3,15 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
 use windows::Storage::Streams::{DataReader, DataWriter};
 
 use super::error::check_communication_status;
-use crate::{Result, Uuid};
+use crate::{Descriptor, Result, Uuid};
 
 /// A Bluetooth GATT descriptor
 #[derive(Clone, PartialEq, Eq)]
-pub struct Descriptor {
+pub struct DescriptorImpl {
     inner: GattDescriptor,
 }
 
-impl std::fmt::Debug for Descriptor {
+impl std::fmt::Debug for DescriptorImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Descriptor")
             .field("uuid", &self.inner.Uuid().unwrap())
@@ -22,16 +22,12 @@ impl std::fmt::Debug for Descriptor {
 
 impl Descriptor {
     pub(super) fn new(descriptor: GattDescriptor) -> Self {
-        Descriptor { inner: descriptor }
+        Descriptor(DescriptorImpl { inner: descriptor })
     }
+}
 
+impl DescriptorImpl {
     /// The [`Uuid`] identifying the type of descriptor
-    ///
-    /// # Panics
-    ///
-    /// On Linux, this method will panic if there is a current Tokio runtime and it is single-threaded, if there is no
-    /// current Tokio runtime and creating one fails, or if the underlying [`Descriptor::uuid_async()`] method
-    /// fails.
     pub fn uuid(&self) -> Uuid {
         Uuid::from_u128(self.inner.Uuid().expect("UUID missing on GattDescriptor").to_u128())
     }

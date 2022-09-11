@@ -12,46 +12,45 @@ use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, error, info, warn};
 
 use super::delegates::{self, CentralDelegate};
-use super::device::Device;
 use super::types::{
     dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID,
     NSUUID,
 };
 use crate::error::ErrorKind;
 use crate::util::defer;
-use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, DeviceId, Error, Result, Uuid};
+use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, Device, DeviceId, Error, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Clone)]
-pub struct Adapter {
+pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
     sender: tokio::sync::broadcast::Sender<delegates::CentralEvent>,
     scanning: Arc<AtomicBool>,
 }
 
-impl PartialEq for Adapter {
+impl PartialEq for AdapterImpl {
     fn eq(&self, other: &Self) -> bool {
         self.central == other.central
     }
 }
 
-impl Eq for Adapter {}
+impl Eq for AdapterImpl {}
 
-impl std::hash::Hash for Adapter {
+impl std::hash::Hash for AdapterImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.central.hash(state);
     }
 }
 
-impl std::fmt::Debug for Adapter {
+impl std::fmt::Debug for AdapterImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Adapter").field(&self.central).finish()
     }
 }
 
-impl Adapter {
+impl AdapterImpl {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
         match CBCentralManager::authorization() {
@@ -74,7 +73,7 @@ impl Adapter {
             central.share()
         };
 
-        Some(Adapter {
+        Some(AdapterImpl {
             central,
             sender,
             scanning: Arc::new(AtomicBool::new(false)),
@@ -236,20 +235,10 @@ impl Adapter {
 
     /// Connects to the [`Device`]
     ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
     /// This method must be called before any methods on the [`Device`] which require a connection are called. After a
     /// successful return from this method, a connection has been established with the device (if one did not already
     /// exist) and the application can then interact with the device. This connection will be maintained until either
     /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, a
-    /// connection will automatically be established, if necessary, when methods on the device requiring a connection
-    /// are called.
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
@@ -257,14 +246,16 @@ impl Adapter {
 
         let mut events = BroadcastStream::new(self.sender.subscribe());
         debug!("Connecting to {:?}", device);
-        self.central.connect_peripheral(&*device.peripheral, None);
+        self.central.connect_peripheral(&*device.0.peripheral, None);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
-                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.peripheral => break,
-                Ok(delegates::CentralEvent::ConnectFailed { peripheral, error }) if peripheral == device.peripheral => {
+                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => break,
+                Ok(delegates::CentralEvent::ConnectFailed { peripheral, error })
+                    if peripheral == device.0.peripheral =>
+                {
                     return Err(error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror));
                 }
                 _ => (),
@@ -276,18 +267,9 @@ impl Adapter {
 
     /// Disconnects from the [`Device`]
     ///
-    /// # Platform specifics
-    ///
-    /// ## MacOS/iOS
-    ///
     /// Once this method is called, the application will no longer have access to the [`Device`] and any methods
     /// which would require a connection will fail. If no other application has a connection to the same device,
     /// the underlying Bluetooth connection will be closed.
-    ///
-    /// ## Windows
-    ///
-    /// On Windows, device connections are automatically managed by the OS. This method has no effect. Instead, the
-    /// connection will be closed only when the [`Device`] and all its child objects are dropped.
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
@@ -295,7 +277,7 @@ impl Adapter {
 
         let mut events = BroadcastStream::new(self.sender.subscribe());
         debug!("Disconnecting from {:?}", device);
-        self.central.cancel_peripheral_connection(&*device.peripheral);
+        self.central.cancel_peripheral_connection(&*device.0.peripheral);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
@@ -304,11 +286,11 @@ impl Adapter {
                 Ok(delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: None,
-                }) if peripheral == device.peripheral => break,
+                }) if peripheral == device.0.peripheral => break,
                 Ok(delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: Some(err),
-                }) if peripheral == device.peripheral => return Err(Error::from_nserror(err)),
+                }) if peripheral == device.0.peripheral => return Err(Error::from_nserror(err)),
                 Err(err) => return Err(Error::from_stream_recv_error(err)),
                 _ => (),
             }
