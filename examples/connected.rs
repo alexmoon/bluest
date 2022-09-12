@@ -33,9 +33,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let characteristics = service.discover_characteristics().await?;
             for characteristic in characteristics {
                 info!("    {:?}", characteristic);
+                let props = characteristic.properties().await?;
+                info!("      props: {:?}", props);
+                if props.read {
+                    info!("      value: {:?}", characteristic.read().await);
+                }
+
                 let descriptors = characteristic.discover_descriptors().await?;
                 for descriptor in descriptors {
-                    info!("      {:?}", descriptor);
+                    info!("      {:?}: {:?}", descriptor, descriptor.read().await);
                 }
             }
         }

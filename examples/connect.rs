@@ -28,11 +28,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let services = &[btuuid::services::USER_DATA];
         let mut scan = adapter.scan(services).await?;
         info!("scan started");
-        scan.next().await.ok_or("scan terminated")? // this will never timeout
+        scan.next().await.ok_or("scan terminated")?
     };
 
     info!("{:?} {:?}", discovered_device.rssi, discovered_device.adv_data);
-    adapter.connect_device(&discovered_device.device).await?; // this will never timeout
+    adapter.connect_device(&discovered_device.device).await?;
     info!("connected!");
 
     tokio::time::sleep(Duration::from_secs(30)).await;

@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         device.id()
     );
 
-    adapter.connect_device(&device).await?; // this will never timeout
+    adapter.connect_device(&device).await?;
     info!("connected!");
 
     let service = match device

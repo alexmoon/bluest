@@ -23,7 +23,7 @@ pub enum IoCapability {
 }
 
 /// An error indicating the pairing request has been rejected
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub struct PairingRejected;
 
