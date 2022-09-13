@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.5.0
+
+- `Device::name` now returns a `Result`
+- `Characteristic::properties` is now async
+- Added `_async` APIs to all platforms for methods which are sync on some
+  platforms and async on others
+- Added support for pairing to devices
+
 ## 0.4.0
 
 - Breaking change: take `id` by reference in `Adapter::open_device`
