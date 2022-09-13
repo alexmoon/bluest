@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::DeviceId;
+use crate::Device;
 
 /// Bluetooth input/output capabilities for pairing
 ///
@@ -104,21 +104,21 @@ pub trait PairingAgent: Send + Sync {
     /// Request pairing confirmation from the user.
     ///
     /// Must be supported if `io_capability` is `DisplayYesNo`, `KeyboardOnly`, `NoInputOutput`, or `KeyboardDisplay`
-    async fn confirm(&self, _id: &DeviceId) -> Result<(), PairingRejected> {
+    async fn confirm(&self, _device: &Device) -> Result<(), PairingRejected> {
         Err(PairingRejected)
     }
 
     /// Request pairing confirmation from the user. The `passkey` should be displayed for validation.
     ///
     /// Must be supported if `io_capability` is `DisplayYesNo`, `KeyboardOnly`, or `KeyboardDisplay`
-    async fn confirm_passkey(&self, _id: &DeviceId, _passkey: Passkey) -> Result<(), PairingRejected> {
+    async fn confirm_passkey(&self, _device: &Device, _passkey: Passkey) -> Result<(), PairingRejected> {
         Err(PairingRejected)
     }
 
     /// Request a 6 digit numeric passkey from the user.
     ///
     /// Must be supported if `io_capability` is `KeyboardOnly` or `KeyboardDisplay`
-    async fn request_passkey(&self, _id: &DeviceId) -> Result<Passkey, PairingRejected> {
+    async fn request_passkey(&self, _device: &Device) -> Result<Passkey, PairingRejected> {
         Err(PairingRejected)
     }
 
@@ -128,7 +128,7 @@ pub trait PairingAgent: Send + Sync {
     /// cancelled.
     ///
     /// Must be supported if `io_capability` is `DisplayOnly`, `DisplayYesNo`, or `KeyboardDisplay`
-    fn display_passkey(&self, _id: &DeviceId, _passkey: Passkey) {}
+    fn display_passkey(&self, _device: &Device, _passkey: Passkey) {}
 }
 
 /// The simplest possible pairing agent.
@@ -144,7 +144,7 @@ impl PairingAgent for NoInputOutputPairingAgent {
         IoCapability::NoInputNoOutput
     }
 
-    async fn confirm(&self, _id: &DeviceId) -> Result<(), PairingRejected> {
+    async fn confirm(&self, _device: &Device) -> Result<(), PairingRejected> {
         Ok(())
     }
 }

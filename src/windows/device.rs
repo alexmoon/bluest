@@ -131,7 +131,6 @@ impl DeviceImpl {
         };
 
         let (mut tx, mut rx) = mpsc::channel(1);
-        let id = self.id();
         let custom = self.inner.DeviceInformation()?.Pairing()?.Custom()?;
         custom.PairingRequested(&TypedEventHandler::new(
             move |_custom, event_args: &Option<DevicePairingRequestedEventArgs>| {
@@ -144,27 +143,29 @@ impl DeviceImpl {
         ))?;
 
         let op = custom.PairAsync(pairing_kinds_supported)?;
+
+        let device = Device(self.clone());
         let pairing_fut = async move {
             while let Some((event_args, deferral)) = rx.next().await {
                 match event_args.PairingKind()? {
                     DevicePairingKinds::ConfirmOnly => {
-                        if agent.confirm(&id).await.is_ok() {
+                        if agent.confirm(&device).await.is_ok() {
                             event_args.Accept()?;
                         }
                     }
                     DevicePairingKinds::DisplayPin => {
                         if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
-                            agent.display_passkey(&id, passkey);
+                            agent.display_passkey(&device, passkey);
                         }
                     }
                     DevicePairingKinds::ProvidePin => {
-                        if let Ok(passkey) = agent.request_passkey(&id).await {
+                        if let Ok(passkey) = agent.request_passkey(&device).await {
                             event_args.AcceptWithPin(&passkey.to_string().into())?;
                         }
                     }
                     DevicePairingKinds::ConfirmPinMatch => {
                         if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
-                            if let Ok(()) = agent.confirm_passkey(&id, passkey).await {
+                            if let Ok(()) = agent.confirm_passkey(&device, passkey).await {
                                 event_args.Accept()?;
                             }
                         }
