@@ -13,7 +13,7 @@ use super::error::{check_communication_status, check_pairing_status};
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
 use crate::util::defer;
-use crate::{Device, DeviceId, Result, Service, Uuid};
+use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Clone)]
@@ -143,59 +143,51 @@ impl DeviceImpl {
             },
         ))?;
 
-        let mut op = custom.PairAsync(pairing_kinds_supported)?;
-        let res = loop {
-            match select(op, rx.next()).await {
-                Either::Left((res, _)) => break res,
-                Either::Right((Some((event_args, deferral)), pair_op)) => {
-                    let id = id.clone();
-                    let agent_fut = async move {
-                        match event_args.PairingKind()? {
-                            DevicePairingKinds::ConfirmOnly => {
-                                if agent.confirm(&id).await.is_ok() {
-                                    event_args.Accept()?;
-                                }
-                            }
-                            DevicePairingKinds::DisplayPin => {
-                                if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
-                                    agent.display_passkey(&id, passkey);
-                                }
-                            }
-                            DevicePairingKinds::ProvidePin => {
-                                if let Ok(passkey) = agent.request_passkey(&id).await {
-                                    event_args.AcceptWithPin(&passkey.to_string().into())?;
-                                }
-                            }
-                            DevicePairingKinds::ConfirmPinMatch => {
-                                if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
-                                    if let Ok(()) = agent.confirm_passkey(&id, passkey).await {
-                                        event_args.Accept()?;
-                                    }
-                                }
-                            }
-                            _ => (),
-                        }
-
-                        deferral.Complete().map_err(Into::into)
-                    };
-                    pin_mut!(agent_fut);
-
-                    match select(pair_op, agent_fut).await {
-                        Either::Left((res, _)) => break res,
-                        Either::Right((Ok(()), pair_op)) => {
-                            op = pair_op;
-                        }
-                        Either::Right((Err(err), pair_op)) => {
-                            let _ = pair_op.Cancel();
-                            return Err(err);
+        let op = custom.PairAsync(pairing_kinds_supported)?;
+        let pairing_fut = async move {
+            while let Some((event_args, deferral)) = rx.next().await {
+                match event_args.PairingKind()? {
+                    DevicePairingKinds::ConfirmOnly => {
+                        if agent.confirm(&id).await.is_ok() {
+                            event_args.Accept()?;
                         }
                     }
+                    DevicePairingKinds::DisplayPin => {
+                        if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
+                            agent.display_passkey(&id, passkey);
+                        }
+                    }
+                    DevicePairingKinds::ProvidePin => {
+                        if let Ok(passkey) = agent.request_passkey(&id).await {
+                            event_args.AcceptWithPin(&passkey.to_string().into())?;
+                        }
+                    }
+                    DevicePairingKinds::ConfirmPinMatch => {
+                        if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
+                            if let Ok(()) = agent.confirm_passkey(&id, passkey).await {
+                                event_args.Accept()?;
+                            }
+                        }
+                    }
+                    _ => (),
                 }
-                Either::Right((None, op)) => break op.await,
-            }
-        }?;
 
-        check_pairing_status(res.Status()?)
+                deferral.Complete()?;
+            }
+
+            Result::<_, Error>::Ok(())
+        };
+        pin_mut!(pairing_fut);
+
+        match select(op, pairing_fut).await {
+            Either::Left((res, _)) => check_pairing_status(res?.Status()?),
+            Either::Right((Ok(()), _)) => Err(Error::new(
+                ErrorKind::Other,
+                None,
+                "Pairing agent terminated unexpectedly".to_owned(),
+            )),
+            Either::Right((Err(err), _)) => Err(err),
+        }
     }
 
     /// Discover the primary services of this device.
