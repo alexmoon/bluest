@@ -98,11 +98,18 @@ impl DeviceImpl {
             // `agent` to the static lifetime.
             let agent: &'static T = unsafe { std::mem::transmute(agent) };
 
+            async fn req_device(adapter: &str, addr: bluer::Address) -> Result<Device, bluer::agent::ReqError> {
+                let session = session().await.map_err(|_| bluer::agent::ReqError::Rejected)?;
+                let adapter = session.adapter(adapter).map_err(|_| bluer::agent::ReqError::Rejected)?;
+                let device = adapter.device(addr).map_err(|_| bluer::agent::ReqError::Rejected)?;
+                Ok(Device(DeviceImpl { inner: device }))
+            }
+
             bluer::agent::Agent {
                 request_passkey: Some(Box::new(move |req: bluer::agent::RequestPasskey| {
                     Box::pin(async move {
-                        let id = DeviceId(req.device);
-                        match agent.request_passkey(&id).await {
+                        let device = req_device(&req.adapter, req.device).await?;
+                        match agent.request_passkey(&device).await {
                             Ok(passkey) => Ok(passkey.into()),
                             Err(_) => Err(bluer::agent::ReqError::Rejected),
                         }
@@ -110,9 +117,9 @@ impl DeviceImpl {
                 })),
                 display_passkey: Some(Box::new(move |req: bluer::agent::DisplayPasskey| {
                     Box::pin(async move {
-                        let id = DeviceId(req.device);
+                        let device = req_device(&req.adapter, req.device).await?;
                         if let Ok(passkey) = req.passkey.try_into() {
-                            agent.display_passkey(&id, passkey);
+                            agent.display_passkey(&device, passkey);
                             Ok(())
                         } else {
                             Err(bluer::agent::ReqError::Rejected)
@@ -121,10 +128,10 @@ impl DeviceImpl {
                 })),
                 request_confirmation: Some(Box::new(move |req: bluer::agent::RequestConfirmation| {
                     Box::pin(async move {
-                        let id = DeviceId(req.device);
+                        let device = req_device(&req.adapter, req.device).await?;
                         if let Ok(passkey) = req.passkey.try_into() {
                             agent
-                                .confirm_passkey(&id, passkey)
+                                .confirm_passkey(&device, passkey)
                                 .await
                                 .map_err(|_| bluer::agent::ReqError::Rejected)
                         } else {
