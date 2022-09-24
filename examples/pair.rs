@@ -101,5 +101,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     device.pair_with_agent(&StdioPairingAgent).await?;
     info!("paired!");
 
+    adapter.disconnect_device(&device).await?;
+    info!("disconnected!");
+
     Ok(())
 }

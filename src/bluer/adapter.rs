@@ -153,9 +153,13 @@ impl AdapterImpl {
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
                             let device = Device::new(&self.inner, addr).ok()?;
-                            let adv_data = device.0.adv_data().await;
-                            let rssi = device.rssi().await.ok();
-                            Some(AdvertisingDevice { device, adv_data, rssi })
+                            if !device.is_connected().await {
+                                let adv_data = device.0.adv_data().await;
+                                let rssi = device.rssi().await.ok();
+                                Some(AdvertisingDevice { device, adv_data, rssi })
+                            } else {
+                                None
+                            }
                         }
                         _ => None,
                     }

@@ -83,7 +83,7 @@ impl BluetoothUuidExt for Uuid {
 
     fn try_to_u32(&self) -> Option<u32> {
         let u = self.as_u128();
-        self.is_u32_uuid().then(|| (u >> 96) as u32)
+        self.is_u32_uuid().then_some((u >> 96) as u32)
     }
 
     fn as_bluetooth_bytes(&self) -> &[u8] {

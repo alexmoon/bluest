@@ -45,7 +45,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
-        adapter.disconnect_device(&device).await?;
     }
     info!("done");
 

@@ -86,11 +86,19 @@ impl DeviceImpl {
 
     /// Attempt to pair this device using the system default pairing UI
     pub async fn pair(&self) -> Result<()> {
+        if self.is_paired().await? {
+            return Ok(());
+        }
+
         self.inner.pair().await.map_err(Into::into)
     }
 
     /// Attempt to pair this device using the system default pairing UI
     pub async fn pair_with_agent<T: PairingAgent + 'static>(&self, agent: &T) -> Result<()> {
+        if self.is_paired().await? {
+            return Ok(());
+        }
+
         let agent = {
             // Safety: This `bluer::agent::Agent`, including the encapsulated closures and async blocks will be dropped
             // when the `_handle` below is dropped. Therefore, the lifetime of the captures of `agent` will not
@@ -207,7 +215,7 @@ impl DeviceImpl {
         let is_connectable = true;
 
         let local_name = device.alias().await.unwrap_or_default();
-        let local_name = (!local_name.is_empty()).then(|| local_name);
+        let local_name = (!local_name.is_empty()).then_some(local_name);
 
         let manufacturer_data = device
             .manufacturer_data()
