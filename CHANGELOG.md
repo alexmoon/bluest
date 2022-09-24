@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.1
+
+- (Linux) Don't return connected devices from `Adapter::scan`
+- (Linux) Skip attempt to pair if the devices is already paired
+- (Windows) Let the OS filter the scan results for us
+
 ## 0.5.0
 
 - `Device::name` now returns a `Result`
