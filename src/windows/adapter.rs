@@ -7,9 +7,9 @@ use futures_util::{Stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::{InParam, HSTRING};
 use windows::Devices::Bluetooth::Advertisement::{
-    BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType,
-    BluetoothLEAdvertisementWatcher, BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData,
-    BluetoothLEScanningMode,
+    BluetoothLEAdvertisement, BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementFilter,
+    BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher,
+    BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData, BluetoothLEScanningMode,
 };
 use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
 use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
@@ -245,16 +245,13 @@ impl AdapterImpl {
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
     pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
-        let watcher = BluetoothLEAdvertisementWatcher::new()?;
-        watcher.SetScanningMode(BluetoothLEScanningMode::Active)?;
-        watcher.SetAllowExtendedAdvertisements(true)?;
-
         let (sender, receiver) = futures_channel::mpsc::channel(16);
         let sender = Arc::new(std::sync::Mutex::new(sender));
 
         let weak_sender = Arc::downgrade(&sender);
-        watcher.Received(&TypedEventHandler::new(
-            move |_watcher, event_args: &Option<BluetoothLEAdvertisementReceivedEventArgs>| {
+        let received_handler = TypedEventHandler::new(
+            move |watcher: &Option<BluetoothLEAdvertisementWatcher>,
+                  event_args: &Option<BluetoothLEAdvertisementReceivedEventArgs>| {
                 if let Some(sender) = weak_sender.upgrade() {
                     if let Some(event_args) = event_args {
                         let res = sender.lock().unwrap().try_send(event_args.clone());
@@ -262,24 +259,58 @@ impl AdapterImpl {
                             error!("Unable to send AdvertisingDevice: {:?}", err);
                         }
                     }
+                } else if let Some(watcher) = watcher {
+                    let res = watcher.Stop();
+                    if let Err(err) = res {
+                        warn!("Failed to stop BluetoothLEAdvertisementWatcher: {:?}", err);
+                    }
                 }
                 Ok(())
             },
-        ))?;
+        );
 
         let mut sender = Some(sender);
-        watcher.Stopped(&TypedEventHandler::new(
+        let stopped_handler = TypedEventHandler::new(
             move |_watcher, _event_args: &Option<BluetoothLEAdvertisementWatcherStoppedEventArgs>| {
                 // Drop the sender, ending the stream
                 let _sender = sender.take();
                 Ok(())
             },
-        ))?;
+        );
 
-        watcher.Start()?;
+        let build_watcher = |uuid: Option<Uuid>| {
+            let watcher = BluetoothLEAdvertisementWatcher::new()?;
+            watcher.SetScanningMode(BluetoothLEScanningMode::Active)?;
+            watcher.SetAllowExtendedAdvertisements(true)?;
+            watcher.Received(&received_handler)?;
+            watcher.Stopped(&stopped_handler)?;
+
+            if let Some(uuid) = uuid {
+                let advertisement = BluetoothLEAdvertisement::new()?;
+                let service_uuids = advertisement.ServiceUuids()?;
+                service_uuids.Append(&windows::core::GUID::from_u128(uuid.as_u128()))?;
+                let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
+                advertisement_filter.SetAdvertisement(&advertisement)?;
+                watcher.SetAdvertisementFilter(&advertisement_filter)?;
+            }
+
+            Ok::<_, windows::core::Error>(watcher)
+        };
+
+        let watchers = if services.is_empty() {
+            vec![build_watcher(None)?]
+        } else {
+            services
+                .iter()
+                .map(|uuid| build_watcher(Some(*uuid)))
+                .collect::<Result<_, _>>()?
+        };
+
         let guard = defer(move || {
-            if let Err(err) = watcher.Stop() {
-                error!("Error stopping scan: {:?}", err);
+            for watcher in watchers {
+                if let Err(err) = watcher.Stop() {
+                    error!("Error stopping scan: {:?}", err);
+                }
             }
         });
 
@@ -296,10 +327,6 @@ impl AdapterImpl {
                 let kind = event_args.BluetoothAddressType().ok()?;
                 let rssi = event_args.RawSignalStrengthInDBm().ok();
                 let adv_data = AdvertisementData::from(event_args);
-
-                if !services.is_empty() && !services.iter().any(|x| adv_data.services.contains(x)) {
-                    return None;
-                }
 
                 match Device::from_addr(addr, kind).await {
                     Ok(device) => Some(AdvertisingDevice { device, rssi, adv_data }),
