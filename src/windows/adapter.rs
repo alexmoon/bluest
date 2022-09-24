@@ -306,6 +306,10 @@ impl AdapterImpl {
                 .collect::<Result<_, _>>()?
         };
 
+        for watcher in &watchers {
+            watcher.Start()?;
+        }
+
         let guard = defer(move || {
             for watcher in watchers {
                 if let Err(err) = watcher.Stop() {
