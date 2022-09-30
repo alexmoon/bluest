@@ -293,7 +293,7 @@ impl CBUUID {
         unsafe {
             let obj: *mut Self =
                 msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_vec())];
-            Id::from_retained_ptr(obj)
+            Id::from_ptr(obj)
         }
     }
 
