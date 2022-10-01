@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.2
+
+- (MacOS/iOS) Fix FFI memory issues
+
 ## 0.5.1
 
 - (Linux) Don't return connected devices from `Adapter::scan`
