@@ -1,7 +1,7 @@
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::{Id, ShareId};
 
-use super::delegates::PeripheralEvent;
+use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBPeripheralState, CBService, CBUUID};
 use crate::error::ErrorKind;
 use crate::{Characteristic, Error, Result, Service, Uuid};
@@ -10,12 +10,19 @@ use crate::{Characteristic, Error, Result, Service, Uuid};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceImpl {
     inner: ShareId<CBService>,
+    delegate: ShareId<PeripheralDelegate>,
 }
 
 impl Service {
     pub(super) fn new(service: &CBService) -> Self {
+        let peripheral = service.peripheral();
+        let delegate = peripheral
+            .delegate()
+            .expect("the peripheral should have a delegate attached");
+
         Service(ServiceImpl {
             inner: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
+            delegate,
         })
     }
 }
@@ -59,7 +66,7 @@ impl ServiceImpl {
             return Err(ErrorKind::NotConnected.into());
         }
 
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
         peripheral.discover_characteristics(&self.inner, uuids);
 
         loop {
@@ -123,7 +130,7 @@ impl ServiceImpl {
             return Err(ErrorKind::NotConnected.into());
         }
 
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
         peripheral.discover_included_services(&self.inner, uuids);
 
         loop {

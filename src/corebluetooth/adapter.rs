@@ -1,6 +1,5 @@
 #![allow(clippy::let_unit_value)]
 
-use std::ffi::CStr;
 use std::future::ready;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -12,10 +11,8 @@ use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, error, info, warn};
 
 use super::delegates::{self, CentralDelegate};
-use super::types::{
-    dispatch_queue_create, dispatch_release, nil, CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID,
-    NSUUID,
-};
+use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID, NSUUID};
+use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, Device, DeviceId, Error, Result, Uuid};
@@ -26,7 +23,7 @@ use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, Device, DeviceId
 #[derive(Clone)]
 pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
-    sender: tokio::sync::broadcast::Sender<delegates::CentralEvent>,
+    delegate: ShareId<CentralDelegate>,
     scanning: Arc<AtomicBool>,
 }
 
@@ -62,27 +59,25 @@ impl AdapterImpl {
         }
 
         let (sender, _) = tokio::sync::broadcast::channel(16);
-        let delegate = CentralDelegate::with_sender(sender.clone())?;
+        let delegate = CentralDelegate::with_sender(sender)?.share();
         let central = unsafe {
-            let queue = dispatch_queue_create(CStr::from_bytes_with_nul(b"BluetoothQueue\0").unwrap().as_ptr(), nil);
+            let queue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
             if queue.is_null() {
                 return None;
             }
-            let central = CBCentralManager::with_delegate(delegate, queue);
-            dispatch_release(queue);
-            central.share()
+            CBCentralManager::with_delegate(delegate.clone(), queue).share()
         };
 
         Some(AdapterImpl {
             central,
-            sender,
+            delegate,
             scanning: Arc::new(AtomicBool::new(false)),
         })
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
-        let receiver = self.sender.subscribe();
+        let receiver = self.delegate.sender().subscribe();
         Ok(BroadcastStream::new(receiver).filter_map(|x| {
             ready(match x {
                 Ok(delegates::CentralEvent::StateChanged) => {
@@ -186,7 +181,7 @@ impl AdapterImpl {
             self.scanning.store(false, Ordering::Release);
         });
 
-        let events = BroadcastStream::new(self.sender.subscribe())
+        let events = BroadcastStream::new(self.delegate.sender().subscribe())
             .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
             .filter_map(move |x| {
                 let _guard = &guard;
@@ -244,7 +239,7 @@ impl AdapterImpl {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
-        let mut events = BroadcastStream::new(self.sender.subscribe());
+        let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
         debug!("Connecting to {:?}", device);
         self.central.connect_peripheral(&*device.0.peripheral, None);
         while let Some(event) = events.next().await {
@@ -275,7 +270,7 @@ impl AdapterImpl {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
-        let mut events = BroadcastStream::new(self.sender.subscribe());
+        let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
         debug!("Disconnecting from {:?}", device);
         self.central.cancel_peripheral_connection(&*device.0.peripheral);
         while let Some(event) = events.next().await {

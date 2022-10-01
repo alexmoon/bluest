@@ -2,7 +2,7 @@ use objc::{class, msg_send, sel, sel_impl};
 use objc_foundation::{INSData, INSObject, NSObject};
 use objc_id::ShareId;
 
-use super::delegates::PeripheralEvent;
+use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBDescriptor, CBPeripheralState, NSUInteger};
 use crate::error::ErrorKind;
 use crate::{Descriptor, Error, Result, Uuid};
@@ -11,6 +11,7 @@ use crate::{Descriptor, Error, Result, Uuid};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DescriptorImpl {
     inner: ShareId<CBDescriptor>,
+    delegate: ShareId<PeripheralDelegate>,
 }
 
 fn value_to_slice(val: &NSObject) -> Vec<u8> {
@@ -45,8 +46,16 @@ fn value_to_slice(val: &NSObject) -> Vec<u8> {
 
 impl Descriptor {
     pub(super) fn new(descriptor: &CBDescriptor) -> Self {
+        let characteristic = descriptor.characteristic();
+        let service = characteristic.service();
+        let peripheral = service.peripheral();
+        let delegate = peripheral
+            .delegate()
+            .expect("the peripheral should have a delegate attached");
+
         Descriptor(DescriptorImpl {
             inner: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
+            delegate,
         })
     }
 }
@@ -79,7 +88,7 @@ impl DescriptorImpl {
     pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.characteristic().service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -111,7 +120,7 @@ impl DescriptorImpl {
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let service = self.inner.characteristic().service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());

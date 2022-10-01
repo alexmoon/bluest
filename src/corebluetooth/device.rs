@@ -3,7 +3,7 @@
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::{Id, ShareId};
 
-use super::delegates::{self, PeripheralDelegate, PeripheralEvent};
+use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
@@ -13,7 +13,7 @@ use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 #[derive(Clone)]
 pub struct DeviceImpl {
     pub(super) peripheral: ShareId<CBPeripheral>,
-    sender: tokio::sync::broadcast::Sender<delegates::PeripheralEvent>,
+    delegate: ShareId<PeripheralDelegate>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -44,18 +44,15 @@ impl std::fmt::Display for DeviceImpl {
 
 impl Device {
     pub(super) fn new(peripheral: ShareId<CBPeripheral>) -> Self {
-        let sender = peripheral
-            .delegate()
-            .and_then(|x| x.sender().cloned())
-            .unwrap_or_else(|| {
-                // Create a new delegate and attach it to the peripheral
-                let (sender, _) = tokio::sync::broadcast::channel(16);
-                let delegate = PeripheralDelegate::with_sender(sender.clone());
-                peripheral.set_delegate(delegate);
-                sender
-            });
+        let delegate = peripheral.delegate().unwrap_or_else(|| {
+            // Create a new delegate and attach it to the peripheral
+            let (sender, _) = tokio::sync::broadcast::channel(16);
+            let delegate = PeripheralDelegate::with_sender(sender).share();
+            peripheral.set_delegate(delegate.clone());
+            delegate
+        });
 
-        Device(DeviceImpl { peripheral, sender })
+        Device(DeviceImpl { peripheral, delegate })
     }
 }
 
@@ -125,7 +122,7 @@ impl DeviceImpl {
     }
 
     async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
-        let mut receiver = self.sender.subscribe();
+        let mut receiver = self.delegate.sender().subscribe();
 
         if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
@@ -165,7 +162,7 @@ impl DeviceImpl {
 
     /// Asynchronously blocks until a GATT services changed packet is received
     pub async fn services_changed(&self) -> Result<()> {
-        let mut receiver = self.sender.subscribe();
+        let mut receiver = self.delegate.sender().subscribe();
 
         if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
@@ -186,7 +183,7 @@ impl DeviceImpl {
 
     /// Get the current signal strength from the device in dBm.
     pub async fn rssi(&self) -> Result<i16> {
-        let mut receiver = self.sender.subscribe();
+        let mut receiver = self.delegate.sender().subscribe();
         self.peripheral.read_rssi();
 
         loop {

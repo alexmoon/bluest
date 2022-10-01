@@ -3,8 +3,10 @@
 #![allow(unused)]
 
 use std::collections::HashMap;
+use std::ffi::c_ulong;
 use std::os::raw::{c_char, c_void};
 
+use objc::rc::autoreleasepool;
 use objc::runtime::{Object, BOOL, NO};
 use objc::{msg_send, sel, sel_impl};
 use objc_foundation::{
@@ -210,9 +212,19 @@ impl AdvertisementData {
 
 #[link(name = "CoreBluetooth", kind = "framework")]
 extern "C" {
+    pub static _dispatch_queue_attr_concurrent: Object;
+    pub fn dispatch_queue_attr_make_with_autorelease_frequency(attr: id, frequency: c_ulong) -> id;
     pub fn dispatch_queue_create(label: *const c_char, attr: id) -> id;
+    pub fn dispatch_get_global_queue(identifier: isize, flags: usize) -> id;
     pub fn dispatch_release(object: id) -> c_void;
 }
+
+pub const QOS_CLASS_USER_INTERACTIVE: isize = 0x21;
+pub const QOS_CLASS_USER_INITIATED: isize = 0x19;
+pub const QOS_CLASS_DEFAULT: isize = 0x15;
+pub const QOS_CLASS_UTILITY: isize = 0x11;
+pub const QOS_CLASS_BACKGROUND: isize = 0x09;
+pub const QOS_CLASS_UNSPECIFIED: isize = 0x00;
 
 pub fn id_or_nil<T, O>(val: &Option<Id<T, O>>) -> *const T {
     match val {
@@ -241,35 +253,35 @@ impl NSError {
     }
 
     pub fn domain(&self) -> ShareId<NSString> {
-        unsafe { Id::from_ptr(msg_send![self, domain]) }
+        autoreleasepool(move || unsafe { Id::from_ptr(msg_send![self, domain]) })
     }
 
     pub fn user_info(&self) -> ShareId<NSDictionary<NSString, NSObject>> {
-        unsafe { Id::from_ptr(msg_send![self, userInfo]) }
+        autoreleasepool(move || unsafe { Id::from_ptr(msg_send![self, userInfo]) })
     }
 
     pub fn localized_description(&self) -> ShareId<NSString> {
-        unsafe { Id::from_ptr(msg_send![self, localizedDescription]) }
+        autoreleasepool(move || unsafe { Id::from_ptr(msg_send![self, localizedDescription]) })
     }
 
     pub fn localized_recovery_options(&self) -> Option<ShareId<NSArray<NSString>>> {
-        unsafe { option_from_ptr(msg_send![self, localizedRecoveryOptions]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, localizedRecoveryOptions]) })
     }
 
     pub fn localized_recovery_suggestion(&self) -> Option<ShareId<NSString>> {
-        unsafe { option_from_ptr(msg_send![self, localizedRecoverySuggestion]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, localizedRecoverySuggestion]) })
     }
 
     pub fn localized_failure_reason(&self) -> Option<ShareId<NSString>> {
-        unsafe { option_from_ptr(msg_send![self, localizedFailureReason]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, localizedFailureReason]) })
     }
 
     pub fn help_anchor(&self) -> Option<ShareId<NSString>> {
-        unsafe { option_from_ptr(msg_send![self, helpAnchor]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, helpAnchor]) })
     }
 
     pub fn underlying_errors(&self) -> ShareId<NSArray<NSError>> {
-        unsafe { Id::from_ptr(msg_send![self, underlyingErrors]) }
+        autoreleasepool(move || unsafe { Id::from_ptr(msg_send![self, underlyingErrors]) })
     }
 }
 
@@ -290,24 +302,26 @@ impl NSUUID {
 
 impl CBUUID {
     pub fn from_uuid(uuid: Uuid) -> Id<Self> {
-        unsafe {
+        autoreleasepool(|| unsafe {
             let obj: *mut Self =
                 msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_vec())];
             Id::from_ptr(obj)
-        }
+        })
     }
 
     pub fn to_uuid(&self) -> Uuid {
-        let data: ShareId<NSData> = unsafe { ShareId::from_ptr(msg_send!(self, data)) };
-        Uuid::from_bluetooth_bytes(data.bytes())
+        autoreleasepool(move || {
+            let data: ShareId<NSData> = unsafe { ShareId::from_ptr(msg_send!(self, data)) };
+            Uuid::from_bluetooth_bytes(data.bytes())
+        })
     }
 }
 
 impl CBCentralManager {
-    pub fn with_delegate(delegate: Id<CentralDelegate>, queue: id) -> Id<CBCentralManager> {
+    pub fn with_delegate(delegate: ShareId<CentralDelegate>, queue: id) -> Id<CBCentralManager> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
-            Id::from_retained_ptr(msg_send![obj, initWithDelegate: delegate queue: queue])
+            Id::from_retained_ptr(msg_send![obj, initWithDelegate: &*delegate queue: queue])
         }
     }
 
@@ -331,11 +345,15 @@ impl CBCentralManager {
         &self,
         services: Id<NSArray<CBUUID>>,
     ) -> Id<NSArray<CBPeripheral>> {
-        unsafe { Id::from_ptr(msg_send![self, retrieveConnectedPeripheralsWithServices: services]) }
+        autoreleasepool(move || unsafe {
+            Id::from_ptr(msg_send![self, retrieveConnectedPeripheralsWithServices: services])
+        })
     }
 
     pub fn retrieve_peripherals_with_identifiers(&self, identifiers: Id<NSArray<NSUUID>>) -> Id<NSArray<CBPeripheral>> {
-        unsafe { Id::from_ptr(msg_send![self, retrievePeripheralsWithIdentifiers: identifiers]) }
+        autoreleasepool(move || unsafe {
+            Id::from_ptr(msg_send![self, retrievePeripheralsWithIdentifiers: identifiers])
+        })
     }
 
     pub fn scan_for_peripherals_with_services(
@@ -361,7 +379,7 @@ impl CBCentralManager {
     }
 
     pub fn delegate(&self) -> Option<ShareId<CentralDelegate>> {
-        unsafe { option_from_ptr(msg_send![self, delegate]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, delegate]) })
     }
 
     pub fn register_for_connection_events_with_options(&self, options: Id<NSDictionary<NSString, NSObject>>) {
@@ -371,34 +389,23 @@ impl CBCentralManager {
 
 impl CBPeripheral {
     pub fn identifier(&self) -> ShareId<NSUUID> {
-        unsafe { ShareId::from_ptr(msg_send![self, identifier]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, identifier]) })
     }
 
     pub fn name(&self) -> Option<ShareId<NSString>> {
-        unsafe { option_from_ptr(msg_send![self, name]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, name]) })
     }
 
     pub fn delegate(&self) -> Option<ShareId<PeripheralDelegate>> {
-        unsafe { option_from_ptr(msg_send![self, delegate]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, delegate]) })
     }
 
-    pub fn subscribe(&self) -> crate::Result<tokio::sync::broadcast::Receiver<super::delegates::PeripheralEvent>> {
-        self.delegate()
-            .and_then(|x| x.sender().map(tokio::sync::broadcast::Sender::subscribe))
-            .ok_or_else(|| {
-                crate::Error::new(
-                    crate::error::ErrorKind::Internal,
-                    None,
-                    "failed to get sender for peripheral delegate".to_string(),
-                )
-            })
-    }
-    pub fn set_delegate(&self, delegate: Id<PeripheralDelegate>) {
-        unsafe { msg_send![self, setDelegate: delegate] }
+    pub fn set_delegate(&self, delegate: ShareId<PeripheralDelegate>) {
+        unsafe { msg_send![self, setDelegate: &*delegate] }
     }
 
     pub fn services(&self) -> Option<ShareId<NSArray<CBService>>> {
-        unsafe { option_from_ptr(msg_send![self, services]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, services]) })
     }
     pub fn discover_services(&self, services: Option<Id<NSArray<CBUUID>>>) {
         unsafe { msg_send![self, discoverServices: id_or_nil(&services)] }
@@ -453,11 +460,11 @@ impl CBPeripheral {
 
 impl CBService {
     pub fn uuid(&self) -> ShareId<CBUUID> {
-        unsafe { ShareId::from_ptr(msg_send![self, UUID]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
     pub fn peripheral(&self) -> ShareId<CBPeripheral> {
-        unsafe { ShareId::from_ptr(msg_send![self, peripheral]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, peripheral]) })
     }
 
     pub fn is_primary(&self) -> bool {
@@ -466,29 +473,29 @@ impl CBService {
     }
 
     pub fn characteristics(&self) -> Option<ShareId<NSArray<CBCharacteristic>>> {
-        unsafe { option_from_ptr(msg_send![self, characteristics]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, characteristics]) })
     }
 
     pub fn included_services(&self) -> Option<ShareId<NSArray<CBService>>> {
-        unsafe { option_from_ptr(msg_send![self, includedServices]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, includedServices]) })
     }
 }
 
 impl CBCharacteristic {
     pub fn uuid(&self) -> ShareId<CBUUID> {
-        unsafe { ShareId::from_ptr(msg_send![self, UUID]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
     pub fn service(&self) -> ShareId<CBService> {
-        unsafe { ShareId::from_ptr(msg_send![self, service]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, service]) })
     }
 
     pub fn value(&self) -> Option<ShareId<NSData>> {
-        unsafe { option_from_ptr(msg_send![self, value]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, value]) })
     }
 
     pub fn descriptors(&self) -> Option<ShareId<NSArray<CBDescriptor>>> {
-        unsafe { option_from_ptr(msg_send![self, descriptors]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, descriptors]) })
     }
 
     pub fn properties(&self) -> CBCharacteristicProperties {
@@ -508,14 +515,14 @@ impl CBCharacteristic {
 
 impl CBDescriptor {
     pub fn uuid(&self) -> ShareId<CBUUID> {
-        unsafe { ShareId::from_ptr(msg_send![self, UUID]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
     pub fn characteristic(&self) -> ShareId<CBCharacteristic> {
-        unsafe { ShareId::from_ptr(msg_send![self, characteristic]) }
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, characteristic]) })
     }
 
     pub fn value(&self) -> Option<ShareId<NSObject>> {
-        unsafe { option_from_ptr(msg_send![self, value]) }
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, value]) })
     }
 }

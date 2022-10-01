@@ -5,7 +5,7 @@ use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
 use tokio_stream::wrappers::BroadcastStream;
 
-use super::delegates::PeripheralEvent;
+use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBCharacteristic, CBCharacteristicWriteType, CBPeripheralState};
 use crate::error::ErrorKind;
 use crate::util::defer;
@@ -15,12 +15,20 @@ use crate::{Characteristic, CharacteristicProperties, Descriptor, Error, Result,
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CharacteristicImpl {
     inner: ShareId<CBCharacteristic>,
+    delegate: ShareId<PeripheralDelegate>,
 }
 
 impl Characteristic {
     pub(super) fn new(characteristic: &CBCharacteristic) -> Self {
+        let service = characteristic.service();
+        let peripheral = service.peripheral();
+        let delegate = peripheral
+            .delegate()
+            .expect("the peripheral should have a delegate attached");
+
         Characteristic(CharacteristicImpl {
             inner: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
+            delegate,
         })
     }
 }
@@ -61,7 +69,7 @@ impl CharacteristicImpl {
     pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -97,7 +105,7 @@ impl CharacteristicImpl {
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -152,7 +160,7 @@ impl CharacteristicImpl {
 
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -228,7 +236,7 @@ impl CharacteristicImpl {
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = peripheral.subscribe()?;
+        let mut receiver = self.delegate.sender().subscribe();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
