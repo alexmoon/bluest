@@ -1,7 +1,7 @@
 #![allow(clippy::let_unit_value)]
 
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
-use objc_id::{Id, ShareId};
+use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
@@ -48,7 +48,7 @@ impl Device {
             // Create a new delegate and attach it to the peripheral
             let (sender, _) = tokio::sync::broadcast::channel(16);
             let delegate = PeripheralDelegate::with_sender(sender).share();
-            peripheral.set_delegate(delegate.clone());
+            peripheral.set_delegate(&delegate);
             delegate
         });
 
@@ -117,11 +117,11 @@ impl DeviceImpl {
             NSArray::from_vec(vec)
         };
 
-        let services = self.discover_services_inner(Some(uuids)).await?;
+        let services = self.discover_services_inner(Some(&uuids)).await?;
         Ok(services.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
-    async fn discover_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
+    async fn discover_services_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Service>> {
         let mut receiver = self.delegate.sender().subscribe();
 
         if !self.is_connected().await {

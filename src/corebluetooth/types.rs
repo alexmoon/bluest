@@ -226,9 +226,9 @@ pub const QOS_CLASS_UTILITY: isize = 0x11;
 pub const QOS_CLASS_BACKGROUND: isize = 0x09;
 pub const QOS_CLASS_UNSPECIFIED: isize = 0x00;
 
-pub fn id_or_nil<T, O>(val: &Option<Id<T, O>>) -> *const T {
+pub fn id_or_nil<T>(val: Option<&T>) -> *const T {
     match val {
-        Some(x) => &**x,
+        Some(x) => x,
         None => std::ptr::null(),
     }
 }
@@ -303,8 +303,8 @@ impl NSUUID {
 impl CBUUID {
     pub fn from_uuid(uuid: Uuid) -> Id<Self> {
         autoreleasepool(|| unsafe {
-            let obj: *mut Self =
-                msg_send![Self::class(), UUIDWithData: NSData::from_vec(uuid.as_bluetooth_bytes().to_vec())];
+            let data = NSData::from_vec(uuid.as_bluetooth_bytes().to_vec());
+            let obj: *mut Self = msg_send![Self::class(), UUIDWithData: &*data];
             Id::from_ptr(obj)
         })
     }
@@ -318,10 +318,10 @@ impl CBUUID {
 }
 
 impl CBCentralManager {
-    pub fn with_delegate(delegate: ShareId<CentralDelegate>, queue: id) -> Id<CBCentralManager> {
+    pub fn with_delegate(delegate: &CentralDelegate, queue: id) -> Id<CBCentralManager> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
-            Id::from_retained_ptr(msg_send![obj, initWithDelegate: &*delegate queue: queue])
+            Id::from_retained_ptr(msg_send![obj, initWithDelegate: delegate queue: queue])
         }
     }
 
@@ -333,8 +333,8 @@ impl CBCentralManager {
         CBManagerAuthorization(unsafe { msg_send![Self::class(), authorization] })
     }
 
-    pub fn connect_peripheral(&self, peripheral: &CBPeripheral, options: Option<Id<NSDictionary<NSString, NSObject>>>) {
-        unsafe { msg_send![self, connectPeripheral: peripheral options: id_or_nil(&options)] }
+    pub fn connect_peripheral(&self, peripheral: &CBPeripheral, options: Option<&NSDictionary<NSString, NSObject>>) {
+        unsafe { msg_send![self, connectPeripheral: peripheral options: id_or_nil(options)] }
     }
 
     pub fn cancel_peripheral_connection(&self, peripheral: &CBPeripheral) {
@@ -343,14 +343,14 @@ impl CBCentralManager {
 
     pub fn retrieve_connected_peripherals_with_services(
         &self,
-        services: Id<NSArray<CBUUID>>,
+        services: &NSArray<CBUUID>,
     ) -> Id<NSArray<CBPeripheral>> {
         autoreleasepool(move || unsafe {
             Id::from_ptr(msg_send![self, retrieveConnectedPeripheralsWithServices: services])
         })
     }
 
-    pub fn retrieve_peripherals_with_identifiers(&self, identifiers: Id<NSArray<NSUUID>>) -> Id<NSArray<CBPeripheral>> {
+    pub fn retrieve_peripherals_with_identifiers(&self, identifiers: &NSArray<NSUUID>) -> Id<NSArray<CBPeripheral>> {
         autoreleasepool(move || unsafe {
             Id::from_ptr(msg_send![self, retrievePeripheralsWithIdentifiers: identifiers])
         })
@@ -358,10 +358,10 @@ impl CBCentralManager {
 
     pub fn scan_for_peripherals_with_services(
         &self,
-        services: Option<Id<NSArray<CBUUID>>>,
-        options: Option<Id<NSDictionary<NSString, NSObject>>>,
+        services: Option<&NSArray<CBUUID>>,
+        options: Option<&NSDictionary<NSString, NSObject>>,
     ) {
-        unsafe { msg_send![self, scanForPeripheralsWithServices: id_or_nil(&services) options: id_or_nil(&options)] }
+        unsafe { msg_send![self, scanForPeripheralsWithServices: id_or_nil(services) options: id_or_nil(options)] }
     }
 
     pub fn stop_scan(&self) {
@@ -382,7 +382,7 @@ impl CBCentralManager {
         autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, delegate]) })
     }
 
-    pub fn register_for_connection_events_with_options(&self, options: Id<NSDictionary<NSString, NSObject>>) {
+    pub fn register_for_connection_events_with_options(&self, options: &NSDictionary<NSString, NSObject>) {
         unsafe { msg_send![self, registerForConnectionEventsWithOptions: options] }
     }
 }
@@ -400,23 +400,23 @@ impl CBPeripheral {
         autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, delegate]) })
     }
 
-    pub fn set_delegate(&self, delegate: ShareId<PeripheralDelegate>) {
-        unsafe { msg_send![self, setDelegate: &*delegate] }
+    pub fn set_delegate(&self, delegate: &PeripheralDelegate) {
+        unsafe { msg_send![self, setDelegate: delegate] }
     }
 
     pub fn services(&self) -> Option<ShareId<NSArray<CBService>>> {
         autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, services]) })
     }
-    pub fn discover_services(&self, services: Option<Id<NSArray<CBUUID>>>) {
-        unsafe { msg_send![self, discoverServices: id_or_nil(&services)] }
+    pub fn discover_services(&self, services: Option<&NSArray<CBUUID>>) {
+        unsafe { msg_send![self, discoverServices: id_or_nil(services)] }
     }
 
-    pub fn discover_included_services(&self, service: &CBService, services: Option<Id<NSArray<CBUUID>>>) {
-        unsafe { msg_send![self, discoverIncludedServices: id_or_nil(&services) forService: service] }
+    pub fn discover_included_services(&self, service: &CBService, services: Option<&NSArray<CBUUID>>) {
+        unsafe { msg_send![self, discoverIncludedServices: id_or_nil(services) forService: service] }
     }
 
-    pub fn discover_characteristics(&self, service: &CBService, characteristics: Option<Id<NSArray<CBUUID>>>) {
-        unsafe { msg_send![self, discoverCharacteristics: id_or_nil(&characteristics) forService: service] }
+    pub fn discover_characteristics(&self, service: &CBService, characteristics: Option<&NSArray<CBUUID>>) {
+        unsafe { msg_send![self, discoverCharacteristics: id_or_nil(characteristics) forService: service] }
     }
 
     pub fn discover_descriptors(&self, characteristic: &CBCharacteristic) {

@@ -22,7 +22,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     adapter.wait_available().await?;
 
     info!("getting connected devices");
-    // let devices = adapter.connected_devices().await?;
     let devices = adapter.connected_devices().await?;
     for device in devices {
         info!("found {:?}", device);

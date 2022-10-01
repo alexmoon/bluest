@@ -65,7 +65,7 @@ impl AdapterImpl {
             if queue.is_null() {
                 return None;
             }
-            CBCentralManager::with_delegate(delegate.clone(), queue).share()
+            CBCentralManager::with_delegate(&delegate, queue).share()
         };
 
         Some(AdapterImpl {
@@ -122,7 +122,7 @@ impl AdapterImpl {
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         let identifiers = NSArray::from_vec(vec![NSUUID::from_uuid(id.0)]);
-        let peripherals = self.central.retrieve_peripherals_with_identifiers(identifiers);
+        let peripherals = self.central.retrieve_peripherals_with_identifiers(&identifiers);
         peripherals
             .first_object()
             .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
@@ -147,7 +147,7 @@ impl AdapterImpl {
             let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
             NSArray::from_vec(vec)
         };
-        let peripherals = self.central.retrieve_connected_peripherals_with_services(services);
+        let peripherals = self.central.retrieve_connected_peripherals_with_services(&services);
         Ok(peripherals
             .enumerator()
             .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
@@ -199,7 +199,8 @@ impl AdapterImpl {
                 })
             });
 
-        self.central.scan_for_peripherals_with_services(services, None);
+        self.central
+            .scan_for_peripherals_with_services(services.as_deref(), None);
 
         Ok(events)
     }

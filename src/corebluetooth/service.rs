@@ -1,5 +1,5 @@
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
-use objc_id::{Id, ShareId};
+use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBPeripheralState, CBService, CBUUID};
@@ -55,11 +55,11 @@ impl ServiceImpl {
             NSArray::from_vec(vec)
         };
 
-        let characteristics = self.discover_characteristics_inner(Some(uuids)).await?;
+        let characteristics = self.discover_characteristics_inner(Some(&uuids)).await?;
         Ok(characteristics.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
-    async fn discover_characteristics_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Characteristic>> {
+    async fn discover_characteristics_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Characteristic>> {
         let peripheral = self.inner.peripheral();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -119,11 +119,11 @@ impl ServiceImpl {
             NSArray::from_vec(vec)
         };
 
-        let services = self.discover_included_services_inner(Some(uuids)).await?;
+        let services = self.discover_included_services_inner(Some(&uuids)).await?;
         Ok(services.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
-    async fn discover_included_services_inner(&self, uuids: Option<Id<NSArray<CBUUID>>>) -> Result<Vec<Service>> {
+    async fn discover_included_services_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Service>> {
         let peripheral = self.inner.peripheral();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
