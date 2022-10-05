@@ -53,6 +53,7 @@ The primary functions provided by Bluest are:
   - Finding [connected devices][Adapter::connected_devices]
   - [Opening][Adapter::open_device] previously found devices
   - [Connecting][Adapter::connect_device] to discovered devices
+  - [Pairing][Device::pair] with devices
 - Accessing remote GATT services:
   - Discovering device [services][Device::discover_services]
   - Discovering service [characteristics][Service::discover_characteristics]
@@ -80,19 +81,19 @@ CoreBluetooth never exposes the Bluetooth address of devices to applications, th
 Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
 in behavior are summarized in the table below.
 
-| Method | MacOS/iOS | Windows | Linux |
-|--------|:---------:|:-------:|:-----:|
-| [`Adapter::connect_device`][Adapter::connect_device] | ✅ | ✨ | ✅ |
+| Method                                     | MacOS/iOS | Windows | Linux |
+|--------------------------------------------|:---------:|:-------:|:-----:|
+| [`Adapter::connect_device`][Adapter::connect_device]       | ✅ | ✨ | ✅ |
 | [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
-| [`Device::name`][Device::name] | ✅ | ✅ | ⌛️ |
-| [`Device::is_paired`][Device::is_paired] | ❌ | ✅ | ✅ |
-| [`Device::pair`][Device::pair] | ✨ | ✅ | ✅ |
-| [`Device::pair_with_agent`][Device::pair_with_agent] | ✨ | ✅ | ✅ |
-| [`Device::rssi`][Device::rssi] | ✅ | ❌ | ❌ |
-| [`Service::uuid`][Service::uuid] | ✅ | ✅ | ⌛️ |
-| [`Service::is_primary`][Service::is_primary] | ✅ | ❌ | ✅ |
-| [`Characteristic::uuid`][Characteristic::uuid] | ✅ | ✅ | ⌛️ |
-| [`Descriptor::uuid`][Descriptor::uuid] | ✅ | ✅ | ⌛️ |
+| [`Device::name`][Device::name]                             | ✅ | ✅ | ⌛️ |
+| [`Device::is_paired`][Device::is_paired]                   | ❌ | ✅ | ✅ |
+| [`Device::pair`][Device::pair]                             | ✨ | ✅ | ✅ |
+| [`Device::pair_with_agent`][Device::pair_with_agent]       | ✨ | ✅ | ✅ |
+| [`Device::rssi`][Device::rssi]                             | ✅ | ❌ | ❌ |
+| [`Service::uuid`][Service::uuid]                           | ✅ | ✅ | ⌛️ |
+| [`Service::is_primary`][Service::is_primary]               | ✅ | ❌ | ✅ |
+| [`Characteristic::uuid`][Characteristic::uuid]             | ✅ | ✅ | ⌛️ |
+| [`Descriptor::uuid`][Descriptor::uuid]                     | ✅ | ✅ | ⌛️ |
 
 ✅ = supported  
 ✨ = managed automatically by the OS, this method is a no-op  
