@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.3
+
+- Add support for unpairing devices on Windows/Linux
+
 ## 0.5.2
 
 - (MacOS/iOS) Fix FFI memory issues
