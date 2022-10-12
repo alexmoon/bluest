@@ -105,6 +105,15 @@ impl DeviceImpl {
         Ok(())
     }
 
+    /// Disconnect and unpair this device from the system
+    ///
+    /// # Platform specific
+    ///
+    /// Not supported on MacOS/iOS.
+    pub async fn unpair(&self) -> Result<()> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
     /// Discover the primary services of this device.
     pub async fn discover_services(&self) -> Result<Vec<Service>> {
         self.discover_services_inner(None).await

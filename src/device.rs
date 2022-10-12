@@ -82,6 +82,16 @@ impl Device {
         self.0.pair_with_agent(agent).await
     }
 
+    /// Disconnect and unpair this device from the system
+    ///
+    /// # Platform specific
+    ///
+    /// Not supported on MacOS/iOS.
+    #[inline]
+    pub async fn unpair(&self) -> Result<()> {
+        self.0.unpair().await
+    }
+
     /// Discover the primary services of this device.
     #[inline]
     pub async fn discover_services(&self) -> Result<Vec<Service>> {

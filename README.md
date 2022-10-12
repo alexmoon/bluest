@@ -89,6 +89,7 @@ in behavior are summarized in the table below.
 | [`Device::is_paired`][Device::is_paired]                   | ❌ | ✅ | ✅ |
 | [`Device::pair`][Device::pair]                             | ✨ | ✅ | ✅ |
 | [`Device::pair_with_agent`][Device::pair_with_agent]       | ✨ | ✅ | ✅ |
+| [`Device::unpair`][Device::unpair]                         | ❌ | ✅ | ✅ |
 | [`Device::rssi`][Device::rssi]                             | ✅ | ❌ | ❌ |
 | [`Service::uuid`][Service::uuid]                           | ✅ | ✅ | ⌛️ |
 | [`Service::is_primary`][Service::is_primary]               | ✅ | ❌ | ✅ |
@@ -132,6 +133,7 @@ Refer to the [API documentation] for more details.
 [Device::is_paired]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_paired
 [Device::pair]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.pair
 [Device::pair_with_agent]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.pair_with_agent
+[Device::unpair]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.unpair
 [Device::discover_services]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.discover_services
 [Device::rssi]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.rssi
 [Service::uuid]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.uuid

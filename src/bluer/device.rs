@@ -157,6 +157,14 @@ impl DeviceImpl {
         self.pair().await
     }
 
+    /// Disconnect and unpair this device from the system
+    pub async fn unpair(&self) -> Result<()> {
+        let session = session().await?;
+        let adapter = session.adapter(self.inner.adapter_name())?;
+        adapter.remove_device(self.inner.address()).await?;
+        Ok(())
+    }
+
     /// Discover the primary services of this device.
     pub async fn discover_services(&self) -> Result<Vec<Service>> {
         self.services().await

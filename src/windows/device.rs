@@ -9,7 +9,7 @@ use windows::Devices::Bluetooth::{
 use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEventArgs};
 use windows::Foundation::TypedEventHandler;
 
-use super::error::{check_communication_status, check_pairing_status};
+use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
 use crate::util::defer;
@@ -189,6 +189,13 @@ impl DeviceImpl {
             )),
             Either::Right((Err(err), _)) => Err(err),
         }
+    }
+
+    /// Disconnect and unpair this device from the system
+    pub async fn unpair(&self) -> Result<()> {
+        let op = self.inner.DeviceInformation()?.Pairing()?.UnpairAsync()?;
+        let res = op.await?;
+        check_unpairing_status(res.Status()?)
     }
 
     /// Discover the primary services of this device.

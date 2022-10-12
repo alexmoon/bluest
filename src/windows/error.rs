@@ -1,5 +1,5 @@
 use windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
-use windows::Devices::Enumeration::DevicePairingResultStatus;
+use windows::Devices::Enumeration::{DevicePairingResultStatus, DeviceUnpairingResultStatus};
 use windows::Foundation::IReference;
 
 use crate::error::ErrorKind;
@@ -136,6 +136,51 @@ pub(super) fn check_pairing_status(status: DevicePairingResultStatus) -> Result<
         _ => Err(crate::Error::new(
             kind_from_pairing_status(status),
             Some(Box::new(PairingError(status))),
+            String::new(),
+        )),
+    }
+}
+
+struct UnpairingError(DeviceUnpairingResultStatus);
+
+impl std::fmt::Debug for UnpairingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UnpairingError({})", self)
+    }
+}
+
+impl std::fmt::Display for UnpairingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self.0 {
+            DeviceUnpairingResultStatus::Unpaired => "unpaired",
+            DeviceUnpairingResultStatus::AlreadyUnpaired => "already unpaired",
+            DeviceUnpairingResultStatus::OperationAlreadyInProgress => "operation already in progress",
+            DeviceUnpairingResultStatus::AccessDenied => "access denied",
+            DeviceUnpairingResultStatus::Failed => "failed",
+            _ => return write!(f, "unknown ({})", self.0 .0),
+        };
+        f.write_str(str)
+    }
+}
+
+fn kind_from_unpairing_status(status: DeviceUnpairingResultStatus) -> ErrorKind {
+    match status {
+        DeviceUnpairingResultStatus::AccessDenied => ErrorKind::NotAuthorized,
+        DeviceUnpairingResultStatus::OperationAlreadyInProgress | DeviceUnpairingResultStatus::Failed => {
+            ErrorKind::Other
+        }
+        _ => ErrorKind::Other,
+    }
+}
+
+impl std::error::Error for UnpairingError {}
+
+pub(super) fn check_unpairing_status(status: DeviceUnpairingResultStatus) -> Result<()> {
+    match status {
+        DeviceUnpairingResultStatus::Unpaired | DeviceUnpairingResultStatus::AlreadyUnpaired => Ok(()),
+        _ => Err(crate::Error::new(
+            kind_from_unpairing_status(status),
+            Some(Box::new(UnpairingError(status))),
             String::new(),
         )),
     }
