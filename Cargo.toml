@@ -13,7 +13,11 @@ categories = ["asynchronous", "hardware-support", "os"]
 [package.metadata.docs.rs]
 features = ["serde"]
 default-target = "x86_64-apple-darwin"
-targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+targets = [
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+]
 cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 
 [features]
@@ -34,7 +38,17 @@ uuid = "1.1.1"
 
 [target.'cfg(windows)'.dependencies]
 futures-channel = "0.3.24"
-windows = { version = "0.39.0", features = ["implement", "Foundation", "Foundation_Collections", "Devices_Enumeration", "Devices_Bluetooth", "Devices_Bluetooth_Advertisement", "Devices_Bluetooth_GenericAttributeProfile", "Devices_Radios", "Storage_Streams"] }
+windows = { version = "0.48.0", features = [
+    "implement",
+    "Foundation",
+    "Foundation_Collections",
+    "Devices_Enumeration",
+    "Devices_Bluetooth",
+    "Devices_Bluetooth_Advertisement",
+    "Devices_Bluetooth_GenericAttributeProfile",
+    "Devices_Radios",
+    "Storage_Streams",
+] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.15.0", features = ["bluetoothd"] }

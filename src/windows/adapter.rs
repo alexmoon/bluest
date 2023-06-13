@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt};
 use tracing::{debug, error, trace, warn};
-use windows::core::{InParam, HSTRING};
+use windows::core::HSTRING;
 use windows::Devices::Bluetooth::Advertisement::{
     BluetoothLEAdvertisement, BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementFilter,
     BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher,
@@ -125,7 +125,7 @@ impl AdapterImpl {
 
         let op = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
-            InParam::null(),
+            None,
             DeviceInformationKind::AssociationEndpoint,
         )?;
         let devices = op.await?;
@@ -157,7 +157,7 @@ impl AdapterImpl {
 
         let op = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqsfilter,
-            InParam::null(),
+            None,
             DeviceInformationKind::AssociationEndpoint,
         )?;
         let devices = op.await?;
@@ -288,7 +288,7 @@ impl AdapterImpl {
             if let Some(uuid) = uuid {
                 let advertisement = BluetoothLEAdvertisement::new()?;
                 let service_uuids = advertisement.ServiceUuids()?;
-                service_uuids.Append(&windows::core::GUID::from_u128(uuid.as_u128()))?;
+                service_uuids.Append(windows::core::GUID::from_u128(uuid.as_u128()))?;
                 let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
                 advertisement_filter.SetAdvertisement(&advertisement)?;
                 watcher.SetAdvertisementFilter(&advertisement_filter)?;

@@ -49,10 +49,7 @@ impl IIterator_Impl<HSTRING> for StringIterator {
         Ok(pos + 1 < self.vec.len())
     }
 
-    fn GetMany(
-        &self,
-        items: &mut [<HSTRING as windows::core::RuntimeType>::DefaultType],
-    ) -> windows::core::Result<u32> {
+    fn GetMany(&self, items: &mut [<HSTRING as windows::core::Type<HSTRING>>::Default]) -> windows::core::Result<u32> {
         let pos = self.pos.fetch_add(items.len(), Ordering::Relaxed);
         if pos < self.vec.len() {
             let len = (self.vec.len() - pos).min(items.len());
