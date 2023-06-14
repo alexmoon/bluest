@@ -24,7 +24,7 @@ impl crate::Error {
 
     pub(super) fn from_nserror(err: ShareId<NSError>) -> Self {
         crate::Error::new(
-            kind_from_nserror(&*err),
+            kind_from_nserror(&err),
             Some(Box::new(NSErrorError(err))),
             String::new(),
         )
@@ -89,6 +89,6 @@ impl std::ops::Deref for NSErrorError {
     type Target = NSError;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }

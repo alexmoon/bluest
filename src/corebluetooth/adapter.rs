@@ -242,7 +242,7 @@ impl AdapterImpl {
 
         let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
         debug!("Connecting to {:?}", device);
-        self.central.connect_peripheral(&*device.0.peripheral, None);
+        self.central.connect_peripheral(&device.0.peripheral, None);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
@@ -273,7 +273,7 @@ impl AdapterImpl {
 
         let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
         debug!("Disconnecting from {:?}", device);
-        self.central.cancel_peripheral_connection(&*device.0.peripheral);
+        self.central.cancel_peripheral_connection(&device.0.peripheral);
         while let Some(event) = events.next().await {
             if self.central.state() != CBManagerState::POWERED_ON {
                 return Err(ErrorKind::AdapterUnavailable.into());
