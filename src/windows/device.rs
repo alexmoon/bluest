@@ -18,7 +18,7 @@ use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 /// A Bluetooth LE device
 #[derive(Clone)]
 pub struct DeviceImpl {
-    inner: BluetoothLEDevice,
+    pub(super) inner: BluetoothLEDevice,
 }
 
 impl PartialEq for DeviceImpl {

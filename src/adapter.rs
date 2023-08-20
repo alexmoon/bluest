@@ -2,7 +2,7 @@
 
 use futures_util::Stream;
 
-use crate::{sys, AdapterEvent, AdvertisingDevice, Device, DeviceId, Result, Uuid};
+use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -127,5 +127,20 @@ impl Adapter {
     #[inline]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         self.0.disconnect_device(device).await
+    }
+
+    /// Monitors a device for connection/disconnection events.
+    ///
+    /// # Platform specifics
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Available on iOS/iPadOS only. On MacOS no events will be generated.
+    #[inline]
+    pub async fn device_connection_events<'a>(
+        &'a self,
+        device: &'a Device,
+    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+        self.0.device_connection_events(device).await
     }
 }

@@ -11,6 +11,7 @@ use objc_id::{Id, ShareId, Shared};
 use tracing::{debug, error};
 
 use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
+use crate::ConnectionEvent;
 
 #[derive(Clone)]
 pub enum CentralEvent {
@@ -126,6 +127,15 @@ pub enum PeripheralEvent {
 pub enum CBConnectionEvent {
     Disconnected,
     Connected,
+}
+
+impl From<CBConnectionEvent> for ConnectionEvent {
+    fn from(value: CBConnectionEvent) -> Self {
+        match value {
+            CBConnectionEvent::Disconnected => ConnectionEvent::Disconnected,
+            CBConnectionEvent::Connected => ConnectionEvent::Connected,
+        }
+    }
 }
 
 impl TryFrom<NSInteger> for CBConnectionEvent {

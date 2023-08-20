@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.4
+
+- Add `Adapter::device_connection_events`
+
 ## 0.5.3
 
 - Add support for unpairing devices on Windows/Linux

@@ -5,7 +5,7 @@ use futures_util::{Stream, StreamExt};
 use once_cell::sync::OnceCell;
 
 use crate::error::ErrorKind;
-use crate::{AdapterEvent, AdvertisingDevice, Device, DeviceId, Error, Result, Uuid};
+use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
 
 static SESSION: OnceCell<Session> = OnceCell::new();
 
@@ -217,5 +217,25 @@ impl AdapterImpl {
     /// Disconnects from the [`Device`]
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         device.0.inner.disconnect().await.map_err(Into::into)
+    }
+
+    /// Monitors a device for connection/disconnection events.
+    #[inline]
+    pub async fn device_connection_events<'a>(
+        &'a self,
+        device: &'a Device,
+    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+        let events = device.0.inner.events().await?;
+        Ok(events.filter_map(|ev| {
+            ready(match ev {
+                bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(false)) => {
+                    Some(ConnectionEvent::Disconnected)
+                }
+                bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(true)) => {
+                    Some(ConnectionEvent::Connected)
+                }
+                _ => None,
+            })
+        }))
     }
 }

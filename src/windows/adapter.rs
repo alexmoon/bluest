@@ -22,8 +22,8 @@ use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, Device, DeviceId, ManufacturerData, Result,
-    Uuid,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ConnectionEvent, Device, DeviceId,
+    ManufacturerData, Result, Uuid,
 };
 
 /// The system's Bluetooth adapter interface.
@@ -387,6 +387,48 @@ impl AdapterImpl {
     pub async fn disconnect_device(&self, _device: &Device) -> Result<()> {
         // Windows manages the device connection automatically
         Ok(())
+    }
+
+    /// Monitors a device for connection/disconnection events.
+    pub async fn device_connection_events<'a>(
+        &'a self,
+        device: &'a Device,
+    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+        let (mut sender, receiver) = futures_channel::mpsc::channel::<BluetoothConnectionStatus>(16);
+
+        let token = {
+            let handler = TypedEventHandler::new(move |device: &Option<BluetoothLEDevice>, _| {
+                if let Some(device) = device {
+                    if let Ok(status) = device.ConnectionStatus() {
+                        let res = sender.try_send(status);
+                        if let Err(err) = res {
+                            error!("Unable to send BluetoothConnectionStatus: {:?}", err);
+                        }
+                    }
+                }
+                Ok(())
+            });
+
+            device.0.inner.ConnectionStatusChanged(&handler)?
+        };
+
+        let guard = defer(move || {
+            let _ = device.0.inner.RemoveConnectionStatusChanged(token);
+        });
+
+        Ok(receiver.map(move |x| {
+            let _guard = &guard;
+            ConnectionEvent::from(x)
+        }))
+    }
+}
+
+impl From<BluetoothConnectionStatus> for ConnectionEvent {
+    fn from(value: BluetoothConnectionStatus) -> Self {
+        match value {
+            BluetoothConnectionStatus::Disconnected => ConnectionEvent::Disconnected,
+            _ => ConnectionEvent::Connected,
+        }
     }
 }
 

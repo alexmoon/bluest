@@ -81,24 +81,26 @@ CoreBluetooth never exposes the Bluetooth address of devices to applications, th
 Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
 in behavior are summarized in the table below.
 
-| Method                                     | MacOS/iOS | Windows | Linux |
-|--------------------------------------------|:---------:|:-------:|:-----:|
-| [`Adapter::connect_device`][Adapter::connect_device]       | ✅ | ✨ | ✅ |
-| [`Adapter::disconnect_device`][Adapter::disconnect_device] | ✅ | ✨ | ✅ |
-| [`Device::name`][Device::name]                             | ✅ | ✅ | ⌛️ |
-| [`Device::is_paired`][Device::is_paired]                   | ❌ | ✅ | ✅ |
-| [`Device::pair`][Device::pair]                             | ✨ | ✅ | ✅ |
-| [`Device::pair_with_agent`][Device::pair_with_agent]       | ✨ | ✅ | ✅ |
-| [`Device::unpair`][Device::unpair]                         | ❌ | ✅ | ✅ |
-| [`Device::rssi`][Device::rssi]                             | ✅ | ❌ | ❌ |
-| [`Service::uuid`][Service::uuid]                           | ✅ | ✅ | ⌛️ |
-| [`Service::is_primary`][Service::is_primary]               | ✅ | ❌ | ✅ |
-| [`Characteristic::uuid`][Characteristic::uuid]             | ✅ | ✅ | ⌛️ |
-| [`Descriptor::uuid`][Descriptor::uuid]                     | ✅ | ✅ | ⌛️ |
+| Method                                                   | MacOS/iOS | Windows | Linux |
+|----------------------------------------------------------|:---------:|:-------:|:-----:|
+| [`Adapter::connect_device`][Adapter::connect_device]                     | ✅ | ✨ | ✅ |
+| [`Adapter::disconnect_device`][Adapter::disconnect_device]               | ✅ | ✨ | ✅ |
+| [`Adapter::device_connection_events`][Adapter::device_connection_events] | 📱 | ✅ | ✅ |
+| [`Device::name`][Device::name]                                           | ✅ | ✅ | ⌛️ |
+| [`Device::is_paired`][Device::is_paired]                                 | ❌ | ✅ | ✅ |
+| [`Device::pair`][Device::pair]                                           | ✨ | ✅ | ✅ |
+| [`Device::pair_with_agent`][Device::pair_with_agent]                     | ✨ | ✅ | ✅ |
+| [`Device::unpair`][Device::unpair]                                       | ❌ | ✅ | ✅ |
+| [`Device::rssi`][Device::rssi]                                           | ✅ | ❌ | ❌ |
+| [`Service::uuid`][Service::uuid]                                         | ✅ | ✅ | ⌛️ |
+| [`Service::is_primary`][Service::is_primary]                             | ✅ | ❌ | ✅ |
+| [`Characteristic::uuid`][Characteristic::uuid]                           | ✅ | ✅ | ⌛️ |
+| [`Descriptor::uuid`][Descriptor::uuid]                                   | ✅ | ✅ | ⌛️ |
 
 ✅ = supported  
 ✨ = managed automatically by the OS, this method is a no-op  
 ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
+📱 = supported on iOS/iPadOS only (not MacOS)  
 ❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
 
 Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,
@@ -128,6 +130,7 @@ Refer to the [API documentation] for more details.
 [Adapter::open_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.open_device
 [Adapter::connect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.connect_device
 [Adapter::disconnect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.disconnect_device
+[Adapter::device_connection_events]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.device_connection_events
 [Device::name]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.name
 [Device::is_connected]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_connected
 [Device::is_paired]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_paired

@@ -15,7 +15,9 @@ use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBU
 use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
 use crate::util::defer;
-use crate::{AdapterEvent, AdvertisementData, AdvertisingDevice, Device, DeviceId, Error, Result, Uuid};
+use crate::{
+    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid,
+};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -25,6 +27,7 @@ pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
     delegate: ShareId<CentralDelegate>,
     scanning: Arc<AtomicBool>,
+    registered_connection_events: Arc<std::sync::Mutex<std::collections::HashMap<DeviceId, usize>>>,
 }
 
 impl PartialEq for AdapterImpl {
@@ -71,7 +74,8 @@ impl AdapterImpl {
         Some(AdapterImpl {
             central,
             delegate,
-            scanning: Arc::new(AtomicBool::new(false)),
+            scanning: Default::default(),
+            registered_connection_events: Default::default(),
         })
     }
 
@@ -248,7 +252,9 @@ impl AdapterImpl {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
-                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => break,
+                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => {
+                    return Ok(())
+                }
                 Ok(delegates::CentralEvent::ConnectFailed { peripheral, error })
                     if peripheral == device.0.peripheral =>
                 {
@@ -258,7 +264,7 @@ impl AdapterImpl {
             }
         }
 
-        Ok(())
+        unreachable!()
     }
 
     /// Disconnects from the [`Device`]
@@ -282,7 +288,7 @@ impl AdapterImpl {
                 Ok(delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: None,
-                }) if peripheral == device.0.peripheral => break,
+                }) if peripheral == device.0.peripheral => return Ok(()),
                 Ok(delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: Some(err),
@@ -292,6 +298,80 @@ impl AdapterImpl {
             }
         }
 
-        Ok(())
+        unreachable!()
+    }
+
+    fn register_connection_events(&self, device: DeviceId) -> impl Drop + '_ {
+        use std::collections::HashMap;
+
+        use objc_foundation::{INSDictionary, NSDictionary, NSString};
+        use objc_id::Id;
+
+        use crate::corebluetooth::types::connection_event_matching_option_peripheral_uuids;
+
+        let mut guard = self.registered_connection_events.lock().unwrap();
+
+        fn options(devices: &HashMap<DeviceId, usize>) -> Id<NSDictionary<NSString, NSArray<CBUUID>>> {
+            let ids = devices.keys().map(|x| CBUUID::from_uuid(x.0)).collect();
+            NSDictionary::from_keys_and_objects(
+                &[connection_event_matching_option_peripheral_uuids()],
+                vec![NSArray::from_vec(ids)],
+            )
+        }
+
+        match guard.entry(device.clone()) {
+            std::collections::hash_map::Entry::Occupied(mut e) => {
+                *e.get_mut() += 1;
+            }
+            std::collections::hash_map::Entry::Vacant(e) => {
+                e.insert(1);
+                self.central
+                    .register_for_connection_events_with_options(Some(&*options(&guard)));
+            }
+        }
+
+        defer(move || {
+            let mut guard = self.registered_connection_events.lock().unwrap();
+            match guard.entry(device) {
+                std::collections::hash_map::Entry::Occupied(mut e) => {
+                    *e.get_mut() -= 1;
+                    if *e.get() == 0 {
+                        e.remove();
+                        self.central
+                            .register_for_connection_events_with_options(Some(&*options(&guard)))
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(_) => unreachable!(),
+            }
+        })
+    }
+
+    /// Monitors a device for connection/disconnection events.
+    ///
+    /// # Platform specifics
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Available on iOS/iPadOS only. On MacOS no events will be generated.
+    pub async fn device_connection_events<'a>(
+        &'a self,
+        device: &'a Device,
+    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+        let events = BroadcastStream::new(self.delegate.sender().subscribe());
+        let guard = self.register_connection_events(device.id());
+
+        Ok(events
+            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
+            .filter_map(move |x| {
+                let _guard = &guard;
+                ready(match x {
+                    Ok(delegates::CentralEvent::ConnectionEvent { peripheral, event })
+                        if peripheral.identifier() == device.0.peripheral.identifier() =>
+                    {
+                        Some(event.into())
+                    }
+                    _ => None,
+                })
+            }))
     }
 }

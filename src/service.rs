@@ -27,7 +27,7 @@ impl Service {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported] on Windows.
+    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on Windows.
     #[inline]
     pub async fn is_primary(&self) -> Result<bool> {
         self.0.is_primary().await
