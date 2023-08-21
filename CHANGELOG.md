@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.5
+
+- Fix docs.rs build
+
 ## 0.5.4
 
 - Add `Adapter::device_connection_events`

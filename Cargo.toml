@@ -1,6 +1,6 @@
 [package]
 name = "bluest"
-version = "0.5.4"
+version = "0.5.5"
 authors = ["Alex Moon"]
 edition = "2021"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
@@ -18,7 +18,6 @@ targets = [
     "x86_64-pc-windows-msvc",
     "x86_64-unknown-linux-gnu",
 ]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 
 [features]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
