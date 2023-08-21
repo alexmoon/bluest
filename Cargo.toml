@@ -60,3 +60,7 @@ objc_id = "0.1.1"
 objc-foundation = "0.1.1"
 tokio = { version = "1.20.1", features = ["sync"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }
+
+[[example]]
+name = "scan"
+doc-scrape-examples = true
