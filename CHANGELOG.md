@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.7
+
+- Fix Windows compilation error
+
 ## 0.5.6
 
 - Added `Characteristic::max_write_len()` to get the maximum data that can be

@@ -136,7 +136,7 @@ impl CharacteristicImpl {
     pub fn max_write_len(&self) -> Result<usize> {
         let mtu = self.inner.Service()?.Session()?.MaxPduSize()?;
         // GATT characteristic writes have 3 bytes of overhead (opcode + handle id)
-        Ok(mtu - 3)
+        Ok(usize::from(mtu) - 3)
     }
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
