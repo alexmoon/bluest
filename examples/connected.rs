@@ -26,10 +26,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for device in devices {
         info!("found {:?}", device);
         adapter.connect_device(&device).await?;
-        let services = device.discover_services().await?;
+        let services = device.services().await?;
         for service in services {
             info!("  {:?}", service);
-            let characteristics = service.discover_characteristics().await?;
+            let characteristics = service.characteristics().await?;
             for characteristic in characteristics {
                 info!("    {:?}", characteristic);
                 let props = characteristic.properties().await?;
@@ -37,8 +37,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 if props.read {
                     info!("      value: {:?}", characteristic.read().await);
                 }
+                if props.write_without_response {
+                    info!("      max_write_len: {:?}", characteristic.max_write_len());
+                }
 
-                let descriptors = characteristic.discover_descriptors().await?;
+                let descriptors = characteristic.descriptors().await?;
                 for descriptor in descriptors {
                     info!("      {:?}: {:?}", descriptor, descriptor.read().await);
                 }

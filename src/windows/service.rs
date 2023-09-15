@@ -111,8 +111,7 @@ impl ServiceImpl {
 
     /// Get previously discovered characteristics.
     ///
-    /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
-    /// return an empty set.
+    /// If no characteristics have been discovered yet, this method will perform characteristic discovery.
     pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
         let res = self
             .inner
@@ -150,8 +149,7 @@ impl ServiceImpl {
 
     /// Get previously discovered included services.
     ///
-    /// If no included services have been discovered yet, this method may either perform included service discovery
-    /// or return an empty set.
+    /// If no included services have been discovered yet, this method will perform included service discovery.
     pub async fn included_services(&self) -> Result<Vec<Service>> {
         let res = self
             .inner

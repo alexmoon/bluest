@@ -27,6 +27,7 @@ pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
     delegate: ShareId<CentralDelegate>,
     scanning: Arc<AtomicBool>,
+    #[cfg(not(target_os = "macos"))]
     registered_connection_events: Arc<std::sync::Mutex<std::collections::HashMap<DeviceId, usize>>>,
 }
 
@@ -75,6 +76,7 @@ impl AdapterImpl {
             central,
             delegate,
             scanning: Default::default(),
+            #[cfg(not(target_os = "macos"))]
             registered_connection_events: Default::default(),
         })
     }
@@ -301,6 +303,7 @@ impl AdapterImpl {
         unreachable!()
     }
 
+    #[cfg(not(target_os = "macos"))]
     fn register_connection_events(&self, device: DeviceId) -> impl Drop + '_ {
         use std::collections::HashMap;
 
@@ -353,6 +356,7 @@ impl AdapterImpl {
     /// ## MacOS/iOS
     ///
     /// Available on iOS/iPadOS only. On MacOS no events will be generated.
+    #[cfg(not(target_os = "macos"))]
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
@@ -369,6 +373,34 @@ impl AdapterImpl {
                         if peripheral.identifier() == device.0.peripheral.identifier() =>
                     {
                         Some(event.into())
+                    }
+                    _ => None,
+                })
+            }))
+    }
+
+    /// Monitors a device for connection/disconnection events.
+    ///
+    /// # Platform specifics
+    ///
+    /// ## MacOS/iOS
+    ///
+    /// Available on iOS/iPadOS only. On MacOS no events will be generated.
+    #[cfg(target_os = "macos")]
+    pub async fn device_connection_events<'a>(
+        &'a self,
+        device: &'a Device,
+    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+        let events = BroadcastStream::new(self.delegate.sender().subscribe());
+        Ok(events
+            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
+            .filter_map(move |x| {
+                ready(match x {
+                    Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => {
+                        Some(ConnectionEvent::Connected)
+                    }
+                    Ok(delegates::CentralEvent::Disconnect { peripheral, .. }) if peripheral == device.0.peripheral => {
+                        Some(ConnectionEvent::Disconnected)
                     }
                     _ => None,
                 })

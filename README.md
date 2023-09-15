@@ -12,12 +12,14 @@
 
 <!-- cargo-rdme start -->
 
-Bluest is a cross-platform [Bluetooth Low Energy] (BLE) library for [Rust]. It currently supports Windows (version
-10 and later), MacOS/iOS, and Linux. Android support is planned.
+Bluest is a cross-platform [Bluetooth Low Energy] (BLE) library for [Rust]. It
+currently supports Windows (version 10 and later), MacOS/iOS, and Linux. Android
+support is planned.
 
-The goal of Bluest is to create a *thin* abstraction on top of the platform-specific Bluetooth APIs in order to
-provide safe, cross-platform access to Bluetooth LE devices. The crate currently supports the GAP Central and
-GATT Client roles. Peripheral and Server roles are not supported.
+The goal of Bluest is to create a _thin_ abstraction on top of the
+platform-specific Bluetooth APIs in order to provide safe, cross-platform access
+to Bluetooth LE devices. The crate currently supports the GAP Central and GATT
+Client roles. Peripheral and Server roles are not supported.
 
 [Rust]: https://www.rust-lang.org/
 [Bluetooth Low Energy]: https://www.bluetooth.com/specifications/specs/
@@ -57,57 +59,66 @@ The primary functions provided by Bluest are:
 - Accessing remote GATT services:
   - Discovering device [services][Device::discover_services]
   - Discovering service [characteristics][Service::discover_characteristics]
-  - Discovering characteristic [descriptors][Characteristic::discover_descriptors]
+  - Discovering characteristic
+    [descriptors][Characteristic::discover_descriptors]
   - [Read][Characteristic::read], [write][Characteristic::write] (including
     [write without response][Characteristic::write_without_response]), and
-    [notify/indicate][Characteristic::notify] operations on remote characteristics
-  - [Read][Descriptor::read] and [write][Descriptor::write] operations on characteristic descriptors
+    [notify/indicate][Characteristic::notify] operations on remote
+    characteristics
+  - [Read][Descriptor::read] and [write][Descriptor::write] operations on
+    characteristic descriptors
 
 ## Asynchronous runtimes
 
-On non-linux platforms, Bluest should work with any asynchronous runtime. On linux the underlying `bluer` crate
-requires the Tokio runtime and Bluest makes use of Tokio's `block_in_place` API (which requires Tokio's
-multi-threaded runtime) to make a few methods synchronous. Linux-only asynchronous versions of those methods are
-also provided, which should be preferred in platform-specific code.
+On non-linux platforms, Bluest should work with any asynchronous runtime. On
+linux the underlying `bluer` crate requires the Tokio runtime and Bluest makes
+use of Tokio's `block_in_place` API (which requires Tokio's multi-threaded
+runtime) to make a few methods synchronous. Linux-only asynchronous versions of
+those methods are also provided, which should be preferred in platform-specific
+code.
 
 ## Platform specifics
 
-Because Bluest aims to provide a thin abstraction over the platform-specific APIs, the available APIs represent the
-lowest common denominator of APIs among the supported platforms. In most cases Apple's CoreBluetooth API is the
-most restricted and therefore imposes the limit on what can be supported in a cross platform library. For example,
-CoreBluetooth never exposes the Bluetooth address of devices to applications, therefore there is no method on
-`Device` for retrieving an address or even any Bluetooth address struct in the crate.
+Because Bluest aims to provide a thin abstraction over the platform-specific
+APIs, the available APIs represent the lowest common denominator of APIs among
+the supported platforms. For example, CoreBluetooth never exposes the Bluetooth
+address of devices to applications, therefore there is no method on `Device` for
+retrieving an address or even any Bluetooth address struct in the crate.
 
-Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
-in behavior are summarized in the table below.
+Most Bluest APIs should behave consistently across all supported platforms.
+Those APIs with significant differences in behavior are summarized in the table
+below.
 
-| Method                                                   | MacOS/iOS | Windows | Linux |
-|----------------------------------------------------------|:---------:|:-------:|:-----:|
-| [`Adapter::connect_device`][Adapter::connect_device]                     | ✅ | ✨ | ✅ |
-| [`Adapter::disconnect_device`][Adapter::disconnect_device]               | ✅ | ✨ | ✅ |
-| [`Adapter::device_connection_events`][Adapter::device_connection_events] | 📱 | ✅ | ✅ |
-| [`Device::name`][Device::name]                                           | ✅ | ✅ | ⌛️ |
-| [`Device::is_paired`][Device::is_paired]                                 | ❌ | ✅ | ✅ |
-| [`Device::pair`][Device::pair]                                           | ✨ | ✅ | ✅ |
-| [`Device::pair_with_agent`][Device::pair_with_agent]                     | ✨ | ✅ | ✅ |
-| [`Device::unpair`][Device::unpair]                                       | ❌ | ✅ | ✅ |
-| [`Device::rssi`][Device::rssi]                                           | ✅ | ❌ | ❌ |
-| [`Service::uuid`][Service::uuid]                                         | ✅ | ✅ | ⌛️ |
-| [`Service::is_primary`][Service::is_primary]                             | ✅ | ❌ | ✅ |
-| [`Characteristic::uuid`][Characteristic::uuid]                           | ✅ | ✅ | ⌛️ |
-| [`Descriptor::uuid`][Descriptor::uuid]                                   | ✅ | ✅ | ⌛️ |
+| Method                                                           | MacOS/iOS | Windows | Linux |
+| ---------------------------------------------------------------- | :-------: | :-----: | :---: |
+| [`Adapter::connect_device`][Adapter::connect_device]             |    ✅     |   ✨    |  ✅   |
+| [`Adapter::disconnect_device`][Adapter::disconnect_device]       |    ✅     |   ✨    |  ✅   |
+| [`Device::name`][Device::name]                                   |    ✅     |   ✅    |  ⌛️   |
+| [`Device::is_paired`][Device::is_paired]                         |    ❌     |   ✅    |  ✅   |
+| [`Device::pair`][Device::pair]                                   |    ✨     |   ✅    |  ✅   |
+| [`Device::pair_with_agent`][Device::pair_with_agent]             |    ✨     |   ✅    |  ✅   |
+| [`Device::unpair`][Device::unpair]                               |    ❌     |   ✅    |  ✅   |
+| [`Device::rssi`][Device::rssi]                                   |    ✅     |   ❌    |  ❌   |
+| [`Service::uuid`][Service::uuid]                                 |    ✅     |   ✅    |  ⌛️   |
+| [`Service::is_primary`][Service::is_primary]                     |    ✅     |   ❌    |  ✅   |
+| [`Characteristic::uuid`][Characteristic::uuid]                   |    ✅     |   ✅    |  ⌛️   |
+| [`Characteristic::max_write_len`][Characteristic::max_write_len] |    ✅     |   ✅    |  ⌛️   |
+| [`Descriptor::uuid`][Descriptor::uuid]                           |    ✅     |   ✅    |  ⌛️   |
 
-✅ = supported  
-✨ = managed automatically by the OS, this method is a no-op  
-⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
-📱 = supported on iOS/iPadOS only (not MacOS)  
+✅ = supported\
+✨ = managed automatically by the OS, this method is a no-op\
+⌛️ = the underlying API is async so this method uses Tokio's `block_in_place`
+API internally\
 ❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
 
-Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,
-Linux's bluez API does not return the underlying Bluetooth protocol error in a useful way, whereas the other
-platforms do. Where it is possible to return a meaningful error, Bluest will attempt to do so. In other cases,
-Bluest may return an error with a [`kind`][Error::kind] of [`Other`][error::ErrorKind::Other] and you would need to
-look at the platform-specific [`source`][std::error::Error::source] of the error for more information.
+Also, the errors returned by APIs in a given situation may not be consistent
+from platform to platform. For example, Linux's bluez API does not return the
+underlying Bluetooth protocol error in a useful way, whereas the other platforms
+do. Where it is possible to return a meaningful error, Bluest will attempt to do
+so. In other cases, Bluest may return an error with a [`kind`][Error::kind] of
+[`Other`][error::ErrorKind::Other] and you would need to look at the
+platform-specific [`source`][std::error::Error::source] of the error for more
+information.
 
 ## Feature flags
 
@@ -130,7 +141,6 @@ Refer to the [API documentation] for more details.
 [Adapter::open_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.open_device
 [Adapter::connect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.connect_device
 [Adapter::disconnect_device]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.disconnect_device
-[Adapter::device_connection_events]: https://docs.rs/bluest/latest/bluest/struct.Adapter.html#method.device_connection_events
 [Device::name]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.name
 [Device::is_connected]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_connected
 [Device::is_paired]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.is_paired
@@ -148,6 +158,7 @@ Refer to the [API documentation] for more details.
 [Characteristic::read]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.read
 [Characteristic::write]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.write
 [Characteristic::write_without_response]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.write_without_response
+[Characteristic::max_write_len]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.max_write_len
 [Characteristic::notify]: https://docs.rs/bluest/latest/bluest/struct.Characteristic.html#method.notify
 [Descriptor::uuid]: https://docs.rs/bluest/latest/bluest/struct.Descriptor.html#method.uuid
 [Descriptor::read]: https://docs.rs/bluest/latest/bluest/struct.Descriptor.html#method.read

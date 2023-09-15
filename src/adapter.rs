@@ -135,7 +135,10 @@ impl Adapter {
     ///
     /// ## MacOS/iOS
     ///
-    /// Available on iOS/iPadOS only. On MacOS no events will be generated.
+    /// On MacOS connection events will only be generated for calls to `connect_device` and disconnection events
+    /// will only be generated for devices that have been connected with `connect_device`.
+    ///
+    /// On iOS/iPadOS connection and disconnection events can be generated for any device.
     #[inline]
     pub async fn device_connection_events<'a>(
         &'a self,

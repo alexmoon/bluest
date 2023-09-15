@@ -1,6 +1,8 @@
+use std::pin::pin;
+
 use futures_channel::mpsc;
 use futures_util::future::{select, Either};
-use futures_util::{pin_mut, StreamExt};
+use futures_util::StreamExt;
 use tracing::error;
 use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::{
@@ -145,7 +147,7 @@ impl DeviceImpl {
         let op = custom.PairAsync(pairing_kinds_supported)?;
 
         let device = Device(self.clone());
-        let pairing_fut = async move {
+        let pairing_fut = pin!(async move {
             while let Some((event_args, deferral)) = rx.next().await {
                 match event_args.PairingKind()? {
                     DevicePairingKinds::ConfirmOnly => {
@@ -177,8 +179,7 @@ impl DeviceImpl {
             }
 
             Result::<_, Error>::Ok(())
-        };
-        pin_mut!(pairing_fut);
+        });
 
         match select(op, pairing_fut).await {
             Either::Left((res, _)) => check_pairing_status(res?.Status()?),
@@ -223,8 +224,7 @@ impl DeviceImpl {
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this method may either perform service discovery or return an empty
-    /// set.
+    /// If no services have been discovered yet, this method will perform service discovery.
     pub async fn services(&self) -> Result<Vec<Service>> {
         let res = self
             .inner

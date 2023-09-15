@@ -87,14 +87,20 @@ impl ServiceImpl {
             }
         }
 
-        self.characteristics().await
+        self.characteristics_inner()
     }
 
     /// Get previously discovered characteristics.
     ///
-    /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
-    /// return an error.
+    /// If no characteristics have been discovered yet, this method will perform characteristic discovery.
     pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
+        match self.characteristics_inner() {
+            Ok(characteristics) => Ok(characteristics),
+            Err(_) => self.discover_characteristics().await,
+        }
+    }
+
+    fn characteristics_inner(&self) -> Result<Vec<Characteristic>> {
         self.inner
             .characteristics()
             .map(|s| s.enumerator().map(Characteristic::new).collect())
@@ -153,14 +159,20 @@ impl ServiceImpl {
             }
         }
 
-        self.included_services().await
+        self.included_services_inner()
     }
 
     /// Get previously discovered included services.
     ///
-    /// If no included services have been discovered yet, this method may either perform included service discovery
-    /// or return an error.
+    /// If no included services have been discovered yet, this method will perform included service discovery.
     pub async fn included_services(&self) -> Result<Vec<Service>> {
+        match self.included_services_inner() {
+            Ok(services) => Ok(services),
+            Err(_) => self.discover_included_services().await,
+        }
+    }
+
+    fn included_services_inner(&self) -> Result<Vec<Service>> {
         self.inner
             .included_services()
             .map(|s| s.enumerator().map(Service::new).collect())

@@ -132,6 +132,18 @@ impl CharacteristicImpl {
         check_communication_status(res.Status()?, res.ProtocolError(), "writing characteristic")
     }
 
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    pub fn max_write_len(&self) -> Result<usize> {
+        let mtu = self.inner.Service()?.Session()?.MaxPduSize()?;
+        // GATT characteristic writes have 3 bytes of overhead (opcode + handle id)
+        Ok(mtu - 3)
+    }
+
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    pub async fn max_write_len_async(&self) -> Result<usize> {
+        self.max_write_len()
+    }
+
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
@@ -249,8 +261,7 @@ impl CharacteristicImpl {
 
     /// Get previously discovered descriptors.
     ///
-    /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
-    /// return an empty set.
+    /// If no descriptors have been discovered yet, this method will perform descriptor discovery.
     pub async fn descriptors(&self) -> Result<Vec<Descriptor>> {
         self.get_descriptors(BluetoothCacheMode::Cached).await
     }

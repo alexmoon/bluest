@@ -106,7 +106,7 @@ impl Device {
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this method may either perform service discovery or return an error.
+    /// If no services have been discovered yet, this method will perform service discovery.
     #[inline]
     pub async fn services(&self) -> Result<Vec<Service>> {
         self.0.services().await

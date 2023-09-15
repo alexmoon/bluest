@@ -68,10 +68,9 @@
 //! # Platform specifics
 //!
 //! Because Bluest aims to provide a thin abstraction over the platform-specific APIs, the available APIs represent the
-//! lowest common denominator of APIs among the supported platforms. In most cases Apple's CoreBluetooth API is the
-//! most restricted and therefore imposes the limit on what can be supported in a cross platform library. For example,
-//! CoreBluetooth never exposes the Bluetooth address of devices to applications, therefore there is no method on
-//! `Device` for retrieving an address or even any Bluetooth address struct in the crate.
+//! lowest common denominator of APIs among the supported platforms. For example, CoreBluetooth never exposes the
+//! Bluetooth address of devices to applications, therefore there is no method on `Device` for retrieving an address or
+//! even any Bluetooth address struct in the crate.
 //!
 //! Most Bluest APIs should behave consistently across all supported platforms. Those APIs with significant differences
 //! in behavior are summarized in the table below.
@@ -80,7 +79,6 @@
 //!|----------------------------------------------------------|:---------:|:-------:|:-----:|
 //!| [`Adapter::connect_device`][Adapter::connect_device]                     | ✅ | ✨ | ✅ |
 //!| [`Adapter::disconnect_device`][Adapter::disconnect_device]               | ✅ | ✨ | ✅ |
-//!| [`Adapter::device_connection_events`][Adapter::device_connection_events] | 📱 | ✅ | ✅ |
 //!| [`Device::name`][Device::name]                                           | ✅ | ✅ | ⌛️ |
 //!| [`Device::is_paired`][Device::is_paired]                                 | ❌ | ✅ | ✅ |
 //!| [`Device::pair`][Device::pair]                                           | ✨ | ✅ | ✅ |
@@ -90,12 +88,12 @@
 //!| [`Service::uuid`][Service::uuid]                                         | ✅ | ✅ | ⌛️ |
 //!| [`Service::is_primary`][Service::is_primary]                             | ✅ | ❌ | ✅ |
 //!| [`Characteristic::uuid`][Characteristic::uuid]                           | ✅ | ✅ | ⌛️ |
+//!| [`Characteristic::max_write_len`][Characteristic::max_write_len]         | ✅ | ✅ | ⌛️ |
 //!| [`Descriptor::uuid`][Descriptor::uuid]                                   | ✅ | ✅ | ⌛️ |
 //!
 //! ✅ = supported  
 //! ✨ = managed automatically by the OS, this method is a no-op  
 //! ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
-//! 📱 = supported on iOS/iPadOS only (not MacOS)  
 //! ❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
 //!
 //! Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,

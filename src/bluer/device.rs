@@ -180,7 +180,7 @@ impl DeviceImpl {
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this method may either perform service discovery or return an error.
+    /// If no services have been discovered yet, this method will perform service discovery.
     pub async fn services(&self) -> Result<Vec<Service>> {
         Ok(self.inner.services().await?.into_iter().map(Service::new).collect())
     }

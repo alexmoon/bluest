@@ -61,6 +61,18 @@ impl Characteristic {
         self.0.write_without_response(value).await
     }
 
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    #[inline]
+    pub fn max_write_len(&self) -> Result<usize> {
+        self.0.max_write_len()
+    }
+
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    #[inline]
+    pub async fn max_write_len_async(&self) -> Result<usize> {
+        self.0.max_write_len_async().await
+    }
+
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
@@ -83,8 +95,7 @@ impl Characteristic {
 
     /// Get previously discovered descriptors.
     ///
-    /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
-    /// return an error.
+    /// If no descriptors have been discovered yet, this method will perform descriptor discovery.
     #[inline]
     pub async fn descriptors(&self) -> Result<Vec<Descriptor>> {
         self.0.descriptors().await

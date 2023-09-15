@@ -188,11 +188,7 @@ impl AdvertisementData {
         let services = adv_data
             .object_for(unsafe { extern_nsstring(CBAdvertisementDataServiceUUIDsKey) })
             .into_iter()
-            .chain(
-                adv_data
-                    .object_for(unsafe { extern_nsstring(CBAdvertisementDataOverflowServiceUUIDsKey) })
-                    .into_iter(),
-            )
+            .chain(adv_data.object_for(unsafe { extern_nsstring(CBAdvertisementDataOverflowServiceUUIDsKey) }))
             .flat_map(|x| {
                 let val: &NSArray<CBUUID> = unsafe { &*(x as *const NSObject).cast() };
                 val.enumerator()
@@ -471,6 +467,11 @@ impl CBPeripheral {
         unsafe { msg_send![self, writeValue: value forCharacteristic: characteristic type: write_type] }
     }
 
+    pub fn maximum_write_value_length_for_type(&self, write_type: CBCharacteristicWriteType) -> NSUInteger {
+        let write_type: isize = write_type as isize;
+        unsafe { msg_send![self, maximumWriteValueLengthForType: write_type] }
+    }
+
     pub fn write_descriptor_value(&self, descriptor: &CBDescriptor, value: &NSData) {
         unsafe { msg_send![self, writeValue: value forDescriptor: descriptor] }
     }
@@ -481,6 +482,11 @@ impl CBPeripheral {
 
     pub fn state(&self) -> CBPeripheralState {
         CBPeripheralState(unsafe { msg_send![self, state] })
+    }
+
+    pub fn can_send_write_without_response(&self) -> bool {
+        let res: BOOL = unsafe { msg_send![self, canSendWriteWithoutResponse] };
+        res != NO
     }
 
     pub fn read_rssi(&self) {

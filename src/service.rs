@@ -47,8 +47,7 @@ impl Service {
 
     /// Get previously discovered characteristics.
     ///
-    /// If no characteristics have been discovered yet, this method may either perform characteristic discovery or
-    /// return an error.
+    /// If no characteristics have been discovered yet, this method will perform characteristic discovery.
     #[inline]
     pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
         self.0.characteristics().await
@@ -68,8 +67,7 @@ impl Service {
 
     /// Get previously discovered included services.
     ///
-    /// If no included services have been discovered yet, this method may either perform included service discovery
-    /// or return an error.
+    /// If no included services have been discovered yet, this method will perform included service discovery.
     #[inline]
     pub async fn included_services(&self) -> Result<Vec<Service>> {
         self.0.included_services().await

@@ -150,13 +150,20 @@ impl DeviceImpl {
             }
         }
 
-        self.services().await
+        self.services_inner()
     }
 
     /// Get previously discovered services.
     ///
-    /// If no services have been discovered yet, this method may either perform service discovery or return an error.
+    /// If no services have been discovered yet, this method will perform service discovery.
     pub async fn services(&self) -> Result<Vec<Service>> {
+        match self.services_inner() {
+            Ok(services) => Ok(services),
+            Err(_) => self.discover_services().await,
+        }
+    }
+
+    fn services_inner(&self) -> Result<Vec<Service>> {
         self.peripheral
             .services()
             .map(|s| s.enumerator().map(Service::new).collect())

@@ -1,9 +1,10 @@
 use std::error::Error;
+use std::pin::pin;
 use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
 use futures_util::future::{select, Either};
-use futures_util::{pin_mut, StreamExt};
+use futures_util::StreamExt;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -54,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     info!("found LED and button service");
 
-    let characteristics = service.discover_characteristics().await?;
+    let characteristics = service.characteristics().await?;
     info!("discovered characteristics");
 
     let button_characteristic = characteristics
@@ -62,24 +63,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .find(|x| x.uuid() == BLINKY_BUTTON_STATE_CHARACTERISTIC)
         .ok_or("button characteristic not found")?;
 
-    let button_fut = async {
+    let button_fut = pin!(async {
         info!("enabling button notifications");
-        let updates = button_characteristic.notify().await?;
-        pin_mut!(updates);
+        let mut updates = pin!(button_characteristic.notify().await?);
         info!("waiting for button changes");
         while let Some(val) = updates.next().await {
             info!("Button state changed: {:?}", val?);
         }
         Ok(())
-    };
-    pin_mut!(button_fut);
+    });
 
     let led_characteristic = characteristics
         .iter()
         .find(|x| x.uuid() == BLINKY_LED_STATE_CHARACTERISTIC)
         .ok_or("led characteristic not found")?;
 
-    let blink_fut = async {
+    let blink_fut = pin!(async {
         info!("blinking LED");
         tokio::time::sleep(Duration::from_secs(1)).await;
         loop {
@@ -90,8 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             info!("LED off");
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    };
-    pin_mut!(blink_fut);
+    });
 
     type R = Result<(), Box<dyn Error>>;
     let res: Either<(R, _), (R, _)> = select(blink_fut, button_fut).await;

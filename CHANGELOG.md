@@ -1,5 +1,19 @@
 # Change Log
 
+## 0.5.6
+
+- Added `Characteristic::max_write_len()` to get the maximum data that can be
+  written to the characteristic in a single packet (this is 3 bytes less than
+  the negotiated MTU for the connection; this is a method on the
+  `Characteristic` instead of the `Device` because Linux only exposes this value
+  on characteristics).
+- Added limited support for `device_connection_events` on MacOS
+- Tightened the behavior of the non-discover counterparts of discovery methods
+  (i.e. `Device::services()`, `Service::characteristics()`,
+  `Service::included_characteristics()`, `Characteristic::descriptors()`) to
+  always perform discovery if discovery has not previously been performed.
+- Fix docs.rs example scraping
+
 ## 0.5.5
 
 - Fix docs.rs build

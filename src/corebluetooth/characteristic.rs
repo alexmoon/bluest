@@ -137,12 +137,37 @@ impl CharacteristicImpl {
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     pub async fn write_without_response(&self, value: &[u8]) {
+        {
+            let mut receiver = self.delegate.sender().subscribe();
+            if !self.inner.service().peripheral().can_send_write_without_response() {
+                while let Ok(evt) = receiver.recv().await {
+                    if let PeripheralEvent::ReadyToWrite = evt {
+                        break;
+                    }
+                }
+            }
+        }
+
         let data = INSData::from_vec(value.to_vec());
         self.inner.service().peripheral().write_characteristic_value(
             &self.inner,
             &data,
             CBCharacteristicWriteType::WithoutResponse,
         );
+    }
+
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    pub fn max_write_len(&self) -> Result<usize> {
+        Ok(self
+            .inner
+            .service()
+            .peripheral()
+            .maximum_write_value_length_for_type(CBCharacteristicWriteType::WithoutResponse))
+    }
+
+    /// Get the maximum amount of data that can be written in a single packet for this characteristic.
+    pub async fn max_write_len_async(&self) -> Result<usize> {
+        self.max_write_len()
     }
 
     /// Enables notification of value changes for this GATT characteristic.
@@ -264,14 +289,20 @@ impl CharacteristicImpl {
             }
         }
 
-        self.descriptors().await
+        self.descriptors_inner()
     }
 
     /// Get previously discovered descriptors.
     ///
-    /// If no descriptors have been discovered yet, this method may either perform descriptor discovery or
-    /// return an error.
+    /// If no descriptors have been discovered yet, this method will perform descriptor discovery.
     pub async fn descriptors(&self) -> Result<Vec<Descriptor>> {
+        match self.descriptors_inner() {
+            Ok(descriptors) => Ok(descriptors),
+            Err(_) => self.discover_descriptors().await,
+        }
+    }
+
+    fn descriptors_inner(&self) -> Result<Vec<Descriptor>> {
         self.inner
             .descriptors()
             .map(|s| s.enumerator().map(Descriptor::new).collect())
