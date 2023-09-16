@@ -88,7 +88,7 @@ impl DescriptorImpl {
     pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.characteristic().service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -120,7 +120,7 @@ impl DescriptorImpl {
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let service = self.inner.characteristic().service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());

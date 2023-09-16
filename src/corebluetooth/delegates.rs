@@ -169,13 +169,13 @@ macro_rules! delegate_method {
     ($name:ident < $event:ident > ( central $(, $param:ident: $ty:ident)*)) => {
         extern "C" fn $name(this: &mut Object, _sel: Sel, _central: id, $($param: id),*) {
             unsafe {
-                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
                 if !ptr.is_null() {
                     let event = CentralEvent::$event {
                         $($param: delegate_method!(@value $param: $ty)),*
                     };
                     debug!("CentralDelegate received {:?}", event);
-                    let _res = (*ptr).send(event);
+                    let _res = (*ptr).try_broadcast(event);
                 }
             }
         }
@@ -184,13 +184,13 @@ macro_rules! delegate_method {
     ($name:ident < $event:ident > ( peripheral $(, $param:ident: $ty:ident)*)) => {
         extern "C" fn $name(this: &mut Object, _sel: Sel, _peripheral: id, $($param: id),*) {
             unsafe {
-                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<PeripheralEvent>>();
+                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<PeripheralEvent>>();
                 if !ptr.is_null() {
                     let event = PeripheralEvent::$event {
                         $($param: delegate_method!(@value $param: $ty)),*
                     };
                     debug!("PeripheralDelegate received {:?}", event);
-                    let _res = (*ptr).send(event);
+                    let _res = (*ptr).try_broadcast(event);
                 }
             }
         }
@@ -266,7 +266,7 @@ impl ::std::fmt::Debug for PeripheralDelegate {
 }
 
 impl CentralDelegate {
-    pub fn with_sender(sender: tokio::sync::broadcast::Sender<CentralEvent>) -> Option<Id<CentralDelegate>> {
+    pub fn with_sender(sender: async_broadcast::Sender<CentralEvent>) -> Option<Id<CentralDelegate>> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
             let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>()];
@@ -274,11 +274,11 @@ impl CentralDelegate {
         }
     }
 
-    pub fn sender(&self) -> &tokio::sync::broadcast::Sender<CentralEvent> {
+    pub fn sender(&self) -> &async_broadcast::Sender<CentralEvent> {
         unsafe {
             let sender: *const c_void = msg_send![self, sender];
             assert!(!sender.is_null());
-            &*(sender.cast::<tokio::sync::broadcast::Sender<CentralEvent>>())
+            &*(sender.cast::<async_broadcast::Sender<CentralEvent>>())
         }
     }
 
@@ -293,9 +293,7 @@ impl CentralDelegate {
             let sender: *mut c_void = *this.get_ivar("sender");
             this.set_ivar("sender", std::ptr::null_mut::<c_void>());
             if !sender.is_null() {
-                std::mem::drop(Box::from_raw(
-                    sender.cast::<tokio::sync::broadcast::Sender<CentralEvent>>(),
-                ));
+                std::mem::drop(Box::from_raw(sender.cast::<async_broadcast::Sender<CentralEvent>>()));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
         };
@@ -310,33 +308,33 @@ impl CentralDelegate {
 
     extern "C" fn did_connect(this: &mut Object, _sel: Sel, _central: id, peripheral: id) {
         unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
             if !ptr.is_null() {
                 let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
                 if let Some(delegate) = peripheral.delegate() {
-                    let _res = delegate.sender().send(PeripheralEvent::Connected);
+                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Connected);
                 }
                 let event = CentralEvent::Connect { peripheral };
                 debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).send(event);
+                let _res = (*ptr).try_broadcast(event);
             }
         }
     }
 
     extern "C" fn did_disconnect(this: &mut Object, _sel: Sel, _central: id, peripheral: id, error: id) {
         unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
             if !ptr.is_null() {
                 let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
                 let error: Option<Id<NSError, _>> = (!error.is_null()).then(|| ShareId::from_ptr(error.cast()));
                 if let Some(delegate) = peripheral.delegate() {
                     let _res = delegate
                         .sender()
-                        .send(PeripheralEvent::Disconnected { error: error.clone() });
+                        .try_broadcast(PeripheralEvent::Disconnected { error: error.clone() });
                 }
                 let event = CentralEvent::Disconnect { peripheral, error };
                 debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).send(event);
+                let _res = (*ptr).try_broadcast(event);
             }
         }
     }
@@ -350,7 +348,7 @@ impl CentralDelegate {
         rssi: id,
     ) {
         unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
             if !ptr.is_null() {
                 let rssi: i16 = msg_send![rssi, charValue];
                 let event = CentralEvent::Discovered {
@@ -359,7 +357,7 @@ impl CentralDelegate {
                     rssi,
                 };
                 debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).send(event);
+                let _res = (*ptr).try_broadcast(event);
             }
         }
     }
@@ -372,7 +370,7 @@ impl CentralDelegate {
         peripheral: id,
     ) {
         unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<tokio::sync::broadcast::Sender<CentralEvent>>();
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
             if !ptr.is_null() {
                 match connection_event.try_into() {
                     Ok(event) => {
@@ -381,7 +379,7 @@ impl CentralDelegate {
                             event,
                         };
                         debug!("CentralDelegate received {:?}", event);
-                        let _res = (*ptr).send(event);
+                        let _res = (*ptr).try_broadcast(event);
                     }
                     Err(err) => {
                         error!("Invalid value for CBConnectionEvent: {}", err);
@@ -452,7 +450,7 @@ impl CentralDelegate {
 }
 
 impl PeripheralDelegate {
-    pub fn with_sender(sender: tokio::sync::broadcast::Sender<PeripheralEvent>) -> Id<PeripheralDelegate> {
+    pub fn with_sender(sender: async_broadcast::Sender<PeripheralEvent>) -> Id<PeripheralDelegate> {
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
             let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>()];
@@ -460,11 +458,11 @@ impl PeripheralDelegate {
         }
     }
 
-    pub fn sender(&self) -> &tokio::sync::broadcast::Sender<PeripheralEvent> {
+    pub fn sender(&self) -> &async_broadcast::Sender<PeripheralEvent> {
         unsafe {
             let sender: *const c_void = msg_send![self, sender];
             assert!(!sender.is_null());
-            &*(sender.cast::<tokio::sync::broadcast::Sender<PeripheralEvent>>())
+            &*(sender.cast::<async_broadcast::Sender<PeripheralEvent>>())
         }
     }
 
@@ -479,9 +477,7 @@ impl PeripheralDelegate {
             let sender: *mut c_void = *this.get_ivar("sender");
             this.set_ivar("sender", std::ptr::null_mut::<c_void>());
             if !sender.is_null() {
-                std::mem::drop(Box::from_raw(
-                    sender.cast::<tokio::sync::broadcast::Sender<PeripheralEvent>>(),
-                ));
+                std::mem::drop(Box::from_raw(sender.cast::<async_broadcast::Sender<PeripheralEvent>>()));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
         };

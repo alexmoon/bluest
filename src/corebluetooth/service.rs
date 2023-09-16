@@ -66,7 +66,7 @@ impl ServiceImpl {
             return Err(ErrorKind::NotConnected.into());
         }
 
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
         peripheral.discover_characteristics(&self.inner, uuids);
 
         loop {
@@ -136,7 +136,7 @@ impl ServiceImpl {
             return Err(ErrorKind::NotConnected.into());
         }
 
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
         peripheral.discover_included_services(&self.inner, uuids);
 
         loop {

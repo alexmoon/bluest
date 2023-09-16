@@ -1,5 +1,6 @@
 #![allow(clippy::let_unit_value)]
 
+use async_broadcast::InactiveReceiver;
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
@@ -14,6 +15,7 @@ use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 pub struct DeviceImpl {
     pub(super) peripheral: ShareId<CBPeripheral>,
     delegate: ShareId<PeripheralDelegate>,
+    _receiver: InactiveReceiver<PeripheralEvent>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -44,15 +46,28 @@ impl std::fmt::Display for DeviceImpl {
 
 impl Device {
     pub(super) fn new(peripheral: ShareId<CBPeripheral>) -> Self {
-        let delegate = peripheral.delegate().unwrap_or_else(|| {
-            // Create a new delegate and attach it to the peripheral
-            let (sender, _) = tokio::sync::broadcast::channel(16);
-            let delegate = PeripheralDelegate::with_sender(sender).share();
-            peripheral.set_delegate(&delegate);
-            delegate
-        });
+        let (delegate, _receiver) = match peripheral.delegate() {
+            Some(delegate) => {
+                let receiver = delegate.sender().new_receiver().deactivate();
+                (delegate, receiver)
+            }
+            None => {
+                // Create a new delegate and attach it to the peripheral
+                let (mut sender, receiver) = async_broadcast::broadcast(16);
+                sender.set_overflow(true);
+                let receiver = receiver.deactivate();
 
-        Device(DeviceImpl { peripheral, delegate })
+                let delegate = PeripheralDelegate::with_sender(sender).share();
+                peripheral.set_delegate(&delegate);
+                (delegate, receiver)
+            }
+        };
+
+        Device(DeviceImpl {
+            peripheral,
+            delegate,
+            _receiver,
+        })
     }
 }
 
@@ -131,7 +146,7 @@ impl DeviceImpl {
     }
 
     async fn discover_services_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Service>> {
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
@@ -178,7 +193,7 @@ impl DeviceImpl {
 
     /// Asynchronously blocks until a GATT services changed packet is received
     pub async fn services_changed(&self) -> Result<()> {
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
@@ -199,7 +214,7 @@ impl DeviceImpl {
 
     /// Get the current signal strength from the device in dBm.
     pub async fn rssi(&self) -> Result<i16> {
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
         self.peripheral.read_rssi();
 
         loop {

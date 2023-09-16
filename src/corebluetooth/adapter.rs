@@ -7,10 +7,9 @@ use std::sync::Arc;
 use futures_util::{Stream, StreamExt};
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
-use tokio_stream::wrappers::BroadcastStream;
 use tracing::{debug, error, info, warn};
 
-use super::delegates::{self, CentralDelegate};
+use super::delegates::{self, CentralDelegate, CentralEvent};
 use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID, NSUUID};
 use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
@@ -26,6 +25,7 @@ use crate::{
 pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
     delegate: ShareId<CentralDelegate>,
+    _receiver: async_broadcast::InactiveReceiver<CentralEvent>,
     scanning: Arc<AtomicBool>,
     #[cfg(not(target_os = "macos"))]
     registered_connection_events: Arc<std::sync::Mutex<std::collections::HashMap<DeviceId, usize>>>,
@@ -62,7 +62,10 @@ impl AdapterImpl {
             val => error!("Bluetooth authorization returned unknown value {:?}", val),
         }
 
-        let (sender, _) = tokio::sync::broadcast::channel(16);
+        let (mut sender, receiver) = async_broadcast::broadcast(16);
+        sender.set_overflow(true);
+        let _receiver = receiver.deactivate();
+
         let delegate = CentralDelegate::with_sender(sender)?.share();
         let central = unsafe {
             let queue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
@@ -75,6 +78,7 @@ impl AdapterImpl {
         Some(AdapterImpl {
             central,
             delegate,
+            _receiver,
             scanning: Default::default(),
             #[cfg(not(target_os = "macos"))]
             registered_connection_events: Default::default(),
@@ -83,10 +87,10 @@ impl AdapterImpl {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
-        let receiver = self.delegate.sender().subscribe();
-        Ok(BroadcastStream::new(receiver).filter_map(|x| {
+        let receiver = self.delegate.sender().new_receiver();
+        Ok(receiver.filter_map(|x| {
             ready(match x {
-                Ok(delegates::CentralEvent::StateChanged) => {
+                delegates::CentralEvent::StateChanged => {
                     // TODO: Check CBCentralManager::authorization()?
                     let state = self.central.state();
                     debug!("Central state is now {:?}", state);
@@ -95,11 +99,6 @@ impl AdapterImpl {
                         _ => Some(Ok(AdapterEvent::Unavailable)),
                     }
                 }
-                Err(err) => Some(Err(Error::new(
-                    ErrorKind::Internal,
-                    Some(Box::new(err)),
-                    "adapter event stream".to_string(),
-                ))),
                 _ => None,
             })
         }))
@@ -187,16 +186,19 @@ impl AdapterImpl {
             self.scanning.store(false, Ordering::Release);
         });
 
-        let events = BroadcastStream::new(self.delegate.sender().subscribe())
+        let events = self
+            .delegate
+            .sender()
+            .new_receiver()
             .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
             .filter_map(move |x| {
                 let _guard = &guard;
                 ready(match x {
-                    Ok(delegates::CentralEvent::Discovered {
+                    delegates::CentralEvent::Discovered {
                         peripheral,
                         adv_data,
                         rssi,
-                    }) => Some(AdvertisingDevice {
+                    } => Some(AdvertisingDevice {
                         device: Device::new(peripheral),
                         adv_data: AdvertisementData::from_nsdictionary(&adv_data),
                         rssi: Some(rssi),
@@ -246,7 +248,7 @@ impl AdapterImpl {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
-        let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
+        let mut events = self.delegate.sender().new_receiver();
         debug!("Connecting to {:?}", device);
         self.central.connect_peripheral(&device.0.peripheral, None);
         while let Some(event) = events.next().await {
@@ -254,12 +256,8 @@ impl AdapterImpl {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
-                Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => {
-                    return Ok(())
-                }
-                Ok(delegates::CentralEvent::ConnectFailed { peripheral, error })
-                    if peripheral == device.0.peripheral =>
-                {
+                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => return Ok(()),
+                delegates::CentralEvent::ConnectFailed { peripheral, error } if peripheral == device.0.peripheral => {
                     return Err(error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror));
                 }
                 _ => (),
@@ -279,7 +277,7 @@ impl AdapterImpl {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
-        let mut events = BroadcastStream::new(self.delegate.sender().subscribe());
+        let mut events = self.delegate.sender().new_receiver();
         debug!("Disconnecting from {:?}", device);
         self.central.cancel_peripheral_connection(&device.0.peripheral);
         while let Some(event) = events.next().await {
@@ -287,15 +285,14 @@ impl AdapterImpl {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
-                Ok(delegates::CentralEvent::Disconnect {
+                delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: None,
-                }) if peripheral == device.0.peripheral => return Ok(()),
-                Ok(delegates::CentralEvent::Disconnect {
+                } if peripheral == device.0.peripheral => return Ok(()),
+                delegates::CentralEvent::Disconnect {
                     peripheral,
                     error: Some(err),
-                }) if peripheral == device.0.peripheral => return Err(Error::from_nserror(err)),
-                Err(err) => return Err(Error::from_stream_recv_error(err)),
+                } if peripheral == device.0.peripheral => return Err(Error::from_nserror(err)),
                 _ => (),
             }
         }
@@ -391,15 +388,15 @@ impl AdapterImpl {
         &'a self,
         device: &'a Device,
     ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
-        let events = BroadcastStream::new(self.delegate.sender().subscribe());
+        let events = self.delegate.sender().new_receiver();
         Ok(events
             .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
             .filter_map(move |x| {
                 ready(match x {
-                    Ok(delegates::CentralEvent::Connect { peripheral }) if peripheral == device.0.peripheral => {
+                    delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
                         Some(ConnectionEvent::Connected)
                     }
-                    Ok(delegates::CentralEvent::Disconnect { peripheral, .. }) if peripheral == device.0.peripheral => {
+                    delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
                         Some(ConnectionEvent::Disconnected)
                     }
                     _ => None,

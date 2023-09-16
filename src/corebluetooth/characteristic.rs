@@ -3,7 +3,6 @@ use std::future::ready;
 use futures_util::{Stream, StreamExt};
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
-use tokio_stream::wrappers::BroadcastStream;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBCharacteristic, CBCharacteristicWriteType, CBPeripheralState};
@@ -69,7 +68,7 @@ impl CharacteristicImpl {
     pub async fn read(&self) -> Result<Vec<u8>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -105,7 +104,7 @@ impl CharacteristicImpl {
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -138,7 +137,7 @@ impl CharacteristicImpl {
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     pub async fn write_without_response(&self, value: &[u8]) {
         {
-            let mut receiver = self.delegate.sender().subscribe();
+            let mut receiver = self.delegate.sender().new_receiver();
             if !self.inner.service().peripheral().can_send_write_without_response() {
                 while let Ok(evt) = receiver.recv().await {
                     if let PeripheralEvent::ReadyToWrite = evt {
@@ -185,7 +184,7 @@ impl CharacteristicImpl {
 
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -217,11 +216,11 @@ impl CharacteristicImpl {
             }
         }
 
-        let updates = BroadcastStream::new(receiver)
+        let updates = receiver
             .filter_map(move |x| {
                 let _guard = &guard;
                 ready(match x {
-                    Ok(PeripheralEvent::CharacteristicValueUpdate { characteristic, error })
+                    PeripheralEvent::CharacteristicValueUpdate { characteristic, error }
                         if characteristic == self.inner =>
                     {
                         match error {
@@ -229,10 +228,10 @@ impl CharacteristicImpl {
                             None => Some(Ok(())),
                         }
                     }
-                    Ok(PeripheralEvent::Disconnected { error }) => {
+                    PeripheralEvent::Disconnected { error } => {
                         Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
                     }
-                    Ok(PeripheralEvent::ServicesChanged { invalidated_services })
+                    PeripheralEvent::ServicesChanged { invalidated_services }
                         if invalidated_services.contains(&service) =>
                     {
                         Some(Err(ErrorKind::ServiceChanged.into()))
@@ -261,7 +260,7 @@ impl CharacteristicImpl {
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         let service = self.inner.service();
         let peripheral = service.peripheral();
-        let mut receiver = self.delegate.sender().subscribe();
+        let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
