@@ -1,4 +1,4 @@
-use futures_util::Stream;
+use futures_core::Stream;
 
 use crate::{sys, CharacteristicProperties, Descriptor, Result, Uuid};
 

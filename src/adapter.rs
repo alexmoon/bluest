@@ -1,6 +1,6 @@
 #![allow(clippy::let_unit_value)]
 
-use futures_util::Stream;
+use futures_core::Stream;
 
 use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
 
