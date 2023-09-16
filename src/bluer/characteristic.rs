@@ -1,6 +1,7 @@
 use bluer::gatt::remote::CharacteristicWriteRequest;
 use bluer::gatt::WriteOp;
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::StreamExt;
 
 use crate::{Characteristic, CharacteristicProperties, Descriptor, Result, Uuid};
 
@@ -122,7 +123,7 @@ impl CharacteristicImpl {
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
         Ok(Box::pin(self.inner.notify().await?.map(Ok)))
     }
 

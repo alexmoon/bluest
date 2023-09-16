@@ -1,10 +1,10 @@
 #![allow(clippy::let_unit_value)]
 
-use std::future::ready;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::{stream, StreamExt};
 use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tracing::{debug, error, info, warn};
@@ -86,10 +86,10 @@ impl AdapterImpl {
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
         let receiver = self.delegate.sender().new_receiver();
         Ok(receiver.filter_map(|x| {
-            ready(match x {
+            match x {
                 delegates::CentralEvent::StateChanged => {
                     // TODO: Check CBCentralManager::authorization()?
                     let state = self.central.state();
@@ -100,7 +100,7 @@ impl AdapterImpl {
                     }
                 }
                 _ => None,
-            })
+            }
         }))
     }
 
@@ -110,7 +110,7 @@ impl AdapterImpl {
         if self.central.state() != CBManagerState::POWERED_ON {
             events
                 .await?
-                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
+                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -167,7 +167,10 @@ impl AdapterImpl {
     ///
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
-    pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
+    pub async fn scan<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
         if self.central.state() != CBManagerState::POWERED_ON {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
@@ -190,10 +193,10 @@ impl AdapterImpl {
             .delegate
             .sender()
             .new_receiver()
-            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
+            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
             .filter_map(move |x| {
                 let _guard = &guard;
-                ready(match x {
+                match x {
                     delegates::CentralEvent::Discovered {
                         peripheral,
                         adv_data,
@@ -204,7 +207,7 @@ impl AdapterImpl {
                         rssi: Some(rssi),
                     }),
                     _ => None,
-                })
+                }
             });
 
         self.central
@@ -222,19 +225,19 @@ impl AdapterImpl {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
-        use futures_util::TryFutureExt;
+    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
+        let connected = stream::iter(self.connected_devices_with_services(services).await?).map(Ok);
 
-        let connected = self.connected_devices_with_services(services).await?;
-        let advertising = Box::pin(async {
-            match self.scan(services).await {
-                Ok(stream) => Ok(stream.map(|x| Ok(x.device))),
-                Err(err) => Err(err),
-            }
-        })
-        .try_flatten_stream();
+        // try_unfold is used to ensure we do not start scanning until the connected devices have been consumed
+        let advertising = Box::pin(stream::try_unfold(None, |state| async {
+            let mut stream = match state {
+                Some(stream) => stream,
+                None => self.scan(services).await?,
+            };
+            Ok(stream.next().await.map(|x| (x.device, Some(stream))))
+        }));
 
-        Ok(futures_util::stream::iter(connected).map(Ok).chain(advertising))
+        Ok(connected.chain(advertising))
     }
 
     /// Connects to the [`Device`]
@@ -357,7 +360,7 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         let events = BroadcastStream::new(self.delegate.sender().subscribe());
         let guard = self.register_connection_events(device.id());
 
@@ -387,20 +390,18 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         let events = self.delegate.sender().new_receiver();
         Ok(events
-            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
-            .filter_map(move |x| {
-                ready(match x {
-                    delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
-                        Some(ConnectionEvent::Connected)
-                    }
-                    delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
-                        Some(ConnectionEvent::Disconnected)
-                    }
-                    _ => None,
-                })
+            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
+            .filter_map(move |x| match x {
+                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
+                    Some(ConnectionEvent::Connected)
+                }
+                delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
+                    Some(ConnectionEvent::Disconnected)
+                }
+                _ => None,
             }))
     }
 }

@@ -1,4 +1,5 @@
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::StreamExt;
 use tracing::{error, warn};
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::{
@@ -147,7 +148,7 @@ impl CharacteristicImpl {
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
         let props = self.properties().await?;
         let value = if props.notify {
             GattClientCharacteristicConfigurationDescriptorValue::Notify

@@ -1,6 +1,5 @@
-use std::future::ready;
-
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::StreamExt;
 use objc_foundation::{INSData, INSFastEnumeration};
 use objc_id::ShareId;
 
@@ -172,7 +171,7 @@ impl CharacteristicImpl {
     /// Enables notification of value changes for this GATT characteristic.
     ///
     /// Returns a stream of values for the characteristic sent from the device.
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
         let properties = self.properties().await?;
         if !(properties.notify || properties.indicate) {
             return Err(Error::new(
@@ -219,7 +218,7 @@ impl CharacteristicImpl {
         let updates = receiver
             .filter_map(move |x| {
                 let _guard = &guard;
-                ready(match x {
+                match x {
                     PeripheralEvent::CharacteristicValueUpdate { characteristic, error }
                         if characteristic == self.inner =>
                     {
@@ -237,7 +236,7 @@ impl CharacteristicImpl {
                         Some(Err(ErrorKind::ServiceChanged.into()))
                     }
                     _ => None,
-                })
+                }
             })
             .then(move |x| {
                 Box::pin(async move {

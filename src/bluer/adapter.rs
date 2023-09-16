@@ -1,7 +1,6 @@
-use std::future::ready;
-
 use bluer::{AdapterProperty, Session};
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::StreamExt;
 use once_cell::sync::OnceCell;
 
 use crate::error::ErrorKind;
@@ -55,18 +54,14 @@ impl AdapterImpl {
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
         let stream = self.inner.events().await?;
-        Ok(stream.filter_map(|event| {
-            ready(match event {
-                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(true)) => {
-                    Some(Ok(AdapterEvent::Available))
-                }
-                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(false)) => {
-                    Some(Ok(AdapterEvent::Unavailable))
-                }
-                _ => None,
-            })
+        Ok(stream.filter_map(|event| match event {
+            bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(true)) => Some(Ok(AdapterEvent::Available)),
+            bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(false)) => {
+                Some(Ok(AdapterEvent::Unavailable))
+            }
+            _ => None,
         }))
     }
 
@@ -76,7 +71,7 @@ impl AdapterImpl {
         if !self.inner.is_powered().await? {
             events
                 .await?
-                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
+                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -143,12 +138,15 @@ impl AdapterImpl {
     ///
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
-    pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
+    pub async fn scan<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
         Ok(self
             .inner
             .discover_devices()
             .await?
-            .filter_map(move |event| {
+            .then(move |event| {
                 Box::pin(async move {
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
@@ -165,8 +163,9 @@ impl AdapterImpl {
                     }
                 })
             })
+            .filter_map(|x| x)
             .filter(|x: &AdvertisingDevice| {
-                ready(services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y)))
+                services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))
             }))
     }
 
@@ -179,34 +178,39 @@ impl AdapterImpl {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
-        Ok(self.inner.discover_devices().await?.filter_map(move |event| {
-            Box::pin(async move {
-                match event {
-                    bluer::AdapterEvent::DeviceAdded(addr) => match Device::new(&self.inner, addr) {
-                        Ok(device) => {
-                            if services.is_empty() {
-                                Some(Ok(device))
-                            } else {
-                                match device.0.inner.uuids().await {
-                                    Ok(uuids) => {
-                                        let uuids = uuids.unwrap_or_default();
-                                        if services.iter().any(|x| uuids.contains(x)) {
-                                            Some(Ok(device))
-                                        } else {
-                                            None
+    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
+        Ok(self
+            .inner
+            .discover_devices()
+            .await?
+            .then(move |event| {
+                Box::pin(async move {
+                    match event {
+                        bluer::AdapterEvent::DeviceAdded(addr) => match Device::new(&self.inner, addr) {
+                            Ok(device) => {
+                                if services.is_empty() {
+                                    Some(Ok(device))
+                                } else {
+                                    match device.0.inner.uuids().await {
+                                        Ok(uuids) => {
+                                            let uuids = uuids.unwrap_or_default();
+                                            if services.iter().any(|x| uuids.contains(x)) {
+                                                Some(Ok(device))
+                                            } else {
+                                                None
+                                            }
                                         }
+                                        Err(err) => Some(Err(err.into())),
                                     }
-                                    Err(err) => Some(Err(err.into())),
                                 }
                             }
-                        }
-                        Err(err) => Some(Err(err)),
-                    },
-                    _ => None,
-                }
+                            Err(err) => Some(Err(err)),
+                        },
+                        _ => None,
+                    }
+                })
             })
-        }))
+            .filter_map(|x| x))
     }
 
     /// Connects to the [`Device`]
@@ -224,18 +228,16 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         let events = device.0.inner.events().await?;
-        Ok(events.filter_map(|ev| {
-            ready(match ev {
-                bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(false)) => {
-                    Some(ConnectionEvent::Disconnected)
-                }
-                bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(true)) => {
-                    Some(ConnectionEvent::Connected)
-                }
-                _ => None,
-            })
+        Ok(events.filter_map(|ev| match ev {
+            bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(false)) => {
+                Some(ConnectionEvent::Disconnected)
+            }
+            bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::Connected(true)) => {
+                Some(ConnectionEvent::Connected)
+            }
+            _ => None,
         }))
     }
 }

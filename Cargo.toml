@@ -25,9 +25,9 @@ serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 [dependencies]
 async-trait = "0.1.57"
 futures-core = "0.3.28"
-futures-util = { version = "0.3.24" }
+futures-lite = { version = "1.13.0", default-features = false }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
-tracing = "0.1.36"
+tracing = { version = "0.1.36", default-features = false }
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }

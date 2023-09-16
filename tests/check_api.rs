@@ -1,7 +1,7 @@
 #![allow(clippy::let_unit_value)]
 
 use bluest::*;
-use futures_util::StreamExt;
+use futures_lite::StreamExt;
 
 fn assert_send<T: Send>(t: T) -> T {
     t
@@ -28,6 +28,9 @@ async fn check_adapter_apis(adapter: Adapter) -> Result<Device> {
     let _res: Result<()> = assert_send(adapter.connect_device(&device)).await;
     let _res: Result<()> = assert_send(adapter.disconnect_device(&device)).await;
 
+    let events: Result<_> = assert_send(adapter.device_connection_events(&device)).await;
+    let _event: Option<ConnectionEvent> = assert_send(events?.next()).await;
+
     Ok(device)
 }
 
@@ -39,7 +42,8 @@ async fn check_device_apis(device: Device) -> Result<Service> {
     let _is_paired: Result<bool> = assert_send(device.is_paired()).await;
 
     let _pair: Result<()> = assert_send(device.pair()).await;
-    let _pair: Result<()> = assert_send(device.pair_with_agent(&pairing::NoInputOutputPairingAgent)).await;
+    let _pair_with_agent: Result<()> = assert_send(device.pair_with_agent(&pairing::NoInputOutputPairingAgent)).await;
+    let _unpair: Result<()> = assert_send(device.unpair()).await;
 
     let _discovery: Result<Vec<Service>> = assert_send(device.discover_services()).await;
     let _discovery: Result<Vec<Service>> =
@@ -80,6 +84,7 @@ async fn check_characteristic_apis(characteristic: Characteristic) -> Result<Des
     let _value: Result<Vec<u8>> = assert_send(characteristic.read()).await;
     let _res: Result<()> = assert_send(characteristic.write(&[0u8])).await;
     let _res: () = assert_send(characteristic.write_without_response(&[0u8])).await;
+    let _len: Result<usize> = assert_send(characteristic.max_write_len_async()).await;
 
     let notifications: Result<_> = assert_send(characteristic.notify()).await;
     let _notification: Option<Result<Vec<u8>>> = assert_send(notifications?.next()).await;

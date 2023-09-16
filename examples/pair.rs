@@ -3,7 +3,7 @@ use std::error::Error;
 use async_trait::async_trait;
 use bluest::pairing::{IoCapability, PairingAgent, PairingRejected, Passkey};
 use bluest::{btuuid, Adapter, Device};
-use futures_util::StreamExt;
+use futures_lite::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 

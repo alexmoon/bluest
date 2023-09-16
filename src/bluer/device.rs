@@ -1,4 +1,4 @@
-use futures_util::StreamExt;
+use futures_lite::StreamExt;
 use tokio::pin;
 
 use super::adapter::session;

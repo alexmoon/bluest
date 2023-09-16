@@ -1,8 +1,7 @@
 use std::pin::pin;
 
 use futures_channel::mpsc;
-use futures_util::future::{select, Either};
-use futures_util::StreamExt;
+use futures_lite::{future, StreamExt};
 use tracing::error;
 use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::{
@@ -181,15 +180,20 @@ impl DeviceImpl {
             Result::<_, Error>::Ok(())
         });
 
-        match select(op, pairing_fut).await {
-            Either::Left((res, _)) => check_pairing_status(res?.Status()?),
-            Either::Right((Ok(()), _)) => Err(Error::new(
-                ErrorKind::Other,
-                None,
-                "Pairing agent terminated unexpectedly".to_owned(),
-            )),
-            Either::Right((Err(err), _)) => Err(err),
-        }
+        let op = async move {
+            let res = op.await;
+            check_pairing_status(res?.Status()?)
+        };
+        let pairing_fut = async move {
+            pairing_fut.await.and_then(|_| {
+                Err(Error::new(
+                    ErrorKind::Other,
+                    None,
+                    "Pairing agent terminated unexpectedly".to_owned(),
+                ))
+            })
+        };
+        future::or(op, pairing_fut).await
     }
 
     /// Disconnect and unpair this device from the system

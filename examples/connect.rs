@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use bluest::{btuuid, Adapter};
-use futures_util::StreamExt;
+use futures_lite::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
 

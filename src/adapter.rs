@@ -19,7 +19,7 @@ impl Adapter {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     #[inline]
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
         self.0.events().await
     }
 
@@ -60,7 +60,10 @@ impl Adapter {
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
     #[inline]
-    pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
+    pub async fn scan<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
         self.0.scan(services).await
     }
 
@@ -74,7 +77,7 @@ impl Adapter {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
+    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
         self.0.discover_devices(services).await
     }
 
@@ -143,7 +146,7 @@ impl Adapter {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         self.0.device_connection_events(device).await
     }
 }

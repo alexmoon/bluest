@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
-use std::future::ready;
 use std::sync::Arc;
 
-use futures_util::{Stream, StreamExt};
+use futures_core::Stream;
+use futures_lite::{stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::HSTRING;
 use windows::Devices::Bluetooth::Advertisement::{
@@ -62,7 +62,7 @@ impl AdapterImpl {
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
         let (mut sender, receiver) = futures_channel::mpsc::channel(16);
         let radio = self.inner.GetRadioAsync()?.await?;
         let token = radio.StateChanged(&TypedEventHandler::new(move |radio: &Option<Radio>, _| {
@@ -100,7 +100,7 @@ impl AdapterImpl {
         let state = radio.State()?;
         if state != RadioState::On {
             events
-                .skip_while(|x| ready(x.is_ok() && !matches!(x, Ok(AdapterEvent::Available))))
+                .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
                 .ok_or_else(|| {
@@ -244,7 +244,10 @@ impl AdapterImpl {
     ///
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
-    pub async fn scan<'a>(&'a self, services: &'a [Uuid]) -> Result<impl Stream<Item = AdvertisingDevice> + 'a> {
+    pub async fn scan<'a>(
+        &'a self,
+        services: &'a [Uuid],
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
         let (sender, receiver) = futures_channel::mpsc::channel(16);
         let sender = Arc::new(std::sync::Mutex::new(sender));
 
@@ -318,33 +321,35 @@ impl AdapterImpl {
             }
         });
 
-        Ok(receiver.filter_map(move |event_args| {
-            let _guard = &guard;
+        Ok(receiver
+            .then(move |event_args| {
+                let _guard = &guard;
 
-            Box::pin(async move {
-                if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
-                    // Device cannot be created from a non-connectable advertisement
-                    return None;
-                }
-
-                let addr = event_args.BluetoothAddress().ok()?;
-                let kind = event_args.BluetoothAddressType().ok()?;
-                let rssi = event_args.RawSignalStrengthInDBm().ok();
-                let adv_data = AdvertisementData::from(event_args);
-
-                match Device::from_addr(addr, kind).await {
-                    Ok(device) => Some(AdvertisingDevice { device, rssi, adv_data }),
-                    Err(err) => {
-                        if err.code().is_err() {
-                            warn!("Error creating device: {:?}", err);
-                        } else {
-                            warn!("Device::from_addr returned null");
-                        }
-                        None
+                Box::pin(async move {
+                    if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
+                        // Device cannot be created from a non-connectable advertisement
+                        return None;
                     }
-                }
+
+                    let addr = event_args.BluetoothAddress().ok()?;
+                    let kind = event_args.BluetoothAddressType().ok()?;
+                    let rssi = event_args.RawSignalStrengthInDBm().ok();
+                    let adv_data = AdvertisementData::from(event_args);
+
+                    match Device::from_addr(addr, kind).await {
+                        Ok(device) => Some(AdvertisingDevice { device, rssi, adv_data }),
+                        Err(err) => {
+                            if err.code().is_err() {
+                                warn!("Error creating device: {:?}", err);
+                            } else {
+                                warn!("Device::from_addr returned null");
+                            }
+                            None
+                        }
+                    }
+                })
             })
-        }))
+            .filter_map(|x| x))
     }
 
     /// Finds Bluetooth devices providing any service in `services`.
@@ -356,19 +361,19 @@ impl AdapterImpl {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + 'a> {
-        use futures_util::TryFutureExt;
+    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
+        let connected = stream::iter(self.connected_devices_with_services(services).await?).map(Ok);
 
-        let connected = self.connected_devices_with_services(services).await?;
-        let advertising = Box::pin(async {
-            match self.scan(services).await {
-                Ok(stream) => Ok(stream.map(|x| Ok(x.device))),
-                Err(err) => Err(err),
-            }
-        })
-        .try_flatten_stream();
+        // try_unfold is used to ensure we do not start scanning until the connected devices have been consumed
+        let advertising = Box::pin(stream::try_unfold(None, |state| async {
+            let mut stream = match state {
+                Some(stream) => stream,
+                None => self.scan(services).await?,
+            };
+            Ok(stream.next().await.map(|x| (x.device, Some(stream))))
+        }));
 
-        Ok(futures_util::stream::iter(connected).map(Ok).chain(advertising))
+        Ok(connected.chain(advertising))
     }
 
     /// Connects to the [`Device`]
@@ -393,7 +398,7 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         let (mut sender, receiver) = futures_channel::mpsc::channel::<BluetoothConnectionStatus>(16);
 
         let token = {
