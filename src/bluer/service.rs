@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use crate::{Characteristic, Result, Service, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone)]
 pub struct ServiceImpl {
     pub(super) inner: bluer::gatt::remote::Service,
+    device: Arc<bluer::Device>,
 }
 
 impl PartialEq for ServiceImpl {
@@ -25,8 +28,8 @@ impl std::hash::Hash for ServiceImpl {
 }
 
 impl Service {
-    pub(super) fn new(inner: bluer::gatt::remote::Service) -> Service {
-        Service(ServiceImpl { inner })
+    pub(super) fn new(device: Arc<bluer::Device>, inner: bluer::gatt::remote::Service) -> Service {
+        Service(ServiceImpl { inner, device })
     }
 }
 
@@ -65,8 +68,13 @@ impl ServiceImpl {
     }
 
     /// Discover the characteristic(s) with the given [`Uuid`].
-    pub async fn discover_characteristics_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Characteristic>> {
-        self.characteristics().await
+    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
+        Ok(self
+            .characteristics()
+            .await?
+            .into_iter()
+            .filter(|x| x.uuid() == uuid)
+            .collect())
     }
 
     /// Get previously discovered characteristics.
@@ -86,21 +94,23 @@ impl ServiceImpl {
     }
 
     /// Discover the included service(s) with the given [`Uuid`].
-    pub async fn discover_included_services_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Service>> {
-        self.included_services().await
+    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
+        Ok(self
+            .included_services()
+            .await?
+            .into_iter()
+            .filter(|x| x.uuid() == uuid)
+            .collect())
     }
 
     /// Get previously discovered included services.
     ///
     /// If no included services have been discovered yet, this method will perform included service discovery.
     pub async fn included_services(&self) -> Result<Vec<Service>> {
-        let session = super::adapter::session().await?;
-        let adapter = session.adapter(self.inner.adapter_name())?;
-        let device = adapter.device(self.inner.device_address())?;
         let includes = self.inner.includes().await?;
         let mut res = Vec::with_capacity(includes.len());
         for id in includes {
-            res.push(Service::new(device.service(id).await?));
+            res.push(Service::new(self.device.clone(), self.device.service(id).await?));
         }
         Ok(res)
     }

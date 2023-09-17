@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
 use futures_lite::StreamExt;
 use tokio::pin;
 
-use super::adapter::session;
 use super::DeviceId;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
@@ -10,7 +11,8 @@ use crate::{btuuid, AdvertisementData, Device, Error, ManufacturerData, Result, 
 /// A Bluetooth LE device
 #[derive(Debug, Clone)]
 pub struct DeviceImpl {
-    pub(super) inner: bluer::Device,
+    pub(super) inner: Arc<bluer::Device>,
+    session: Arc<bluer::Session>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -35,9 +37,10 @@ impl std::fmt::Display for DeviceImpl {
 }
 
 impl Device {
-    pub(super) fn new(adapter: &bluer::Adapter, addr: bluer::Address) -> Result<Device> {
+    pub(super) fn new(session: Arc<bluer::Session>, adapter: &bluer::Adapter, addr: bluer::Address) -> Result<Device> {
         Ok(Device(DeviceImpl {
-            inner: adapter.device(addr)?,
+            inner: Arc::new(adapter.device(addr)?),
+            session,
         }))
     }
 }
@@ -106,53 +109,71 @@ impl DeviceImpl {
             // `agent` to the static lifetime.
             let agent: &'static T = unsafe { std::mem::transmute(agent) };
 
-            async fn req_device(adapter: &str, addr: bluer::Address) -> Result<Device, bluer::agent::ReqError> {
-                let session = session().await.map_err(|_| bluer::agent::ReqError::Rejected)?;
+            async fn req_device(
+                session: Arc<bluer::Session>,
+                adapter: &str,
+                addr: bluer::Address,
+            ) -> Result<Device, bluer::agent::ReqError> {
                 let adapter = session.adapter(adapter).map_err(|_| bluer::agent::ReqError::Rejected)?;
                 let device = adapter.device(addr).map_err(|_| bluer::agent::ReqError::Rejected)?;
-                Ok(Device(DeviceImpl { inner: device }))
+                Ok(Device(DeviceImpl {
+                    inner: Arc::new(device),
+                    session,
+                }))
             }
 
             bluer::agent::Agent {
-                request_passkey: Some(Box::new(move |req: bluer::agent::RequestPasskey| {
-                    Box::pin(async move {
-                        let device = req_device(&req.adapter, req.device).await?;
-                        match agent.request_passkey(&device).await {
-                            Ok(passkey) => Ok(passkey.into()),
-                            Err(_) => Err(bluer::agent::ReqError::Rejected),
-                        }
-                    })
+                request_passkey: Some(Box::new({
+                    let session = self.session.clone();
+                    move |req: bluer::agent::RequestPasskey| {
+                        let session = session.clone();
+                        Box::pin(async move {
+                            let device = req_device(session, &req.adapter, req.device).await?;
+                            match agent.request_passkey(&device).await {
+                                Ok(passkey) => Ok(passkey.into()),
+                                Err(_) => Err(bluer::agent::ReqError::Rejected),
+                            }
+                        })
+                    }
                 })),
-                display_passkey: Some(Box::new(move |req: bluer::agent::DisplayPasskey| {
-                    Box::pin(async move {
-                        let device = req_device(&req.adapter, req.device).await?;
-                        if let Ok(passkey) = req.passkey.try_into() {
-                            agent.display_passkey(&device, passkey);
-                            Ok(())
-                        } else {
-                            Err(bluer::agent::ReqError::Rejected)
-                        }
-                    })
+                display_passkey: Some(Box::new({
+                    let session = self.session.clone();
+                    move |req: bluer::agent::DisplayPasskey| {
+                        let session = session.clone();
+                        Box::pin(async move {
+                            let device = req_device(session, &req.adapter, req.device).await?;
+                            if let Ok(passkey) = req.passkey.try_into() {
+                                agent.display_passkey(&device, passkey);
+                                Ok(())
+                            } else {
+                                Err(bluer::agent::ReqError::Rejected)
+                            }
+                        })
+                    }
                 })),
-                request_confirmation: Some(Box::new(move |req: bluer::agent::RequestConfirmation| {
-                    Box::pin(async move {
-                        let device = req_device(&req.adapter, req.device).await?;
-                        if let Ok(passkey) = req.passkey.try_into() {
-                            agent
-                                .confirm_passkey(&device, passkey)
-                                .await
-                                .map_err(|_| bluer::agent::ReqError::Rejected)
-                        } else {
-                            Err(bluer::agent::ReqError::Rejected)
-                        }
-                    })
+                request_confirmation: Some(Box::new({
+                    let session = self.session.clone();
+                    move |req: bluer::agent::RequestConfirmation| {
+                        let session = session.clone();
+                        Box::pin(async move {
+                            let session = session.clone();
+                            let device = req_device(session, &req.adapter, req.device).await?;
+                            if let Ok(passkey) = req.passkey.try_into() {
+                                agent
+                                    .confirm_passkey(&device, passkey)
+                                    .await
+                                    .map_err(|_| bluer::agent::ReqError::Rejected)
+                            } else {
+                                Err(bluer::agent::ReqError::Rejected)
+                            }
+                        })
+                    }
                 })),
                 ..Default::default()
             }
         };
 
-        let session = session().await?;
-        let _handle = session.register_agent(agent).await?;
+        let _handle = self.session.register_agent(agent).await?;
 
         self.pair().await
     }
@@ -163,8 +184,7 @@ impl DeviceImpl {
             self.inner.disconnect().await?;
         }
 
-        let session = session().await?;
-        let adapter = session.adapter(self.inner.adapter_name())?;
+        let adapter = self.session.adapter(self.inner.adapter_name())?;
         adapter.remove_device(self.inner.address()).await.map_err(Into::into)
     }
 
@@ -174,15 +194,26 @@ impl DeviceImpl {
     }
 
     /// Discover the primary service(s) of this device with the given [`Uuid`].
-    pub async fn discover_services_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Service>> {
-        self.services().await
+    pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
+        Ok(self
+            .services()
+            .await?
+            .into_iter()
+            .filter(|x| x.uuid() == uuid)
+            .collect())
     }
 
     /// Get previously discovered services.
     ///
     /// If no services have been discovered yet, this method will perform service discovery.
     pub async fn services(&self) -> Result<Vec<Service>> {
-        Ok(self.inner.services().await?.into_iter().map(Service::new).collect())
+        Ok(self
+            .inner
+            .services()
+            .await?
+            .into_iter()
+            .map(|x| Service::new(self.inner.clone(), x))
+            .collect())
     }
 
     /// Asynchronously blocks until a GATT services changed packet is received

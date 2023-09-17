@@ -1,23 +1,11 @@
-use bluer::{AdapterProperty, Session};
+use std::sync::Arc;
+
+use bluer::AdapterProperty;
 use futures_core::Stream;
 use futures_lite::StreamExt;
-use once_cell::sync::OnceCell;
 
 use crate::error::ErrorKind;
 use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
-
-static SESSION: OnceCell<Session> = OnceCell::new();
-
-pub(super) async fn session() -> bluer::Result<&'static Session> {
-    if let Some(session) = SESSION.get() {
-        Ok(session)
-    } else {
-        // If called concurrently, this will race but all threads will agree on the result and extra sessions will be
-        // dropped.
-        let _ = SESSION.set(Session::new().await?);
-        Ok(SESSION.get().unwrap())
-    }
-}
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -25,6 +13,7 @@ pub(super) async fn session() -> bluer::Result<&'static Session> {
 #[derive(Debug, Clone)]
 pub struct AdapterImpl {
     inner: bluer::Adapter,
+    session: Arc<bluer::Session>,
 }
 
 impl PartialEq for AdapterImpl {
@@ -44,13 +33,12 @@ impl std::hash::Hash for AdapterImpl {
 impl AdapterImpl {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
-        session()
-            .await
-            .ok()?
+        let session = Arc::new(bluer::Session::new().await.ok()?);
+        session
             .default_adapter()
             .await
             .ok()
-            .map(|inner| AdapterImpl { inner })
+            .map(|inner| AdapterImpl { inner, session })
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
@@ -87,7 +75,7 @@ impl AdapterImpl {
 
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
-        Device::new(&self.inner, id.0)
+        Device::new(self.session.clone(), &self.inner, id.0)
     }
 
     /// Finds all connected Bluetooth LE devices
@@ -98,7 +86,7 @@ impl AdapterImpl {
             .device_addresses()
             .await?
             .into_iter()
-            .filter_map(|addr| Device::new(&self.inner, addr).ok())
+            .filter_map(|addr| Device::new(self.session.clone(), &self.inner, addr).ok())
         {
             if device.is_connected().await {
                 devices.push(device);
@@ -150,7 +138,7 @@ impl AdapterImpl {
                 Box::pin(async move {
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
-                            let device = Device::new(&self.inner, addr).ok()?;
+                            let device = Device::new(self.session.clone(), &self.inner, addr).ok()?;
                             if !device.is_connected().await {
                                 let adv_data = device.0.adv_data().await;
                                 let rssi = device.rssi().await.ok();
@@ -186,26 +174,28 @@ impl AdapterImpl {
             .then(move |event| {
                 Box::pin(async move {
                     match event {
-                        bluer::AdapterEvent::DeviceAdded(addr) => match Device::new(&self.inner, addr) {
-                            Ok(device) => {
-                                if services.is_empty() {
-                                    Some(Ok(device))
-                                } else {
-                                    match device.0.inner.uuids().await {
-                                        Ok(uuids) => {
-                                            let uuids = uuids.unwrap_or_default();
-                                            if services.iter().any(|x| uuids.contains(x)) {
-                                                Some(Ok(device))
-                                            } else {
-                                                None
-                                            }
+                        bluer::AdapterEvent::DeviceAdded(addr) => {
+                            let device = match Device::new(self.session.clone(), &self.inner, addr) {
+                                Ok(device) => device,
+                                Err(err) => return Some(Err(err)),
+                            };
+
+                            if services.is_empty() {
+                                Some(Ok(device))
+                            } else {
+                                match device.0.inner.uuids().await {
+                                    Ok(uuids) => {
+                                        let uuids = uuids.unwrap_or_default();
+                                        if services.iter().any(|x| uuids.contains(x)) {
+                                            Some(Ok(device))
+                                        } else {
+                                            None
                                         }
-                                        Err(err) => Some(Err(err.into())),
                                     }
+                                    Err(err) => Some(Err(err.into())),
                                 }
                             }
-                            Err(err) => Some(Err(err)),
-                        },
+                        }
                         _ => None,
                     }
                 })
