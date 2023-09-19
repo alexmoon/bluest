@@ -17,13 +17,7 @@ pub struct CharacteristicImpl {
 }
 
 impl Characteristic {
-    pub(super) fn new(characteristic: &CBCharacteristic) -> Self {
-        let service = characteristic.service();
-        let peripheral = service.peripheral();
-        let delegate = peripheral
-            .delegate()
-            .expect("the peripheral should have a delegate attached");
-
+    pub(super) fn new(characteristic: &CBCharacteristic, delegate: ShareId<PeripheralDelegate>) -> Self {
         Characteristic(CharacteristicImpl {
             inner: unsafe { ShareId::from_ptr(characteristic as *const _ as *mut _) },
             delegate,
@@ -135,46 +129,38 @@ impl CharacteristicImpl {
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
-        {
-            let mut receiver = self.delegate.sender().new_receiver();
-            let peripheral = self.inner.service().peripheral();
-            if peripheral.state() != CBPeripheralState::CONNECTED {
-                return Err(ErrorKind::NotConnected.into());
-            } else if !peripheral.can_send_write_without_response() {
-                let service = self.inner.service();
-                while let Ok(evt) = receiver.recv().await {
-                    match evt {
-                        PeripheralEvent::ReadyToWrite => break,
-                        PeripheralEvent::Disconnected { error } => {
-                            return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
-                        }
-                        PeripheralEvent::ServicesChanged { invalidated_services }
-                            if invalidated_services.contains(&service) =>
-                        {
-                            return Err(ErrorKind::ServiceChanged.into());
-                        }
-                        _ => (),
+        let service = self.inner.service();
+        let peripheral = service.peripheral();
+        let mut receiver = self.delegate.sender().new_receiver();
+
+        if peripheral.state() != CBPeripheralState::CONNECTED {
+            return Err(ErrorKind::NotConnected.into());
+        } else if !peripheral.can_send_write_without_response() {
+            while let Ok(evt) = receiver.recv().await {
+                match evt {
+                    PeripheralEvent::ReadyToWrite => break,
+                    PeripheralEvent::Disconnected { error } => {
+                        return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                     }
+                    PeripheralEvent::ServicesChanged { invalidated_services }
+                        if invalidated_services.contains(&service) =>
+                    {
+                        return Err(ErrorKind::ServiceChanged.into());
+                    }
+                    _ => (),
                 }
             }
         }
 
         let data = INSData::from_vec(value.to_vec());
-        self.inner.service().peripheral().write_characteristic_value(
-            &self.inner,
-            &data,
-            CBCharacteristicWriteType::WithoutResponse,
-        );
+        peripheral.write_characteristic_value(&self.inner, &data, CBCharacteristicWriteType::WithoutResponse);
         Ok(())
     }
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
     pub fn max_write_len(&self) -> Result<usize> {
-        Ok(self
-            .inner
-            .service()
-            .peripheral()
-            .maximum_write_value_length_for_type(CBCharacteristicWriteType::WithoutResponse))
+        let peripheral = self.inner.service().peripheral();
+        Ok(peripheral.maximum_write_value_length_for_type(CBCharacteristicWriteType::WithoutResponse))
     }
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
@@ -317,7 +303,11 @@ impl CharacteristicImpl {
     fn descriptors_inner(&self) -> Result<Vec<Descriptor>> {
         self.inner
             .descriptors()
-            .map(|s| s.enumerator().map(Descriptor::new).collect())
+            .map(|s| {
+                s.enumerator()
+                    .map(|x| Descriptor::new(x, self.delegate.clone()))
+                    .collect()
+            })
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::NotReady,

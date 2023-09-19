@@ -1,6 +1,5 @@
 #![allow(clippy::let_unit_value)]
 
-use async_broadcast::InactiveReceiver;
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
@@ -15,7 +14,6 @@ use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 pub struct DeviceImpl {
     pub(super) peripheral: ShareId<CBPeripheral>,
     delegate: ShareId<PeripheralDelegate>,
-    _receiver: InactiveReceiver<PeripheralEvent>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -46,28 +44,14 @@ impl std::fmt::Display for DeviceImpl {
 
 impl Device {
     pub(super) fn new(peripheral: ShareId<CBPeripheral>) -> Self {
-        let (delegate, _receiver) = match peripheral.delegate() {
-            Some(delegate) => {
-                let receiver = delegate.sender().new_receiver().deactivate();
-                (delegate, receiver)
-            }
-            None => {
-                // Create a new delegate and attach it to the peripheral
-                let (mut sender, receiver) = async_broadcast::broadcast(16);
-                sender.set_overflow(true);
-                let receiver = receiver.deactivate();
+        let delegate = peripheral.delegate().unwrap_or_else(|| {
+            // Create a new delegate and attach it to the peripheral
+            let delegate = PeripheralDelegate::new().share();
+            peripheral.set_delegate(&delegate);
+            delegate
+        });
 
-                let delegate = PeripheralDelegate::with_sender(sender).share();
-                peripheral.set_delegate(&delegate);
-                (delegate, receiver)
-            }
-        };
-
-        Device(DeviceImpl {
-            peripheral,
-            delegate,
-            _receiver,
-        })
+        Device(DeviceImpl { peripheral, delegate })
     }
 }
 
@@ -181,7 +165,7 @@ impl DeviceImpl {
     fn services_inner(&self) -> Result<Vec<Service>> {
         self.peripheral
             .services()
-            .map(|s| s.enumerator().map(Service::new).collect())
+            .map(|s| s.enumerator().map(|x| Service::new(x, self.delegate.clone())).collect())
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::NotReady,

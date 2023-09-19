@@ -45,14 +45,7 @@ fn value_to_slice(val: &NSObject) -> Vec<u8> {
 }
 
 impl Descriptor {
-    pub(super) fn new(descriptor: &CBDescriptor) -> Self {
-        let characteristic = descriptor.characteristic();
-        let service = characteristic.service();
-        let peripheral = service.peripheral();
-        let delegate = peripheral
-            .delegate()
-            .expect("the peripheral should have a delegate attached");
-
+    pub(super) fn new(descriptor: &CBDescriptor, delegate: ShareId<PeripheralDelegate>) -> Self {
         Descriptor(DescriptorImpl {
             inner: unsafe { ShareId::from_ptr(descriptor as *const _ as *mut _) },
             delegate,

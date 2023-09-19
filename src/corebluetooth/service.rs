@@ -14,12 +14,7 @@ pub struct ServiceImpl {
 }
 
 impl Service {
-    pub(super) fn new(service: &CBService) -> Self {
-        let peripheral = service.peripheral();
-        let delegate = peripheral
-            .delegate()
-            .expect("the peripheral should have a delegate attached");
-
+    pub(super) fn new(service: &CBService, delegate: ShareId<PeripheralDelegate>) -> Self {
         Service(ServiceImpl {
             inner: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
             delegate,
@@ -103,7 +98,11 @@ impl ServiceImpl {
     fn characteristics_inner(&self) -> Result<Vec<Characteristic>> {
         self.inner
             .characteristics()
-            .map(|s| s.enumerator().map(Characteristic::new).collect())
+            .map(|s| {
+                s.enumerator()
+                    .map(|x| Characteristic::new(x, self.delegate.clone()))
+                    .collect()
+            })
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::NotReady,
@@ -175,7 +174,7 @@ impl ServiceImpl {
     fn included_services_inner(&self) -> Result<Vec<Service>> {
         self.inner
             .included_services()
-            .map(|s| s.enumerator().map(Service::new).collect())
+            .map(|s| s.enumerator().map(|x| Service::new(x, self.delegate.clone())).collect())
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::NotReady,

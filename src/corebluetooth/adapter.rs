@@ -9,7 +9,7 @@ use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tracing::{debug, error, info, warn};
 
-use super::delegates::{self, CentralDelegate, CentralEvent};
+use super::delegates::{self, CentralDelegate};
 use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID, NSUUID};
 use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
@@ -25,7 +25,6 @@ use crate::{
 pub struct AdapterImpl {
     central: ShareId<CBCentralManager>,
     delegate: ShareId<CentralDelegate>,
-    _receiver: async_broadcast::InactiveReceiver<CentralEvent>,
     scanning: Arc<AtomicBool>,
     #[cfg(not(target_os = "macos"))]
     registered_connection_events: Arc<std::sync::Mutex<std::collections::HashMap<DeviceId, usize>>>,
@@ -62,11 +61,7 @@ impl AdapterImpl {
             val => error!("Bluetooth authorization returned unknown value {:?}", val),
         }
 
-        let (mut sender, receiver) = async_broadcast::broadcast(16);
-        sender.set_overflow(true);
-        let _receiver = receiver.deactivate();
-
-        let delegate = CentralDelegate::with_sender(sender)?.share();
+        let delegate = CentralDelegate::new()?.share();
         let central = unsafe {
             let queue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
             if queue.is_null() {
@@ -78,7 +73,6 @@ impl AdapterImpl {
         Some(AdapterImpl {
             central,
             delegate,
-            _receiver,
             scanning: Default::default(),
             #[cfg(not(target_os = "macos"))]
             registered_connection_events: Default::default(),

@@ -1,5 +1,3 @@
-#![allow(clippy::let_unit_value)]
-
 use std::os::raw::c_void;
 use std::sync::Once;
 
@@ -266,10 +264,14 @@ impl ::std::fmt::Debug for PeripheralDelegate {
 }
 
 impl CentralDelegate {
-    pub fn with_sender(sender: async_broadcast::Sender<CentralEvent>) -> Option<Id<CentralDelegate>> {
+    pub fn new() -> Option<Id<CentralDelegate>> {
+        let (mut sender, receiver) = async_broadcast::broadcast::<CentralEvent>(16);
+        sender.set_overflow(true);
+        let receiver = receiver.deactivate();
+
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
-            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>()];
+            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>() receiver: Box::into_raw(Box::new(receiver)).cast::<c_void>()];
             (!obj.is_null()).then(|| Id::from_retained_ptr(obj))
         }
     }
@@ -282,18 +284,26 @@ impl CentralDelegate {
         }
     }
 
-    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void) -> id {
+    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void, receiver: *mut c_void) -> id {
         let this: &mut Object = unsafe { msg_send![super(this, class!(NSObject)), init] };
         unsafe { this.set_ivar("sender", sender) };
+        unsafe { this.set_ivar("receiver", receiver) };
         this
     }
 
     extern "C" fn dealloc(this: &mut Object, _sel: Sel) {
         unsafe {
             let sender: *mut c_void = *this.get_ivar("sender");
+            let receiver: *mut c_void = *this.get_ivar("receiver");
             this.set_ivar("sender", std::ptr::null_mut::<c_void>());
+            this.set_ivar("receiver", std::ptr::null_mut::<c_void>());
             if !sender.is_null() {
-                std::mem::drop(Box::from_raw(sender.cast::<async_broadcast::Sender<CentralEvent>>()));
+                drop(Box::from_raw(sender.cast::<async_broadcast::Sender<CentralEvent>>()));
+            }
+            if !receiver.is_null() {
+                drop(Box::from_raw(
+                    sender.cast::<async_broadcast::InactiveReceiver<CentralEvent>>(),
+                ));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
         };
@@ -301,6 +311,10 @@ impl CentralDelegate {
 
     extern "C" fn sender_getter(this: &mut Object, _sel: Sel) -> *const c_void {
         unsafe { *this.get_ivar("sender") }
+    }
+
+    extern "C" fn receiver_getter(this: &mut Object, _sel: Sel) -> *const c_void {
+        unsafe { *this.get_ivar("receiver") }
     }
 
     delegate_method!(did_fail_to_connect<ConnectFailed>(central, peripheral: Object, error: Option));
@@ -394,13 +408,14 @@ impl CentralDelegate {
         DELEGATE_CLASS_INIT.call_once(|| {
             let mut cls = ClassDecl::new("BluestCentralDelegate", class!(NSObject)).unwrap();
             cls.add_ivar::<*mut c_void>("sender");
+            cls.add_ivar::<*mut c_void>("receiver");
             cls.add_protocol(Protocol::get("CBCentralManagerDelegate").unwrap());
 
             unsafe {
                 // Initialization
                 cls.add_method(
-                    sel!(initWithSender:),
-                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void) -> id,
+                    sel!(initWithSender:receiver:),
+                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void, *mut c_void) -> id,
                 );
 
                 // Cleanup
@@ -410,6 +425,12 @@ impl CentralDelegate {
                 cls.add_method(
                     sel!(sender),
                     Self::sender_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
+                );
+
+                // Receiver property
+                cls.add_method(
+                    sel!(receiver),
+                    Self::receiver_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
                 );
 
                 // CBCentralManagerDelegate
@@ -450,10 +471,14 @@ impl CentralDelegate {
 }
 
 impl PeripheralDelegate {
-    pub fn with_sender(sender: async_broadcast::Sender<PeripheralEvent>) -> Id<PeripheralDelegate> {
+    pub fn new() -> Id<PeripheralDelegate> {
+        let (mut sender, receiver) = async_broadcast::broadcast::<PeripheralEvent>(16);
+        sender.set_overflow(true);
+        let receiver = receiver.deactivate();
+
         unsafe {
             let obj: *mut Self = msg_send![Self::class(), alloc];
-            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>()];
+            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>() receiver: Box::into_raw(Box::new(receiver)).cast::<c_void>()];
             Id::from_retained_ptr(obj)
         }
     }
@@ -466,18 +491,26 @@ impl PeripheralDelegate {
         }
     }
 
-    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void) -> id {
+    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void, receiver: *mut c_void) -> id {
         let this: &mut Object = unsafe { msg_send![super(this, class!(NSObject)), init] };
         unsafe { this.set_ivar("sender", sender) };
+        unsafe { this.set_ivar("receiver", receiver) };
         this
     }
 
     extern "C" fn dealloc(this: &mut Object, _sel: Sel) {
         unsafe {
             let sender: *mut c_void = *this.get_ivar("sender");
+            let receiver: *mut c_void = *this.get_ivar("receiver");
             this.set_ivar("sender", std::ptr::null_mut::<c_void>());
+            this.set_ivar("receiver", std::ptr::null_mut::<c_void>());
             if !sender.is_null() {
-                std::mem::drop(Box::from_raw(sender.cast::<async_broadcast::Sender<PeripheralEvent>>()));
+                drop(Box::from_raw(sender.cast::<async_broadcast::Sender<PeripheralEvent>>()));
+            }
+            if !receiver.is_null() {
+                drop(Box::from_raw(
+                    sender.cast::<async_broadcast::InactiveReceiver<PeripheralEvent>>(),
+                ));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
         };
@@ -485,6 +518,10 @@ impl PeripheralDelegate {
 
     extern "C" fn sender_getter(this: &mut Object, _sel: Sel) -> *const c_void {
         unsafe { *this.get_ivar("sender") }
+    }
+
+    extern "C" fn receiver_getter(this: &mut Object, _sel: Sel) -> *const c_void {
+        unsafe { *this.get_ivar("receiver") }
     }
 
     delegate_method!(did_discover_services<DiscoveredServices>(peripheral, error: Option));
@@ -507,13 +544,14 @@ impl PeripheralDelegate {
         DELEGATE_CLASS_INIT.call_once(|| {
             let mut cls = ClassDecl::new("BluestPeripheralDelegate", class!(NSObject)).unwrap();
             cls.add_ivar::<*mut c_void>("sender");
+            cls.add_ivar::<*mut c_void>("receiver");
             cls.add_protocol(Protocol::get("CBPeripheralDelegate").unwrap());
 
             unsafe {
                 // Initialization
                 cls.add_method(
-                    sel!(initWithSender:),
-                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void) -> id,
+                    sel!(initWithSender:receiver:),
+                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void, *mut c_void) -> id,
                 );
 
                 // Cleanup
@@ -523,6 +561,12 @@ impl PeripheralDelegate {
                 cls.add_method(
                     sel!(sender),
                     Self::sender_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
+                );
+
+                // Receiver property
+                cls.add_method(
+                    sel!(receiver),
+                    Self::receiver_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
                 );
 
                 // CBPeripheralDelegate
