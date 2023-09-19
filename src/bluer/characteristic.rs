@@ -88,9 +88,8 @@ impl CharacteristicImpl {
     }
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
-    pub async fn write_without_response(&self, value: &[u8]) {
-        let _ = self
-            .inner
+    pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
+        self.inner
             .write_ext(
                 value,
                 &CharacteristicWriteRequest {
@@ -98,7 +97,8 @@ impl CharacteristicImpl {
                     ..Default::default()
                 },
             )
-            .await;
+            .await
+            .map_err(Into::into)
     }
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.

@@ -117,8 +117,8 @@ impl CharacteristicImpl {
     }
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
-    pub async fn write_without_response(&self, value: &[u8]) {
-        let _res = self.write_kind(value, GattWriteOption::WriteWithoutResponse).await;
+    pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
+        self.write_kind(value, GattWriteOption::WriteWithoutResponse).await
     }
 
     async fn write_kind(&self, value: &[u8], writeoption: GattWriteOption) -> Result<()> {

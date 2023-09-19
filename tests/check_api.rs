@@ -83,7 +83,7 @@ async fn check_characteristic_apis(characteristic: Characteristic) -> Result<Des
     let _value: Result<Vec<u8>> = assert_send(characteristic.value()).await;
     let _value: Result<Vec<u8>> = assert_send(characteristic.read()).await;
     let _res: Result<()> = assert_send(characteristic.write(&[0u8])).await;
-    let _res: () = assert_send(characteristic.write_without_response(&[0u8])).await;
+    let _res: Result<()> = assert_send(characteristic.write_without_response(&[0u8])).await;
     let _len: Result<usize> = assert_send(characteristic.max_write_len_async()).await;
 
     let notifications: Result<_> = assert_send(characteristic.notify()).await;

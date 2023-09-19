@@ -57,7 +57,7 @@ impl Characteristic {
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     #[inline]
-    pub async fn write_without_response(&self, value: &[u8]) {
+    pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
         self.0.write_without_response(value).await
     }
 

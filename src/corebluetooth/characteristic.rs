@@ -134,13 +134,26 @@ impl CharacteristicImpl {
     }
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
-    pub async fn write_without_response(&self, value: &[u8]) {
+    pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
         {
             let mut receiver = self.delegate.sender().new_receiver();
-            if !self.inner.service().peripheral().can_send_write_without_response() {
+            let peripheral = self.inner.service().peripheral();
+            if peripheral.state() != CBPeripheralState::CONNECTED {
+                return Err(ErrorKind::NotConnected.into());
+            } else if !peripheral.can_send_write_without_response() {
+                let service = self.inner.service();
                 while let Ok(evt) = receiver.recv().await {
-                    if let PeripheralEvent::ReadyToWrite = evt {
-                        break;
+                    match evt {
+                        PeripheralEvent::ReadyToWrite => break,
+                        PeripheralEvent::Disconnected { error } => {
+                            return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                        }
+                        PeripheralEvent::ServicesChanged { invalidated_services }
+                            if invalidated_services.contains(&service) =>
+                        {
+                            return Err(ErrorKind::ServiceChanged.into());
+                        }
+                        _ => (),
                     }
                 }
             }
@@ -152,6 +165,7 @@ impl CharacteristicImpl {
             &data,
             CBCharacteristicWriteType::WithoutResponse,
         );
+        Ok(())
     }
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
