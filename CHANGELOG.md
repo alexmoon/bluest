@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.6.0
+
+- `Characteristic::write_without_response` now returns a `Result<()>`
+- Added `Send + Unpin` constraints to returned `impl Stream` values
+- Reduced the number and weight of dependencies
+- Removed static `bluer` session on Linux. Each `Adapter` now starts its own
+  session.
+
 ## 0.5.7
 
 - Fix Windows compilation error
