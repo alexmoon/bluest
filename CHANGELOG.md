@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.1
+
+- Fix a bug on MacOS/iOS where the event channels could be closed prematurely
+
 ## 0.6.0
 
 - `Characteristic::write_without_response` now returns a `Result<()>`
