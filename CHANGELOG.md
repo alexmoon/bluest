@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.6.2 (unreleased)
+## 0.6.2
 
 - Add `Device::service_changed_indications` to get a stream of service changed
   indications from the device
