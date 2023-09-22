@@ -1,10 +1,13 @@
 #![allow(clippy::let_unit_value)]
 
+use futures_core::Stream;
+use futures_lite::StreamExt;
 use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
+use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
 use crate::{Device, DeviceId, Error, Result, Service, Uuid};
@@ -175,25 +178,23 @@ impl DeviceImpl {
             })
     }
 
-    /// Asynchronously blocks until a GATT services changed packet is received
-    pub async fn services_changed(&self) -> Result<()> {
-        let mut receiver = self.delegate.sender().new_receiver();
+    /// Monitors the device for services changed events.
+    pub async fn service_changed_indications(
+        &self,
+    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
+        let receiver = self.delegate.sender().new_receiver();
 
         if !self.is_connected().await {
             return Err(ErrorKind::NotConnected.into());
         }
 
-        loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::ServicesChanged { .. } => break,
-                PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error))
-                }
-                _ => (),
+        Ok(receiver.filter_map(|ev| match ev {
+            PeripheralEvent::ServicesChanged { .. } => Some(Ok(ServicesChanged::new())),
+            PeripheralEvent::Disconnected { error } => {
+                Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
             }
-        }
-
-        Ok(())
+            _ => None,
+        }))
     }
 
     /// Get the current signal strength from the device in dBm.

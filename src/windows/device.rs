@@ -1,6 +1,7 @@
 use std::pin::pin;
 
 use futures_channel::mpsc;
+use futures_core::Stream;
 use futures_lite::{future, StreamExt};
 use tracing::error;
 use windows::core::{GUID, HSTRING};
@@ -11,6 +12,7 @@ use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEv
 use windows::Foundation::TypedEventHandler;
 
 use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
+use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
 use crate::util::defer;
@@ -239,25 +241,28 @@ impl DeviceImpl {
         Ok(services.into_iter().map(Service::new).collect())
     }
 
-    /// Asynchronously blocks until a GATT services changed packet is received
-    pub async fn services_changed(&self) -> Result<()> {
-        let (sender, receiver) = futures_channel::oneshot::channel();
-        let mut sender = Some(sender);
+    /// Monitors the device for services changed events.
+    pub async fn service_changed_indications(
+        &self,
+    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
+        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
         let token = self.inner.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
-            if let Some(sender) = sender.take() {
-                let _ = sender.send(());
+            if let Err(err) = sender.try_send(Ok(ServicesChanged::new())) {
+                error!("Error sending service changed indication: {:?}", err);
             }
             Ok(())
         }))?;
 
-        let _guard = defer(move || {
+        let guard = defer(move || {
             if let Err(err) = self.inner.RemoveGattServicesChanged(token) {
                 error!("Error removing state changed handler: {:?}", err);
             }
         });
 
-        receiver.await.unwrap();
-        Ok(())
+        Ok(receiver.map(move |x| {
+            let _guard = &guard;
+            x
+        }))
     }
 
     /// Get the current signal strength from the device in dBm.

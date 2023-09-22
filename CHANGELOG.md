@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.6.2 (unreleased)
+
+- Add `Device::service_changed_indications` to get a stream of service changed
+  indications from the device
+
 ## 0.6.1
 
 - Fix a bug on MacOS/iOS where the event channels could be closed prematurely

@@ -1,11 +1,27 @@
 #![allow(clippy::let_unit_value)]
 
+use futures_core::Stream;
+use futures_lite::StreamExt;
+
+use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
-use crate::{sys, DeviceId, Result, Service, Uuid};
+use crate::{sys, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Device(pub(crate) sys::device::DeviceImpl);
+
+/// A services changed notification
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChanged {
+    _private: (),
+}
+
+impl ServicesChanged {
+    pub(crate) const fn new() -> Self {
+        Self { _private: () }
+    }
+}
 
 impl std::fmt::Display for Device {
     #[inline]
@@ -113,9 +129,21 @@ impl Device {
     }
 
     /// Asynchronously blocks until a GATT services changed packet is received
-    #[inline]
     pub async fn services_changed(&self) -> Result<()> {
-        self.0.services_changed().await
+        self.service_changed_indications()
+            .await?
+            .next()
+            .await
+            .ok_or(Error::from(ErrorKind::AdapterUnavailable))
+            .map(|x| x.map(|_| ()))?
+    }
+
+    /// Monitors the device for service changed indications.
+    #[inline]
+    pub async fn service_changed_indications(
+        &self,
+    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
+        self.0.service_changed_indications().await
     }
 
     /// Get the current signal strength from the device in dBm.

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use futures_core::Stream;
 use futures_lite::StreamExt;
-use tokio::pin;
 
 use super::DeviceId;
+use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
 use crate::{btuuid, AdvertisementData, Device, Error, ManufacturerData, Result, Service, Uuid};
@@ -216,30 +217,26 @@ impl DeviceImpl {
             .collect())
     }
 
-    /// Asynchronously blocks until a GATT services changed packet is received
-    pub async fn services_changed(&self) -> Result<()> {
-        let services = self.services().await?;
-        for service in services {
-            if service.uuid_async().await? == btuuid::services::GENERIC_ATTRIBUTE {
-                for characteristic in service.characteristics().await? {
-                    if characteristic.uuid_async().await? == btuuid::characteristics::SERVICE_CHANGED {
-                        let notifications = characteristic.notify().await?;
-                        pin!(notifications);
-                        return match notifications.next().await {
-                            Some(Ok(_)) => Ok(()),
-                            Some(Err(err)) => Err(err),
-                            None => Err(Error::new(
-                                ErrorKind::Internal,
-                                None,
-                                "service changed notifications ended unexpectedly".to_string(),
-                            )),
-                        };
+    /// Monitors the device for services changed events.
+    pub async fn service_changed_indications(
+        &self,
+    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
+        let mut characteristic = Err(Error::from(ErrorKind::NotFound));
+        {
+            let services = self.inner.services().await?;
+            for service in services {
+                if service.uuid().await? == btuuid::services::GENERIC_ATTRIBUTE {
+                    for c in service.characteristics().await? {
+                        if c.uuid().await? == btuuid::characteristics::SERVICE_CHANGED {
+                            characteristic = Ok(c);
+                        }
                     }
                 }
             }
         }
 
-        Err(ErrorKind::NotFound.into())
+        let notifications = Box::pin(characteristic?.notify().await?);
+        Ok(notifications.map(|_| Ok(ServicesChanged::new())))
     }
 
     /// Get the current signal strength from the device in dBm.
