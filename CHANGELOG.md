@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.6.3
+
+- Add `ServicesChanged::was_invalidated` method to check if a particular service
+  was invalidated by a service changed indication
+
 ## 0.6.2
 
 - Add `Device::service_changed_indications` to get a stream of service changed
