@@ -6,7 +6,7 @@ use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
-use super::types::{CBPeripheral, CBPeripheralState, CBUUID};
+use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
@@ -189,7 +189,9 @@ impl DeviceImpl {
         }
 
         Ok(receiver.filter_map(|ev| match ev {
-            PeripheralEvent::ServicesChanged { .. } => Some(Ok(ServicesChanged::new())),
+            PeripheralEvent::ServicesChanged { invalidated_services } => {
+                Some(Ok(ServicesChanged(ServicesChangedImpl(invalidated_services))))
+            }
             PeripheralEvent::Disconnected { error } => {
                 Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
             }
@@ -210,5 +212,14 @@ impl DeviceImpl {
                 _ => (),
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChangedImpl(Vec<ShareId<CBService>>);
+
+impl ServicesChangedImpl {
+    pub fn was_invalidated(&self, service: &Service) -> bool {
+        self.0.contains(&service.0.inner)
     }
 }

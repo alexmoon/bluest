@@ -138,7 +138,7 @@ pub use adapter::Adapter;
 pub use btuuid::BluetoothUuidExt;
 pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
-pub use device::Device;
+pub use device::{Device, ServicesChanged};
 pub use error::Error;
 pub use service::Service;
 pub use sys::DeviceId;

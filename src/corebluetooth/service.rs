@@ -9,7 +9,7 @@ use crate::{Characteristic, Error, Result, Service, Uuid};
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceImpl {
-    inner: ShareId<CBService>,
+    pub(super) inner: ShareId<CBService>,
     delegate: ShareId<PeripheralDelegate>,
 }
 

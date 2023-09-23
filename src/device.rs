@@ -11,18 +11,6 @@ use crate::{sys, DeviceId, Error, Result, Service, Uuid};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Device(pub(crate) sys::device::DeviceImpl);
 
-/// A services changed notification
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ServicesChanged {
-    _private: (),
-}
-
-impl ServicesChanged {
-    pub(crate) const fn new() -> Self {
-        Self { _private: () }
-    }
-}
-
 impl std::fmt::Display for Device {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -129,6 +117,10 @@ impl Device {
     }
 
     /// Asynchronously blocks until a GATT services changed packet is received
+    ///
+    /// # Platform specific
+    ///
+    /// See [`Device::service_changed_indications`].
     pub async fn services_changed(&self) -> Result<()> {
         self.service_changed_indications()
             .await?
@@ -139,6 +131,11 @@ impl Device {
     }
 
     /// Monitors the device for service changed indications.
+    ///
+    /// # Platform specific
+    ///
+    /// On Windows an event is generated whenever the `services` value is updated. In addition to actual service change
+    /// indications this occurs when, for example, `discover_services` is called or when an unpaired device disconnects.
     #[inline]
     pub async fn service_changed_indications(
         &self,
@@ -154,5 +151,21 @@ impl Device {
     #[inline]
     pub async fn rssi(&self) -> Result<i16> {
         self.0.rssi().await
+    }
+}
+
+/// A services changed notification
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChanged(pub(crate) sys::device::ServicesChangedImpl);
+
+impl ServicesChanged {
+    /// Check if `service` was invalidated by this service changed indication.
+    ///
+    /// # Platform specific
+    ///
+    /// Windows does not indicate which services were affected by a services changed event, so this method will
+    /// pessimistically return true for all services.
+    pub fn was_invalidated(&self, service: &Service) -> bool {
+        self.0.was_invalidated(service)
     }
 }

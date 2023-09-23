@@ -247,7 +247,7 @@ impl DeviceImpl {
     ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
         let (mut sender, receiver) = futures_channel::mpsc::channel(16);
         let token = self.inner.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
-            if let Err(err) = sender.try_send(Ok(ServicesChanged::new())) {
+            if let Err(err) = sender.try_send(Ok(ServicesChanged(ServicesChangedImpl))) {
                 error!("Error sending service changed indication: {:?}", err);
             }
             Ok(())
@@ -270,5 +270,14 @@ impl DeviceImpl {
     /// Returns [ErrorKind::NotSupported].
     pub async fn rssi(&self) -> Result<i16> {
         Err(ErrorKind::NotSupported.into())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChangedImpl;
+
+impl ServicesChangedImpl {
+    pub fn was_invalidated(&self, _service: &Service) -> bool {
+        true
     }
 }

@@ -236,7 +236,15 @@ impl DeviceImpl {
         }
 
         let notifications = Box::pin(characteristic?.notify().await?);
-        Ok(notifications.map(|_| Ok(ServicesChanged::new())))
+        Ok(notifications.map(|data| {
+            if data.len() == 4 {
+                let start_handle = u16::from_le_bytes(data[..2].try_into().unwrap());
+                let end_handle = u16::from_le_bytes(data[2..].try_into().unwrap());
+                Ok(ServicesChanged(ServicesChangedImpl(start_handle..=end_handle)))
+            } else {
+                Err(ErrorKind::InvalidParameter.into())
+            }
+        }))
     }
 
     /// Get the current signal strength from the device in dBm.
@@ -281,5 +289,15 @@ impl DeviceImpl {
             tx_power_level,
             is_connectable,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChangedImpl(std::ops::RangeInclusive<u16>);
+
+impl ServicesChangedImpl {
+    pub fn was_invalidated(&self, service: &Service) -> bool {
+        let service_id = service.0.inner.id();
+        self.0.contains(&service_id)
     }
 }
