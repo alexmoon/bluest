@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.4
+
+- Fix a segmentation violation on MacOS/iOS introduced in v0.6.1
+
 ## 0.6.3
 
 - Add `ServicesChanged::was_invalidated` method to check if a particular service
