@@ -509,7 +509,7 @@ impl PeripheralDelegate {
             }
             if !receiver.is_null() {
                 drop(Box::from_raw(
-                    sender.cast::<async_broadcast::InactiveReceiver<PeripheralEvent>>(),
+                    receiver.cast::<async_broadcast::InactiveReceiver<PeripheralEvent>>(),
                 ));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
