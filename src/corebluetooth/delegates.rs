@@ -302,7 +302,7 @@ impl CentralDelegate {
             }
             if !receiver.is_null() {
                 drop(Box::from_raw(
-                    sender.cast::<async_broadcast::InactiveReceiver<CentralEvent>>(),
+                    receiver.cast::<async_broadcast::InactiveReceiver<CentralEvent>>(),
                 ));
             }
             let _: () = msg_send![super(this, class!(NSObject)), dealloc];
