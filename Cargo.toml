@@ -28,7 +28,7 @@ futures-core = "0.3.28"
 futures-lite = { version = "1.13.0", default-features = false }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
-tokio_stream = "0.1.14"
+tokio-stream = { version = "0.1.14", features = ["sync"] }
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
