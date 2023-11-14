@@ -2,7 +2,10 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+
+#[cfg(not(target_os = "macos"))]
 use std::future::ready;
+#[cfg(not(target_os = "macos"))]
 use tokio_stream::wrappers::BroadcastStream;
 
 use futures_core::Stream;
