@@ -3,6 +3,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::future::ready;
+use tokio_stream::wrappers::BroadcastStream;
 
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
