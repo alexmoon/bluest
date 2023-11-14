@@ -2,6 +2,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::future::ready;
 
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
