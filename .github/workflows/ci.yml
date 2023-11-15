@@ -10,18 +10,13 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Install Rust (nightly)
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          components: rustfmt
-
-      - name: Format Rust code
-        run: cargo +nightly fmt --all -- --check
+      - name: Install nightly toolchain
+        run: rustup toolchain add nightly --profile minimal --component rustfmt
+        
+      - name: rustfmt
+        run: cargo +nightly fmt --all --check
 
   build:
     strategy:
@@ -34,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - run: rustup component add clippy
 
@@ -43,16 +38,18 @@ jobs:
         run: sudo apt-get install libdbus-1-dev
 
       - name: Clippy (default)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets -- -D warnings
+        run: |
+          cargo clippy --all-targets -- -D warnings
 
       - name: Clippy (all features)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features -- -D warnings
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Clippy (iOS)
+        if: ${{ runner.os == 'macOS'}}
+        run: |
+          rustup target add aarch64-apple-ios
+          cargo clippy --all-targets --target=aarch64-apple-ios -- -D warnings
 
       - name: Test
         run: cargo test --all
