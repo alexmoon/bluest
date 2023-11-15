@@ -355,21 +355,26 @@ impl AdapterImpl {
         &'a self,
         device: &'a Device,
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
-        let events = BroadcastStream::new(self.delegate.sender().subscribe());
+        let events = self.delegate.sender().new_receiver();
         let guard = self.register_connection_events(device.id());
 
         Ok(events
-            .take_while(|_| ready(self.central.state() == CBManagerState::POWERED_ON))
+            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
             .filter_map(move |x| {
                 let _guard = &guard;
-                ready(match x {
-                    Ok(delegates::CentralEvent::ConnectionEvent { peripheral, event })
+                match x {
+                    delegates::CentralEvent::Connect { peripheral }
                         if peripheral.identifier() == device.0.peripheral.identifier() =>
                     {
-                        Some(event.into())
+                        Some(ConnectionEvent::Connected)
+                    }
+                    delegates::CentralEvent::Disconnect { peripheral, .. }
+                        if peripheral.identifier() == device.0.peripheral.identifier() =>
+                    {
+                        Some(ConnectionEvent::Disconnected)
                     }
                     _ => None,
-                })
+                }
             }))
     }
 
