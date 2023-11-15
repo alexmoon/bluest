@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.6
+
+- Fix compilation on iOS
+
 ## 0.6.5
 
 - Fix another segmentation violation on MacOS/iOS introduced in v0.6.1
