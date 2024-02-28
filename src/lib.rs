@@ -123,6 +123,8 @@ pub mod pairing;
 mod service;
 mod util;
 
+#[cfg(target_os = "android")]
+mod android;
 #[cfg(target_os = "linux")]
 mod bluer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -145,6 +147,8 @@ pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]
 pub use uuid::Uuid;
 
+#[cfg(target_os = "android")]
+use crate::android as sys;
 #[cfg(target_os = "linux")]
 use crate::bluer as sys;
 #[cfg(any(target_os = "macos", target_os = "ios"))]

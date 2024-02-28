@@ -1,4 +1,4 @@
-#![cfg(not(target_os = "linux"))]
+#![allow(unused)] // used depending on the target.
 
 use std::mem::ManuallyDrop;
 
