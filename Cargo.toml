@@ -54,6 +54,10 @@ windows = { version = "0.48.0", features = [
 bluer = { version = "0.16.1", features = ["bluetoothd"] }
 tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+java-spaghetti = "0.1.0"
+futures-channel = "0.3.24"
+
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.5.1"
 objc = "0.2.7"

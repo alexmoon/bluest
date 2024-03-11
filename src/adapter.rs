@@ -11,8 +11,24 @@ use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, Devic
 pub struct Adapter(sys::adapter::AdapterImpl);
 
 impl Adapter {
+    /// Creates an interface to the default Bluetooth adapter for the system.
+    ///
+    /// # Safety
+    ///
+    /// - `java_vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
+    /// - `bluetooth_manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
+    #[cfg(target_os = "android")]
+    pub unsafe fn new(
+        java_vm: *mut java_spaghetti::sys::JavaVM,
+        bluetooth_manager: java_spaghetti::sys::jobject,
+    ) -> Result<Self> {
+        sys::adapter::AdapterImpl::new(java_vm, bluetooth_manager).map(Self)
+    }
+
     /// Creates an interface to the default Bluetooth adapter for the system
     #[inline]
+    #[cfg(not(target_os = "android"))]
     pub async fn default() -> Option<Self> {
         sys::adapter::AdapterImpl::default().await.map(Adapter)
     }
