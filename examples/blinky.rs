@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let service = match device
         .discover_services_with_uuid(NORDIC_LED_AND_BUTTON_SERVICE)
         .await?
-        .get(0)
+        .first()
     {
         Some(service) => service.clone(),
         None => return Err("service not found".into()),
