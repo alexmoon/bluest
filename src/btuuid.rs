@@ -107,9 +107,8 @@ mod private {
 }
 
 /// Bluetooth GATT Service 16-bit UUIDs
+#[allow(missing_docs)]
 pub mod services {
-    #![allow(missing_docs)]
-
     use super::bluetooth_uuid_from_u16;
     use crate::Uuid;
 
@@ -179,9 +178,8 @@ pub mod services {
 }
 
 /// Bluetooth GATT Characteristic 16-bit UUIDs
+#[allow(missing_docs)]
 pub mod characteristics {
-    #![allow(missing_docs)]
-
     use super::bluetooth_uuid_from_u16;
     use crate::Uuid;
 
@@ -590,9 +588,8 @@ pub mod characteristics {
 }
 
 /// Bluetooth GATT Descriptor 16-bit UUIDs
+#[allow(missing_docs)]
 pub mod descriptors {
-    #![allow(missing_docs)]
-
     use super::bluetooth_uuid_from_u16;
     use crate::Uuid;
 
