@@ -3,6 +3,7 @@ pub mod characteristic;
 pub mod descriptor;
 pub mod device;
 pub mod error;
+pub mod l2cap_channel;
 pub mod service;
 mod types;
 

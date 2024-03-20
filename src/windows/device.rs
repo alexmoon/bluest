@@ -12,6 +12,7 @@ use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEv
 use windows::Foundation::TypedEventHandler;
 
 use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
+use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
@@ -269,6 +270,14 @@ impl DeviceImpl {
     ///
     /// Returns [ErrorKind::NotSupported].
     pub async fn rssi(&self) -> Result<i16> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
+    pub async fn open_l2cap_channel(
+        &self,
+        _psm: u16,
+        _secure: bool,
+    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
         Err(ErrorKind::NotSupported.into())
     }
 }

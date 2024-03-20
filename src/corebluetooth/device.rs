@@ -6,6 +6,7 @@ use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
+use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
@@ -212,6 +213,14 @@ impl DeviceImpl {
                 _ => (),
             }
         }
+    }
+
+    pub async fn open_l2cap_channel(
+        &self,
+        _psm: u16,
+        _secure: bool,
+    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+        Err(ErrorKind::NotSupported.into())
     }
 }
 

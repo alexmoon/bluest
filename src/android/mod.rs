@@ -7,11 +7,13 @@ pub mod adapter;
 pub mod characteristic;
 pub mod descriptor;
 pub mod device;
+pub mod l2cap_channel;
 pub mod service;
 
 pub(crate) mod bindings;
 
 /// A platform-specific device identifier.
+/// On android it contains the Bluetooth address in the format `AB:CD:EF:01:23:45`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeviceId(pub(crate) String);

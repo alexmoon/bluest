@@ -119,6 +119,7 @@ mod characteristic;
 mod descriptor;
 mod device;
 pub mod error;
+mod l2cap_channel;
 pub mod pairing;
 mod service;
 mod util;

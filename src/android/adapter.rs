@@ -288,7 +288,10 @@ fn on_scan_result(env: Env<'_>, id: i32, callback_type: i32, scan_result: Arg<Sc
     let device_id = DeviceId(address);
 
     let d = AdvertisingDevice {
-        device: Device(DeviceImpl { id: device_id }),
+        device: Device(DeviceImpl {
+            id: device_id,
+            device: device.as_global(),
+        }),
         adv_data: AdvertisementData {
             is_connectable,
             local_name,

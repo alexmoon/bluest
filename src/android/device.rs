@@ -1,13 +1,17 @@
 use futures_core::Stream;
 use futures_lite::stream;
+use java_spaghetti::Global;
 use uuid::Uuid;
 
+use super::bindings::android::bluetooth::BluetoothDevice;
+use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use crate::pairing::PairingAgent;
 use crate::{DeviceId, Result, Service, ServicesChanged};
 
 #[derive(Clone)]
 pub struct DeviceImpl {
     pub(super) id: DeviceId,
+    pub(super) device: Global<BluetoothDevice>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -91,6 +95,14 @@ impl DeviceImpl {
 
     pub async fn rssi(&self) -> Result<i16> {
         todo!()
+    }
+
+    pub async fn open_l2cap_channel(
+        &self,
+        psm: u16,
+        secure: bool,
+    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+        super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
     }
 }
 
