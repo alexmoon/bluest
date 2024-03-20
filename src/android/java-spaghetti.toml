@@ -33,7 +33,7 @@ verbose = true
 
 [input]
 files = [
-    "/home/dirbaio/Android/Sdk/platforms/android-28/android.jar",
+    "/home/dirbaio/Android/Sdk/platforms/android-33/android.jar",
     "build/bluest.jar",
 ]
 

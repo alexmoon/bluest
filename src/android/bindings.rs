@@ -198,6 +198,28 @@ pub mod android {
                         }
                     }
 
+                    /// [getServiceSolicitationUuids](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.html#getServiceSolicitationUuids())
+                    pub fn getServiceSolicitationUuids<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/AdvertiseData", java.flags == PUBLIC, .name == "getServiceSolicitationUuids", .descriptor == "()Ljava/util/List;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/AdvertiseData\0", "getServiceSolicitationUuids\0", "()Ljava/util/List;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTransportDiscoveryData](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.html#getTransportDiscoveryData())
+                    pub fn getTransportDiscoveryData<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/AdvertiseData", java.flags == PUBLIC, .name == "getTransportDiscoveryData", .descriptor == "()Ljava/util/List;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/AdvertiseData\0", "getTransportDiscoveryData\0", "()Ljava/util/List;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
                     /// [getManufacturerSpecificData](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.html#getManufacturerSpecificData())
                     pub fn getManufacturerSpecificData<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::util::SparseArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
                         // class.path == "android/bluetooth/le/AdvertiseData", java.flags == PUBLIC, .name == "getManufacturerSpecificData", .descriptor == "()Landroid/util/SparseArray;"
@@ -313,6 +335,17 @@ pub mod android {
                         }
                     }
 
+                    /// [addServiceSolicitationUuid](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.Builder.html#addServiceSolicitationUuid(android.os.ParcelUuid))
+                    pub fn addServiceSolicitationUuid<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, AdvertiseData_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/AdvertiseData$Builder", java.flags == PUBLIC, .name == "addServiceSolicitationUuid", .descriptor == "(Landroid/os/ParcelUuid;)Landroid/bluetooth/le/AdvertiseData$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/AdvertiseData$Builder\0", "addServiceSolicitationUuid\0", "(Landroid/os/ParcelUuid;)Landroid/bluetooth/le/AdvertiseData$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
                     /// [addServiceData](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.Builder.html#addServiceData(android.os.ParcelUuid,%20byte%5B%5D))
                     pub fn addServiceData<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, AdvertiseData_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
                         // class.path == "android/bluetooth/le/AdvertiseData$Builder", java.flags == PUBLIC, .name == "addServiceData", .descriptor == "(Landroid/os/ParcelUuid;[B)Landroid/bluetooth/le/AdvertiseData$Builder;"
@@ -320,6 +353,17 @@ pub mod android {
                             let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
                             let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                             let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/AdvertiseData$Builder\0", "addServiceData\0", "(Landroid/os/ParcelUuid;[B)Landroid/bluetooth/le/AdvertiseData$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [addTransportDiscoveryData](https://developer.android.com/reference/android/bluetooth/le/AdvertiseData.Builder.html#addTransportDiscoveryData(android.bluetooth.le.TransportDiscoveryData))
+                    pub fn addTransportDiscoveryData<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env TransportDiscoveryData>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, AdvertiseData_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/AdvertiseData$Builder", java.flags == PUBLIC, .name == "addTransportDiscoveryData", .descriptor == "(Landroid/bluetooth/le/TransportDiscoveryData;)Landroid/bluetooth/le/AdvertiseData$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/AdvertiseData$Builder\0", "addTransportDiscoveryData\0", "(Landroid/bluetooth/le/TransportDiscoveryData;)Landroid/bluetooth/le/AdvertiseData$Builder;\0");
                             __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                         }
                     }
@@ -1313,6 +1357,12 @@ pub mod android {
 
                     /// public static final [SCAN_FAILED_INTERNAL_ERROR](https://developer.android.com/reference/android/bluetooth/le/ScanCallback.html#SCAN_FAILED_INTERNAL_ERROR)
                     pub const SCAN_FAILED_INTERNAL_ERROR : i32 = 3;
+
+                    /// public static final [SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES](https://developer.android.com/reference/android/bluetooth/le/ScanCallback.html#SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES)
+                    pub const SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES : i32 = 5;
+
+                    /// public static final [SCAN_FAILED_SCANNING_TOO_FREQUENTLY](https://developer.android.com/reference/android/bluetooth/le/ScanCallback.html#SCAN_FAILED_SCANNING_TOO_FREQUENTLY)
+                    pub const SCAN_FAILED_SCANNING_TOO_FREQUENTLY : i32 = 6;
                 }
             }
 
@@ -1360,6 +1410,28 @@ pub mod android {
                             let __jni_args = [];
                             let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                             let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getServiceUuidMask\0", "()Landroid/os/ParcelUuid;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getServiceSolicitationUuid](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.html#getServiceSolicitationUuid())
+                    pub fn getServiceSolicitationUuid<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::os::ParcelUuid>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter", java.flags == PUBLIC, .name == "getServiceSolicitationUuid", .descriptor == "()Landroid/os/ParcelUuid;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getServiceSolicitationUuid\0", "()Landroid/os/ParcelUuid;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getServiceSolicitationUuidMask](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.html#getServiceSolicitationUuidMask())
+                    pub fn getServiceSolicitationUuidMask<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::os::ParcelUuid>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter", java.flags == PUBLIC, .name == "getServiceSolicitationUuidMask", .descriptor == "()Landroid/os/ParcelUuid;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getServiceSolicitationUuidMask\0", "()Landroid/os/ParcelUuid;\0");
                             __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                         }
                     }
@@ -1437,6 +1509,39 @@ pub mod android {
                             let __jni_args = [];
                             let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                             let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getManufacturerDataMask\0", "()[B\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getAdvertisingDataType](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.html#getAdvertisingDataType())
+                    pub fn getAdvertisingDataType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter", java.flags == PUBLIC, .name == "getAdvertisingDataType", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getAdvertisingDataType\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getAdvertisingData](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.html#getAdvertisingData())
+                    pub fn getAdvertisingData<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter", java.flags == PUBLIC, .name == "getAdvertisingData", .descriptor == "()[B"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getAdvertisingData\0", "()[B\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getAdvertisingDataMask](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.html#getAdvertisingDataMask())
+                    pub fn getAdvertisingDataMask<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter", java.flags == PUBLIC, .name == "getAdvertisingDataMask", .descriptor == "()[B"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter\0", "getAdvertisingDataMask\0", "()[B\0");
                             __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                         }
                     }
@@ -1545,6 +1650,28 @@ pub mod android {
                         }
                     }
 
+                    /// [setServiceSolicitationUuid](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#setServiceSolicitationUuid(android.os.ParcelUuid))
+                    pub fn setServiceSolicitationUuid_ParcelUuid<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "setServiceSolicitationUuid", .descriptor == "(Landroid/os/ParcelUuid;)Landroid/bluetooth/le/ScanFilter$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter$Builder\0", "setServiceSolicitationUuid\0", "(Landroid/os/ParcelUuid;)Landroid/bluetooth/le/ScanFilter$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [setServiceSolicitationUuid](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#setServiceSolicitationUuid(android.os.ParcelUuid,%20android.os.ParcelUuid))
+                    pub fn setServiceSolicitationUuid_ParcelUuid_ParcelUuid<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "setServiceSolicitationUuid", .descriptor == "(Landroid/os/ParcelUuid;Landroid/os/ParcelUuid;)Landroid/bluetooth/le/ScanFilter$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter$Builder\0", "setServiceSolicitationUuid\0", "(Landroid/os/ParcelUuid;Landroid/os/ParcelUuid;)Landroid/bluetooth/le/ScanFilter$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
                     /// [setServiceData](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#setServiceData(android.os.ParcelUuid,%20byte%5B%5D))
                     pub fn setServiceData_ParcelUuid_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::os::ParcelUuid>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
                         // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "setServiceData", .descriptor == "(Landroid/os/ParcelUuid;[B)Landroid/bluetooth/le/ScanFilter$Builder;"
@@ -1589,6 +1716,28 @@ pub mod android {
                         }
                     }
 
+                    /// [setAdvertisingDataTypeWithData](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#setAdvertisingDataTypeWithData(int,%20byte%5B%5D,%20byte%5B%5D))
+                    pub fn setAdvertisingDataTypeWithData<'env>(&'env self, arg0: i32, arg1: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "setAdvertisingDataTypeWithData", .descriptor == "(I[B[B)Landroid/bluetooth/le/ScanFilter$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter$Builder\0", "setAdvertisingDataTypeWithData\0", "(I[B[B)Landroid/bluetooth/le/ScanFilter$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [setAdvertisingDataType](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#setAdvertisingDataType(int))
+                    pub fn setAdvertisingDataType<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter_Builder>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "setAdvertisingDataType", .descriptor == "(I)Landroid/bluetooth/le/ScanFilter$Builder;"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanFilter$Builder\0", "setAdvertisingDataType\0", "(I)Landroid/bluetooth/le/ScanFilter$Builder;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
                     /// [build](https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder.html#build())
                     pub fn build<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ScanFilter>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
                         // class.path == "android/bluetooth/le/ScanFilter$Builder", java.flags == PUBLIC, .name == "build", .descriptor == "()Landroid/bluetooth/le/ScanFilter;"
@@ -1624,6 +1773,17 @@ pub mod android {
                             let __jni_args = [];
                             let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                             let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanRecord\0", "getServiceUuids\0", "()Ljava/util/List;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getServiceSolicitationUuids](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#getServiceSolicitationUuids())
+                    pub fn getServiceSolicitationUuids<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanRecord", java.flags == PUBLIC, .name == "getServiceSolicitationUuids", .descriptor == "()Ljava/util/List;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanRecord\0", "getServiceSolicitationUuids\0", "()Ljava/util/List;\0");
                             __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                         }
                     }
@@ -1694,6 +1854,17 @@ pub mod android {
                         }
                     }
 
+                    /// [getAdvertisingDataMap](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#getAdvertisingDataMap())
+                    pub fn getAdvertisingDataMap<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::super::java::util::Map>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/ScanRecord", java.flags == PUBLIC, .name == "getAdvertisingDataMap", .descriptor == "()Ljava/util/Map;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/ScanRecord\0", "getAdvertisingDataMap\0", "()Ljava/util/Map;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
                     /// [getBytes](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#getBytes())
                     pub fn getBytes<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
                         // class.path == "android/bluetooth/le/ScanRecord", java.flags == PUBLIC, .name == "getBytes", .descriptor == "()[B"
@@ -1715,6 +1886,147 @@ pub mod android {
                             __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                         }
                     }
+
+                    /// public static final [DATA_TYPE_3D_INFORMATION_DATA](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_3D_INFORMATION_DATA)
+                    pub const DATA_TYPE_3D_INFORMATION_DATA : i32 = 61;
+
+                    /// public static final [DATA_TYPE_ADVERTISING_INTERVAL](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_ADVERTISING_INTERVAL)
+                    pub const DATA_TYPE_ADVERTISING_INTERVAL : i32 = 26;
+
+                    /// public static final [DATA_TYPE_ADVERTISING_INTERVAL_LONG](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_ADVERTISING_INTERVAL_LONG)
+                    pub const DATA_TYPE_ADVERTISING_INTERVAL_LONG : i32 = 47;
+
+                    /// public static final [DATA_TYPE_APPEARANCE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_APPEARANCE)
+                    pub const DATA_TYPE_APPEARANCE : i32 = 25;
+
+                    /// public static final [DATA_TYPE_BIG_INFO](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_BIG_INFO)
+                    pub const DATA_TYPE_BIG_INFO : i32 = 44;
+
+                    /// public static final [DATA_TYPE_BROADCAST_CODE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_BROADCAST_CODE)
+                    pub const DATA_TYPE_BROADCAST_CODE : i32 = 45;
+
+                    /// public static final [DATA_TYPE_CHANNEL_MAP_UPDATE_INDICATION](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_CHANNEL_MAP_UPDATE_INDICATION)
+                    pub const DATA_TYPE_CHANNEL_MAP_UPDATE_INDICATION : i32 = 40;
+
+                    /// public static final [DATA_TYPE_CLASS_OF_DEVICE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_CLASS_OF_DEVICE)
+                    pub const DATA_TYPE_CLASS_OF_DEVICE : i32 = 13;
+
+                    /// public static final [DATA_TYPE_DEVICE_ID](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_DEVICE_ID)
+                    pub const DATA_TYPE_DEVICE_ID : i32 = 16;
+
+                    /// public static final [DATA_TYPE_FLAGS](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_FLAGS)
+                    pub const DATA_TYPE_FLAGS : i32 = 1;
+
+                    /// public static final [DATA_TYPE_INDOOR_POSITIONING](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_INDOOR_POSITIONING)
+                    pub const DATA_TYPE_INDOOR_POSITIONING : i32 = 37;
+
+                    /// public static final [DATA_TYPE_LE_BLUETOOTH_DEVICE_ADDRESS](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LE_BLUETOOTH_DEVICE_ADDRESS)
+                    pub const DATA_TYPE_LE_BLUETOOTH_DEVICE_ADDRESS : i32 = 27;
+
+                    /// public static final [DATA_TYPE_LE_ROLE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LE_ROLE)
+                    pub const DATA_TYPE_LE_ROLE : i32 = 28;
+
+                    /// public static final [DATA_TYPE_LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE)
+                    pub const DATA_TYPE_LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE : i32 = 34;
+
+                    /// public static final [DATA_TYPE_LE_SECURE_CONNECTIONS_RANDOM_VALUE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LE_SECURE_CONNECTIONS_RANDOM_VALUE)
+                    pub const DATA_TYPE_LE_SECURE_CONNECTIONS_RANDOM_VALUE : i32 = 35;
+
+                    /// public static final [DATA_TYPE_LE_SUPPORTED_FEATURES](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LE_SUPPORTED_FEATURES)
+                    pub const DATA_TYPE_LE_SUPPORTED_FEATURES : i32 = 39;
+
+                    /// public static final [DATA_TYPE_LOCAL_NAME_COMPLETE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LOCAL_NAME_COMPLETE)
+                    pub const DATA_TYPE_LOCAL_NAME_COMPLETE : i32 = 9;
+
+                    /// public static final [DATA_TYPE_LOCAL_NAME_SHORT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_LOCAL_NAME_SHORT)
+                    pub const DATA_TYPE_LOCAL_NAME_SHORT : i32 = 8;
+
+                    /// public static final [DATA_TYPE_MANUFACTURER_SPECIFIC_DATA](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_MANUFACTURER_SPECIFIC_DATA)
+                    pub const DATA_TYPE_MANUFACTURER_SPECIFIC_DATA : i32 = 255;
+
+                    /// public static final [DATA_TYPE_MESH_BEACON](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_MESH_BEACON)
+                    pub const DATA_TYPE_MESH_BEACON : i32 = 43;
+
+                    /// public static final [DATA_TYPE_MESH_MESSAGE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_MESH_MESSAGE)
+                    pub const DATA_TYPE_MESH_MESSAGE : i32 = 42;
+
+                    /// public static final [DATA_TYPE_NONE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_NONE)
+                    pub const DATA_TYPE_NONE : i32 = -1;
+
+                    /// public static final [DATA_TYPE_PB_ADV](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_PB_ADV)
+                    pub const DATA_TYPE_PB_ADV : i32 = 41;
+
+                    /// public static final [DATA_TYPE_PUBLIC_TARGET_ADDRESS](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_PUBLIC_TARGET_ADDRESS)
+                    pub const DATA_TYPE_PUBLIC_TARGET_ADDRESS : i32 = 23;
+
+                    /// public static final [DATA_TYPE_RANDOM_TARGET_ADDRESS](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_RANDOM_TARGET_ADDRESS)
+                    pub const DATA_TYPE_RANDOM_TARGET_ADDRESS : i32 = 24;
+
+                    /// public static final [DATA_TYPE_RESOLVABLE_SET_IDENTIFIER](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_RESOLVABLE_SET_IDENTIFIER)
+                    pub const DATA_TYPE_RESOLVABLE_SET_IDENTIFIER : i32 = 46;
+
+                    /// public static final [DATA_TYPE_SECURITY_MANAGER_OUT_OF_BAND_FLAGS](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SECURITY_MANAGER_OUT_OF_BAND_FLAGS)
+                    pub const DATA_TYPE_SECURITY_MANAGER_OUT_OF_BAND_FLAGS : i32 = 17;
+
+                    /// public static final [DATA_TYPE_SERVICE_DATA_128_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_DATA_128_BIT)
+                    pub const DATA_TYPE_SERVICE_DATA_128_BIT : i32 = 33;
+
+                    /// public static final [DATA_TYPE_SERVICE_DATA_16_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_DATA_16_BIT)
+                    pub const DATA_TYPE_SERVICE_DATA_16_BIT : i32 = 22;
+
+                    /// public static final [DATA_TYPE_SERVICE_DATA_32_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_DATA_32_BIT)
+                    pub const DATA_TYPE_SERVICE_DATA_32_BIT : i32 = 32;
+
+                    /// public static final [DATA_TYPE_SERVICE_SOLICITATION_UUIDS_128_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_SOLICITATION_UUIDS_128_BIT)
+                    pub const DATA_TYPE_SERVICE_SOLICITATION_UUIDS_128_BIT : i32 = 21;
+
+                    /// public static final [DATA_TYPE_SERVICE_SOLICITATION_UUIDS_16_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_SOLICITATION_UUIDS_16_BIT)
+                    pub const DATA_TYPE_SERVICE_SOLICITATION_UUIDS_16_BIT : i32 = 20;
+
+                    /// public static final [DATA_TYPE_SERVICE_SOLICITATION_UUIDS_32_BIT](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_SOLICITATION_UUIDS_32_BIT)
+                    pub const DATA_TYPE_SERVICE_SOLICITATION_UUIDS_32_BIT : i32 = 31;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_128_BIT_COMPLETE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_128_BIT_COMPLETE)
+                    pub const DATA_TYPE_SERVICE_UUIDS_128_BIT_COMPLETE : i32 = 7;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_128_BIT_PARTIAL](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_128_BIT_PARTIAL)
+                    pub const DATA_TYPE_SERVICE_UUIDS_128_BIT_PARTIAL : i32 = 6;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_16_BIT_COMPLETE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_16_BIT_COMPLETE)
+                    pub const DATA_TYPE_SERVICE_UUIDS_16_BIT_COMPLETE : i32 = 3;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_16_BIT_PARTIAL](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_16_BIT_PARTIAL)
+                    pub const DATA_TYPE_SERVICE_UUIDS_16_BIT_PARTIAL : i32 = 2;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_32_BIT_COMPLETE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_32_BIT_COMPLETE)
+                    pub const DATA_TYPE_SERVICE_UUIDS_32_BIT_COMPLETE : i32 = 5;
+
+                    /// public static final [DATA_TYPE_SERVICE_UUIDS_32_BIT_PARTIAL](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SERVICE_UUIDS_32_BIT_PARTIAL)
+                    pub const DATA_TYPE_SERVICE_UUIDS_32_BIT_PARTIAL : i32 = 4;
+
+                    /// public static final [DATA_TYPE_SIMPLE_PAIRING_HASH_C](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SIMPLE_PAIRING_HASH_C)
+                    pub const DATA_TYPE_SIMPLE_PAIRING_HASH_C : i32 = 14;
+
+                    /// public static final [DATA_TYPE_SIMPLE_PAIRING_HASH_C_256](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SIMPLE_PAIRING_HASH_C_256)
+                    pub const DATA_TYPE_SIMPLE_PAIRING_HASH_C_256 : i32 = 29;
+
+                    /// public static final [DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R)
+                    pub const DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R : i32 = 15;
+
+                    /// public static final [DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R_256](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R_256)
+                    pub const DATA_TYPE_SIMPLE_PAIRING_RANDOMIZER_R_256 : i32 = 30;
+
+                    /// public static final [DATA_TYPE_SLAVE_CONNECTION_INTERVAL_RANGE](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_SLAVE_CONNECTION_INTERVAL_RANGE)
+                    pub const DATA_TYPE_SLAVE_CONNECTION_INTERVAL_RANGE : i32 = 18;
+
+                    /// public static final [DATA_TYPE_TRANSPORT_DISCOVERY_DATA](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_TRANSPORT_DISCOVERY_DATA)
+                    pub const DATA_TYPE_TRANSPORT_DISCOVERY_DATA : i32 = 38;
+
+                    /// public static final [DATA_TYPE_TX_POWER_LEVEL](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_TX_POWER_LEVEL)
+                    pub const DATA_TYPE_TX_POWER_LEVEL : i32 = 10;
+
+                    /// public static final [DATA_TYPE_URI](https://developer.android.com/reference/android/bluetooth/le/ScanRecord.html#DATA_TYPE_URI)
+                    pub const DATA_TYPE_URI : i32 = 36;
                 }
             }
 
@@ -2163,6 +2475,202 @@ pub mod android {
                     }
                 }
             }
+
+            ::java_spaghetti::class! {
+                /// public final class [TransportBlock](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html)
+                public final class TransportBlock ("android/bluetooth/le/TransportBlock\0") extends super::super::super::java::lang::Object, implements super::super::os::Parcelable {
+
+                    /// [TransportBlock](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#TransportBlock(int,%20int,%20int,%20byte%5B%5D))
+                    pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: i32, arg1: i32, arg2: i32, arg3: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "<init>", .descriptor == "(III[B)V"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "<init>\0", "(III[B)V\0");
+                            __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [describeContents](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#describeContents())
+                    pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "describeContents\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [equals](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#equals(java.lang.Object))
+                    pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                            __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getOrgId](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#getOrgId())
+                    pub fn getOrgId<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "getOrgId", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "getOrgId\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTdsFlags](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#getTdsFlags())
+                    pub fn getTdsFlags<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "getTdsFlags", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "getTdsFlags\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTransportDataLength](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#getTransportDataLength())
+                    pub fn getTransportDataLength<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "getTransportDataLength", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "getTransportDataLength\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTransportData](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#getTransportData())
+                    pub fn getTransportData<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "getTransportData", .descriptor == "()[B"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "getTransportData\0", "()[B\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [toByteArray](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#toByteArray())
+                    pub fn toByteArray<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "toByteArray", .descriptor == "()[B"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "toByteArray\0", "()[B\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [totalBytes](https://developer.android.com/reference/android/bluetooth/le/TransportBlock.html#totalBytes())
+                    pub fn totalBytes<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportBlock", java.flags == PUBLIC, .name == "totalBytes", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportBlock\0", "totalBytes\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+                }
+            }
+
+            ::java_spaghetti::class! {
+                /// public final class [TransportDiscoveryData](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html)
+                public final class TransportDiscoveryData ("android/bluetooth/le/TransportDiscoveryData\0") extends super::super::super::java::lang::Object, implements super::super::os::Parcelable {
+
+                    /// [TransportDiscoveryData](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#TransportDiscoveryData(int,%20java.util.List))
+                    pub fn new_int_List<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: i32, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::super::super::java::util::List>>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "<init>", .descriptor == "(ILjava/util/List;)V"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "<init>\0", "(ILjava/util/List;)V\0");
+                            __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [TransportDiscoveryData](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#TransportDiscoveryData(byte%5B%5D))
+                    pub fn new_byte_array<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "<init>", .descriptor == "([B)V"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "<init>\0", "([B)V\0");
+                            __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [describeContents](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#describeContents())
+                    pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "describeContents\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [equals](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#equals(java.lang.Object))
+                    pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                        unsafe {
+                            let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                            __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTransportDataType](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#getTransportDataType())
+                    pub fn getTransportDataType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "getTransportDataType", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "getTransportDataType\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [getTransportBlocks](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#getTransportBlocks())
+                    pub fn getTransportBlocks<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "getTransportBlocks", .descriptor == "()Ljava/util/List;"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "getTransportBlocks\0", "()Ljava/util/List;\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [toByteArray](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#toByteArray())
+                    pub fn toByteArray<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "toByteArray", .descriptor == "()[B"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "toByteArray\0", "()[B\0");
+                            __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+
+                    /// [totalBytes](https://developer.android.com/reference/android/bluetooth/le/TransportDiscoveryData.html#totalBytes())
+                    pub fn totalBytes<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::super::java::lang::Throwable>> {
+                        // class.path == "android/bluetooth/le/TransportDiscoveryData", java.flags == PUBLIC, .name == "totalBytes", .descriptor == "()I"
+                        unsafe {
+                            let __jni_args = [];
+                            let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                            let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/le/TransportDiscoveryData\0", "totalBytes\0", "()I\0");
+                            __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                        }
+                    }
+                }
+            }
         }
 
         ::java_spaghetti::class! {
@@ -2243,7 +2751,7 @@ pub mod android {
             public final class BluetoothAdapter ("android/bluetooth/BluetoothAdapter\0") extends super::super::java::lang::Object {
 
                 /// [getDefaultAdapter](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#getDefaultAdapter())
-                pub fn getDefaultAdapter<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothAdapter>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getDefaultAdapter<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothAdapter>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC | STATIC | SYNCRONIZED, .name == "getDefaultAdapter", .descriptor == "()Landroid/bluetooth/BluetoothAdapter;"
                     unsafe {
                         let __jni_args = [];
@@ -2259,6 +2767,17 @@ pub mod android {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "getRemoteDevice\0", "(Ljava/lang/String;)Landroid/bluetooth/BluetoothDevice;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getRemoteLeDevice](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#getRemoteLeDevice(java.lang.String,%20int))
+                pub fn getRemoteLeDevice<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>, arg1: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothDevice>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "getRemoteLeDevice", .descriptor == "(Ljava/lang/String;I)Landroid/bluetooth/BluetoothDevice;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "getRemoteLeDevice\0", "(Ljava/lang/String;I)Landroid/bluetooth/BluetoothDevice;\0");
                         __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -2319,7 +2838,7 @@ pub mod android {
                 }
 
                 /// [enable](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#enable())
-                pub fn enable<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn enable<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "enable", .descriptor == "()Z"
                     unsafe {
                         let __jni_args = [];
@@ -2330,7 +2849,7 @@ pub mod android {
                 }
 
                 /// [disable](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#disable())
-                pub fn disable<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn disable<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "disable", .descriptor == "()Z"
                     unsafe {
                         let __jni_args = [];
@@ -2494,6 +3013,39 @@ pub mod android {
                     }
                 }
 
+                /// [isLeAudioSupported](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#isLeAudioSupported())
+                pub fn isLeAudioSupported<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "isLeAudioSupported", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "isLeAudioSupported\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isLeAudioBroadcastSourceSupported](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#isLeAudioBroadcastSourceSupported())
+                pub fn isLeAudioBroadcastSourceSupported<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "isLeAudioBroadcastSourceSupported", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "isLeAudioBroadcastSourceSupported\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isLeAudioBroadcastAssistantSupported](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#isLeAudioBroadcastAssistantSupported())
+                pub fn isLeAudioBroadcastAssistantSupported<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "isLeAudioBroadcastAssistantSupported", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "isLeAudioBroadcastAssistantSupported\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [getLeMaximumAdvertisingDataLength](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#getLeMaximumAdvertisingDataLength())
                 pub fn getLeMaximumAdvertisingDataLength<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "getLeMaximumAdvertisingDataLength", .descriptor == "()I"
@@ -2501,6 +3053,17 @@ pub mod android {
                         let __jni_args = [];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "getLeMaximumAdvertisingDataLength\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getMaxConnectedAudioDevices](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#getMaxConnectedAudioDevices())
+                pub fn getMaxConnectedAudioDevices<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "getMaxConnectedAudioDevices", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "getMaxConnectedAudioDevices\0", "()I\0");
                         __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -2600,6 +3163,28 @@ pub mod android {
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "stopLeScan\0", "(Landroid/bluetooth/BluetoothAdapter$LeScanCallback;)V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [listenUsingL2capChannel](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#listenUsingL2capChannel())
+                pub fn listenUsingL2capChannel<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothServerSocket>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "listenUsingL2capChannel", .descriptor == "()Landroid/bluetooth/BluetoothServerSocket;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "listenUsingL2capChannel\0", "()Landroid/bluetooth/BluetoothServerSocket;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [listenUsingInsecureL2capChannel](https://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html#listenUsingInsecureL2capChannel())
+                pub fn listenUsingInsecureL2capChannel<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothServerSocket>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothAdapter", java.flags == PUBLIC, .name == "listenUsingInsecureL2capChannel", .descriptor == "()Landroid/bluetooth/BluetoothServerSocket;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothAdapter\0", "listenUsingInsecureL2capChannel\0", "()Landroid/bluetooth/BluetoothServerSocket;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
 
@@ -3473,6 +4058,26 @@ pub mod android {
                         __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
+
+                /// [doesClassMatch](https://developer.android.com/reference/android/bluetooth/BluetoothClass.html#doesClassMatch(int))
+                pub fn doesClassMatch<'env>(&'env self, arg0: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothClass", java.flags == PUBLIC, .name == "doesClassMatch", .descriptor == "(I)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothClass\0", "doesClassMatch\0", "(I)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [PROFILE_A2DP](https://developer.android.com/reference/android/bluetooth/BluetoothClass.html#PROFILE_A2DP)
+                pub const PROFILE_A2DP : i32 = 1;
+
+                /// public static final [PROFILE_HEADSET](https://developer.android.com/reference/android/bluetooth/BluetoothClass.html#PROFILE_HEADSET)
+                pub const PROFILE_HEADSET : i32 = 0;
+
+                /// public static final [PROFILE_HID](https://developer.android.com/reference/android/bluetooth/BluetoothClass.html#PROFILE_HID)
+                pub const PROFILE_HID : i32 = 3;
             }
         }
 
@@ -3585,6 +4190,18 @@ pub mod android {
 
                 /// public static final [HEALTH_WEIGHING](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#HEALTH_WEIGHING)
                 pub const HEALTH_WEIGHING : i32 = 2316;
+
+                /// public static final [PERIPHERAL_KEYBOARD](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#PERIPHERAL_KEYBOARD)
+                pub const PERIPHERAL_KEYBOARD : i32 = 1344;
+
+                /// public static final [PERIPHERAL_KEYBOARD_POINTING](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#PERIPHERAL_KEYBOARD_POINTING)
+                pub const PERIPHERAL_KEYBOARD_POINTING : i32 = 1472;
+
+                /// public static final [PERIPHERAL_NON_KEYBOARD_NON_POINTING](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#PERIPHERAL_NON_KEYBOARD_NON_POINTING)
+                pub const PERIPHERAL_NON_KEYBOARD_NON_POINTING : i32 = 1280;
+
+                /// public static final [PERIPHERAL_POINTING](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#PERIPHERAL_POINTING)
+                pub const PERIPHERAL_POINTING : i32 = 1408;
 
                 /// public static final [PHONE_CELLULAR](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Device.html#PHONE_CELLULAR)
                 pub const PHONE_CELLULAR : i32 = 516;
@@ -3714,6 +4331,9 @@ pub mod android {
                 /// public static final [INFORMATION](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Service.html#INFORMATION)
                 pub const INFORMATION : i32 = 8388608;
 
+                /// public static final [LE_AUDIO](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Service.html#LE_AUDIO)
+                pub const LE_AUDIO : i32 = 16384;
+
                 /// public static final [LIMITED_DISCOVERABILITY](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Service.html#LIMITED_DISCOVERABILITY)
                 pub const LIMITED_DISCOVERABILITY : i32 = 8192;
 
@@ -3731,6 +4351,574 @@ pub mod android {
 
                 /// public static final [TELEPHONY](https://developer.android.com/reference/android/bluetooth/BluetoothClass.Service.html#TELEPHONY)
                 pub const TELEPHONY : i32 = 4194304;
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html)
+            public final class BluetoothCodecConfig ("android/bluetooth/BluetoothCodecConfig\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
+
+                /// [equals](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#equals(java.lang.Object))
+                pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [hashCode](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#hashCode())
+                pub fn hashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "hashCode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "hashCode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [toString](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#toString())
+                pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "toString\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [describeContents](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#describeContents())
+                pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "describeContents\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecType](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecType())
+                pub fn getCodecType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecType", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecType\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isMandatoryCodec](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#isMandatoryCodec())
+                pub fn isMandatoryCodec<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "isMandatoryCodec", .descriptor == "()Z"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "isMandatoryCodec\0", "()Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecPriority](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecPriority())
+                pub fn getCodecPriority<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecPriority", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecPriority\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getSampleRate](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getSampleRate())
+                pub fn getSampleRate<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getSampleRate", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getSampleRate\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getBitsPerSample](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getBitsPerSample())
+                pub fn getBitsPerSample<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getBitsPerSample", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getBitsPerSample\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getChannelMode](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getChannelMode())
+                pub fn getChannelMode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getChannelMode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getChannelMode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecSpecific1](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecSpecific1())
+                pub fn getCodecSpecific1<'env>(&'env self) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecSpecific1", .descriptor == "()J"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecSpecific1\0", "()J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecSpecific2](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecSpecific2())
+                pub fn getCodecSpecific2<'env>(&'env self) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecSpecific2", .descriptor == "()J"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecSpecific2\0", "()J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecSpecific3](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecSpecific3())
+                pub fn getCodecSpecific3<'env>(&'env self) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecSpecific3", .descriptor == "()J"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecSpecific3\0", "()J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecSpecific4](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#getCodecSpecific4())
+                pub fn getCodecSpecific4<'env>(&'env self) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig", java.flags == PUBLIC, .name == "getCodecSpecific4", .descriptor == "()J"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig\0", "getCodecSpecific4\0", "()J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [BITS_PER_SAMPLE_16](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#BITS_PER_SAMPLE_16)
+                pub const BITS_PER_SAMPLE_16 : i32 = 1;
+
+                /// public static final [BITS_PER_SAMPLE_24](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#BITS_PER_SAMPLE_24)
+                pub const BITS_PER_SAMPLE_24 : i32 = 2;
+
+                /// public static final [BITS_PER_SAMPLE_32](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#BITS_PER_SAMPLE_32)
+                pub const BITS_PER_SAMPLE_32 : i32 = 4;
+
+                /// public static final [BITS_PER_SAMPLE_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#BITS_PER_SAMPLE_NONE)
+                pub const BITS_PER_SAMPLE_NONE : i32 = 0;
+
+                /// public static final [CHANNEL_MODE_MONO](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CHANNEL_MODE_MONO)
+                pub const CHANNEL_MODE_MONO : i32 = 1;
+
+                /// public static final [CHANNEL_MODE_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CHANNEL_MODE_NONE)
+                pub const CHANNEL_MODE_NONE : i32 = 0;
+
+                /// public static final [CHANNEL_MODE_STEREO](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CHANNEL_MODE_STEREO)
+                pub const CHANNEL_MODE_STEREO : i32 = 2;
+
+                /// public static final [CODEC_PRIORITY_DEFAULT](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CODEC_PRIORITY_DEFAULT)
+                pub const CODEC_PRIORITY_DEFAULT : i32 = 0;
+
+                /// public static final [CODEC_PRIORITY_DISABLED](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CODEC_PRIORITY_DISABLED)
+                pub const CODEC_PRIORITY_DISABLED : i32 = -1;
+
+                /// public static final [CODEC_PRIORITY_HIGHEST](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#CODEC_PRIORITY_HIGHEST)
+                pub const CODEC_PRIORITY_HIGHEST : i32 = 1000000;
+
+                /// public static final [SAMPLE_RATE_176400](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_176400)
+                pub const SAMPLE_RATE_176400 : i32 = 16;
+
+                /// public static final [SAMPLE_RATE_192000](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_192000)
+                pub const SAMPLE_RATE_192000 : i32 = 32;
+
+                /// public static final [SAMPLE_RATE_44100](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_44100)
+                pub const SAMPLE_RATE_44100 : i32 = 1;
+
+                /// public static final [SAMPLE_RATE_48000](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_48000)
+                pub const SAMPLE_RATE_48000 : i32 = 2;
+
+                /// public static final [SAMPLE_RATE_88200](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_88200)
+                pub const SAMPLE_RATE_88200 : i32 = 4;
+
+                /// public static final [SAMPLE_RATE_96000](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_96000)
+                pub const SAMPLE_RATE_96000 : i32 = 8;
+
+                /// public static final [SAMPLE_RATE_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SAMPLE_RATE_NONE)
+                pub const SAMPLE_RATE_NONE : i32 = 0;
+
+                /// public static final [SOURCE_CODEC_TYPE_AAC](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_AAC)
+                pub const SOURCE_CODEC_TYPE_AAC : i32 = 1;
+
+                /// public static final [SOURCE_CODEC_TYPE_APTX](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_APTX)
+                pub const SOURCE_CODEC_TYPE_APTX : i32 = 2;
+
+                /// public static final [SOURCE_CODEC_TYPE_APTX_HD](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_APTX_HD)
+                pub const SOURCE_CODEC_TYPE_APTX_HD : i32 = 3;
+
+                /// public static final [SOURCE_CODEC_TYPE_INVALID](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_INVALID)
+                pub const SOURCE_CODEC_TYPE_INVALID : i32 = 1000000;
+
+                /// public static final [SOURCE_CODEC_TYPE_LC3](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_LC3)
+                pub const SOURCE_CODEC_TYPE_LC3 : i32 = 5;
+
+                /// public static final [SOURCE_CODEC_TYPE_LDAC](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_LDAC)
+                pub const SOURCE_CODEC_TYPE_LDAC : i32 = 4;
+
+                /// public static final [SOURCE_CODEC_TYPE_SBC](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.html#SOURCE_CODEC_TYPE_SBC)
+                pub const SOURCE_CODEC_TYPE_SBC : i32 = 0;
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothCodecConfig.Builder](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html)
+            public final class BluetoothCodecConfig_Builder ("android/bluetooth/BluetoothCodecConfig$Builder\0") extends super::super::java::lang::Object {
+
+                /// [Builder](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#Builder())
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "<init>\0", "()V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecType](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecType(int))
+                pub fn setCodecType<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecType", .descriptor == "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecType\0", "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecPriority](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecPriority(int))
+                pub fn setCodecPriority<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecPriority", .descriptor == "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecPriority\0", "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setSampleRate](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setSampleRate(int))
+                pub fn setSampleRate<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setSampleRate", .descriptor == "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setSampleRate\0", "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setBitsPerSample](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setBitsPerSample(int))
+                pub fn setBitsPerSample<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setBitsPerSample", .descriptor == "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setBitsPerSample\0", "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setChannelMode](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setChannelMode(int))
+                pub fn setChannelMode<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setChannelMode", .descriptor == "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setChannelMode\0", "(I)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecSpecific1](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecSpecific1(long))
+                pub fn setCodecSpecific1<'env>(&'env self, arg0: i64) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecSpecific1", .descriptor == "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecSpecific1\0", "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecSpecific2](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecSpecific2(long))
+                pub fn setCodecSpecific2<'env>(&'env self, arg0: i64) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecSpecific2", .descriptor == "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecSpecific2\0", "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecSpecific3](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecSpecific3(long))
+                pub fn setCodecSpecific3<'env>(&'env self, arg0: i64) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecSpecific3", .descriptor == "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecSpecific3\0", "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecSpecific4](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#setCodecSpecific4(long))
+                pub fn setCodecSpecific4<'env>(&'env self, arg0: i64) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecSpecific4", .descriptor == "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "setCodecSpecific4\0", "(J)Landroid/bluetooth/BluetoothCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [build](https://developer.android.com/reference/android/bluetooth/BluetoothCodecConfig.Builder.html#build())
+                pub fn build<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecConfig$Builder", java.flags == PUBLIC, .name == "build", .descriptor == "()Landroid/bluetooth/BluetoothCodecConfig;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecConfig$Builder\0", "build\0", "()Landroid/bluetooth/BluetoothCodecConfig;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothCodecStatus](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html)
+            public final class BluetoothCodecStatus ("android/bluetooth/BluetoothCodecStatus\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
+
+                /// [equals](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#equals(java.lang.Object))
+                pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isCodecConfigSelectable](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#isCodecConfigSelectable(android.bluetooth.BluetoothCodecConfig))
+                pub fn isCodecConfigSelectable<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothCodecConfig>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "isCodecConfigSelectable", .descriptor == "(Landroid/bluetooth/BluetoothCodecConfig;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "isCodecConfigSelectable\0", "(Landroid/bluetooth/BluetoothCodecConfig;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [hashCode](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#hashCode())
+                pub fn hashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "hashCode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "hashCode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [toString](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#toString())
+                pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "toString\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [describeContents](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#describeContents())
+                pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "describeContents\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#getCodecConfig())
+                pub fn getCodecConfig<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecConfig>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "getCodecConfig", .descriptor == "()Landroid/bluetooth/BluetoothCodecConfig;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "getCodecConfig\0", "()Landroid/bluetooth/BluetoothCodecConfig;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecsLocalCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#getCodecsLocalCapabilities())
+                pub fn getCodecsLocalCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "getCodecsLocalCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "getCodecsLocalCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecsSelectableCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#getCodecsSelectableCapabilities())
+                pub fn getCodecsSelectableCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus", java.flags == PUBLIC, .name == "getCodecsSelectableCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus\0", "getCodecsSelectableCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [EXTRA_CODEC_STATUS](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.html#EXTRA_CODEC_STATUS)
+                pub const EXTRA_CODEC_STATUS : &'static str = "android.bluetooth.extra.CODEC_STATUS";
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothCodecStatus.Builder](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html)
+            public final class BluetoothCodecStatus_Builder ("android/bluetooth/BluetoothCodecStatus$Builder\0") extends super::super::java::lang::Object {
+
+                /// [Builder](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html#Builder())
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus$Builder", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus$Builder\0", "<init>\0", "()V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html#setCodecConfig(android.bluetooth.BluetoothCodecConfig))
+                pub fn setCodecConfig<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothCodecConfig>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecStatus_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus$Builder", java.flags == PUBLIC, .name == "setCodecConfig", .descriptor == "(Landroid/bluetooth/BluetoothCodecConfig;)Landroid/bluetooth/BluetoothCodecStatus$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus$Builder\0", "setCodecConfig\0", "(Landroid/bluetooth/BluetoothCodecConfig;)Landroid/bluetooth/BluetoothCodecStatus$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecsLocalCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html#setCodecsLocalCapabilities(java.util.List))
+                pub fn setCodecsLocalCapabilities<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecStatus_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus$Builder", java.flags == PUBLIC, .name == "setCodecsLocalCapabilities", .descriptor == "(Ljava/util/List;)Landroid/bluetooth/BluetoothCodecStatus$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus$Builder\0", "setCodecsLocalCapabilities\0", "(Ljava/util/List;)Landroid/bluetooth/BluetoothCodecStatus$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecsSelectableCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html#setCodecsSelectableCapabilities(java.util.List))
+                pub fn setCodecsSelectableCapabilities<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecStatus_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus$Builder", java.flags == PUBLIC, .name == "setCodecsSelectableCapabilities", .descriptor == "(Ljava/util/List;)Landroid/bluetooth/BluetoothCodecStatus$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus$Builder\0", "setCodecsSelectableCapabilities\0", "(Ljava/util/List;)Landroid/bluetooth/BluetoothCodecStatus$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [build](https://developer.android.com/reference/android/bluetooth/BluetoothCodecStatus.Builder.html#build())
+                pub fn build<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothCodecStatus>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCodecStatus$Builder", java.flags == PUBLIC, .name == "build", .descriptor == "()Landroid/bluetooth/BluetoothCodecStatus;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCodecStatus$Builder\0", "build\0", "()Landroid/bluetooth/BluetoothCodecStatus;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothCsipSetCoordinator](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html)
+            public final class BluetoothCsipSetCoordinator ("android/bluetooth/BluetoothCsipSetCoordinator\0") extends super::super::java::lang::Object, implements BluetoothProfile {
+
+                /// [close](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html#close())
+                pub fn close<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCsipSetCoordinator", java.flags == PUBLIC, .name == "close", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCsipSetCoordinator\0", "close\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectedDevices](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html#getConnectedDevices())
+                pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCsipSetCoordinator", java.flags == PUBLIC, .name == "getConnectedDevices", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCsipSetCoordinator\0", "getConnectedDevices\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getDevicesMatchingConnectionStates](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html#getDevicesMatchingConnectionStates(int%5B%5D))
+                pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCsipSetCoordinator", java.flags == PUBLIC, .name == "getDevicesMatchingConnectionStates", .descriptor == "([I)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCsipSetCoordinator\0", "getDevicesMatchingConnectionStates\0", "([I)Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectionState](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html#getConnectionState(android.bluetooth.BluetoothDevice))
+                pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothCsipSetCoordinator", java.flags == PUBLIC, .name == "getConnectionState", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothCsipSetCoordinator\0", "getConnectionState\0", "(Landroid/bluetooth/BluetoothDevice;)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [ACTION_CSIS_CONNECTION_STATE_CHANGED](https://developer.android.com/reference/android/bluetooth/BluetoothCsipSetCoordinator.html#ACTION_CSIS_CONNECTION_STATE_CHANGED)
+                pub const ACTION_CSIS_CONNECTION_STATE_CHANGED : &'static str = "android.bluetooth.action.CSIS_CONNECTION_STATE_CHANGED";
             }
         }
 
@@ -3811,6 +4999,28 @@ pub mod android {
                         let __jni_args = [];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothDevice\0", "getType\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getAlias](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#getAlias())
+                pub fn getAlias<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothDevice", java.flags == PUBLIC, .name == "getAlias", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothDevice\0", "getAlias\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setAlias](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#setAlias(java.lang.String))
+                pub fn setAlias<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothDevice", java.flags == PUBLIC, .name == "setAlias", .descriptor == "(Ljava/lang/String;)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothDevice\0", "setAlias\0", "(Ljava/lang/String;)I\0");
                         __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -3914,6 +5124,28 @@ pub mod android {
                     }
                 }
 
+                /// [createL2capChannel](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#createL2capChannel(int))
+                pub fn createL2capChannel<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothSocket>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothDevice", java.flags == PUBLIC, .name == "createL2capChannel", .descriptor == "(I)Landroid/bluetooth/BluetoothSocket;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothDevice\0", "createL2capChannel\0", "(I)Landroid/bluetooth/BluetoothSocket;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [createInsecureL2capChannel](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#createInsecureL2capChannel(int))
+                pub fn createInsecureL2capChannel<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothSocket>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothDevice", java.flags == PUBLIC, .name == "createInsecureL2capChannel", .descriptor == "(I)Landroid/bluetooth/BluetoothSocket;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothDevice\0", "createInsecureL2capChannel\0", "(I)Landroid/bluetooth/BluetoothSocket;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// public static final [ACTION_ACL_CONNECTED](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ACTION_ACL_CONNECTED)
                 pub const ACTION_ACL_CONNECTED : &'static str = "android.bluetooth.device.action.ACL_CONNECTED";
 
@@ -3922,6 +5154,9 @@ pub mod android {
 
                 /// public static final [ACTION_ACL_DISCONNECT_REQUESTED](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ACTION_ACL_DISCONNECT_REQUESTED)
                 pub const ACTION_ACL_DISCONNECT_REQUESTED : &'static str = "android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED";
+
+                /// public static final [ACTION_ALIAS_CHANGED](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ACTION_ALIAS_CHANGED)
+                pub const ACTION_ALIAS_CHANGED : &'static str = "android.bluetooth.device.action.ALIAS_CHANGED";
 
                 /// public static final [ACTION_BOND_STATE_CHANGED](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ACTION_BOND_STATE_CHANGED)
                 pub const ACTION_BOND_STATE_CHANGED : &'static str = "android.bluetooth.device.action.BOND_STATE_CHANGED";
@@ -3940,6 +5175,15 @@ pub mod android {
 
                 /// public static final [ACTION_UUID](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ACTION_UUID)
                 pub const ACTION_UUID : &'static str = "android.bluetooth.device.action.UUID";
+
+                /// public static final [ADDRESS_TYPE_PUBLIC](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ADDRESS_TYPE_PUBLIC)
+                pub const ADDRESS_TYPE_PUBLIC : i32 = 0;
+
+                /// public static final [ADDRESS_TYPE_RANDOM](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ADDRESS_TYPE_RANDOM)
+                pub const ADDRESS_TYPE_RANDOM : i32 = 1;
+
+                /// public static final [ADDRESS_TYPE_UNKNOWN](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#ADDRESS_TYPE_UNKNOWN)
+                pub const ADDRESS_TYPE_UNKNOWN : i32 = 65535;
 
                 /// public static final [BOND_BONDED](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#BOND_BONDED)
                 pub const BOND_BONDED : i32 = 12;
@@ -3974,6 +5218,9 @@ pub mod android {
                 /// public static final [EXTRA_DEVICE](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_DEVICE)
                 pub const EXTRA_DEVICE : &'static str = "android.bluetooth.device.extra.DEVICE";
 
+                /// public static final [EXTRA_IS_COORDINATED_SET_MEMBER](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_IS_COORDINATED_SET_MEMBER)
+                pub const EXTRA_IS_COORDINATED_SET_MEMBER : &'static str = "android.bluetooth.extra.IS_COORDINATED_SET_MEMBER";
+
                 /// public static final [EXTRA_NAME](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_NAME)
                 pub const EXTRA_NAME : &'static str = "android.bluetooth.device.extra.NAME";
 
@@ -3988,6 +5235,9 @@ pub mod android {
 
                 /// public static final [EXTRA_RSSI](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_RSSI)
                 pub const EXTRA_RSSI : &'static str = "android.bluetooth.device.extra.RSSI";
+
+                /// public static final [EXTRA_TRANSPORT](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_TRANSPORT)
+                pub const EXTRA_TRANSPORT : &'static str = "android.bluetooth.device.extra.TRANSPORT";
 
                 /// public static final [EXTRA_UUID](https://developer.android.com/reference/android/bluetooth/BluetoothDevice.html#EXTRA_UUID)
                 pub const EXTRA_UUID : &'static str = "android.bluetooth.device.extra.UUID";
@@ -4151,13 +5401,24 @@ pub mod android {
                 }
 
                 /// [writeCharacteristic](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#writeCharacteristic(android.bluetooth.BluetoothGattCharacteristic))
-                pub fn writeCharacteristic<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn writeCharacteristic_BluetoothGattCharacteristic<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "writeCharacteristic", .descriptor == "(Landroid/bluetooth/BluetoothGattCharacteristic;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGatt\0", "writeCharacteristic\0", "(Landroid/bluetooth/BluetoothGattCharacteristic;)Z\0");
                         __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [writeCharacteristic](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#writeCharacteristic(android.bluetooth.BluetoothGattCharacteristic,%20byte%5B%5D,%20int))
+                pub fn writeCharacteristic_BluetoothGattCharacteristic_byte_array_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg2: i32) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "writeCharacteristic", .descriptor == "(Landroid/bluetooth/BluetoothGattCharacteristic;[BI)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGatt\0", "writeCharacteristic\0", "(Landroid/bluetooth/BluetoothGattCharacteristic;[BI)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
 
@@ -4173,13 +5434,24 @@ pub mod android {
                 }
 
                 /// [writeDescriptor](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#writeDescriptor(android.bluetooth.BluetoothGattDescriptor))
-                pub fn writeDescriptor<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn writeDescriptor_BluetoothGattDescriptor<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "writeDescriptor", .descriptor == "(Landroid/bluetooth/BluetoothGattDescriptor;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGatt\0", "writeDescriptor\0", "(Landroid/bluetooth/BluetoothGattDescriptor;)Z\0");
                         __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [writeDescriptor](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#writeDescriptor(android.bluetooth.BluetoothGattDescriptor,%20byte%5B%5D))
+                pub fn writeDescriptor_BluetoothGattDescriptor_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "writeDescriptor", .descriptor == "(Landroid/bluetooth/BluetoothGattDescriptor;[B)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGatt\0", "writeDescriptor\0", "(Landroid/bluetooth/BluetoothGattDescriptor;[B)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
 
@@ -4272,7 +5544,7 @@ pub mod android {
                 }
 
                 /// [getConnectionState](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#getConnectionState(android.bluetooth.BluetoothDevice))
-                pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "getConnectionState", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -4283,7 +5555,7 @@ pub mod android {
                 }
 
                 /// [getConnectedDevices](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#getConnectedDevices())
-                pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "getConnectedDevices", .descriptor == "()Ljava/util/List;"
                     unsafe {
                         let __jni_args = [];
@@ -4294,7 +5566,7 @@ pub mod android {
                 }
 
                 /// [getDevicesMatchingConnectionStates](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#getDevicesMatchingConnectionStates(int%5B%5D))
-                pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGatt", java.flags == PUBLIC, .name == "getDevicesMatchingConnectionStates", .descriptor == "([I)Ljava/util/List;"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -4321,6 +5593,9 @@ pub mod android {
 
                 /// public static final [GATT_INSUFFICIENT_AUTHENTICATION](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#GATT_INSUFFICIENT_AUTHENTICATION)
                 pub const GATT_INSUFFICIENT_AUTHENTICATION : i32 = 5;
+
+                /// public static final [GATT_INSUFFICIENT_AUTHORIZATION](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#GATT_INSUFFICIENT_AUTHORIZATION)
+                pub const GATT_INSUFFICIENT_AUTHORIZATION : i32 = 8;
 
                 /// public static final [GATT_INSUFFICIENT_ENCRYPTION](https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html#GATT_INSUFFICIENT_ENCRYPTION)
                 pub const GATT_INSUFFICIENT_ENCRYPTION : i32 = 15;
@@ -4404,12 +5679,23 @@ pub mod android {
                 }
 
                 /// [onCharacteristicRead](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onCharacteristicRead(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic,%20int))
-                pub fn onCharacteristicRead<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onCharacteristicRead", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;I)V"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onCharacteristicRead\0", "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;I)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [onCharacteristicRead](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onCharacteristicRead(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic,%20byte%5B%5D,%20int))
+                pub fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_byte_array_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg3: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onCharacteristicRead", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[BI)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onCharacteristicRead\0", "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[BI)V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -4426,7 +5712,7 @@ pub mod android {
                 }
 
                 /// [onCharacteristicChanged](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onCharacteristicChanged(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic))
-                pub fn onCharacteristicChanged<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onCharacteristicChanged", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;)V"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
@@ -4436,13 +5722,35 @@ pub mod android {
                     }
                 }
 
+                /// [onCharacteristicChanged](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onCharacteristicChanged(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic,%20byte%5B%5D))
+                pub fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onCharacteristicChanged", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[B)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onCharacteristicChanged\0", "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[B)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [onDescriptorRead](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onDescriptorRead(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattDescriptor,%20int))
-                pub fn onDescriptorRead<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>, arg2: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>, arg2: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onDescriptorRead", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I)V"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onDescriptorRead\0", "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [onDescriptorRead](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onDescriptorRead(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattDescriptor,%20int,%20byte%5B%5D))
+                pub fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattDescriptor>>, arg2: i32, arg3: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onDescriptorRead", .descriptor == "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I[B)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onDescriptorRead\0", "(Landroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I[B)V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -4487,6 +5795,17 @@ pub mod android {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onMtuChanged\0", "(Landroid/bluetooth/BluetoothGatt;II)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [onServiceChanged](https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback.html#onServiceChanged(android.bluetooth.BluetoothGatt))
+                pub fn onServiceChanged<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGatt>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGattCallback", java.flags == PUBLIC, .name == "onServiceChanged", .descriptor == "(Landroid/bluetooth/BluetoothGatt;)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattCallback\0", "onServiceChanged\0", "(Landroid/bluetooth/BluetoothGatt;)V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -4629,7 +5948,7 @@ pub mod android {
                 }
 
                 /// [getValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#getValue())
-                pub fn getValue<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getValue<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "getValue", .descriptor == "()[B"
                     unsafe {
                         let __jni_args = [];
@@ -4640,7 +5959,7 @@ pub mod android {
                 }
 
                 /// [getStringValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#getStringValue(int))
-                pub fn getStringValue<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getStringValue<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "getStringValue", .descriptor == "(I)Ljava/lang/String;"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
@@ -4651,7 +5970,7 @@ pub mod android {
                 }
 
                 /// [setValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#setValue(byte%5B%5D))
-                pub fn setValue_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn setValue_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "setValue", .descriptor == "([B)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -4662,7 +5981,7 @@ pub mod android {
                 }
 
                 /// [setValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#setValue(int,%20int,%20int))
-                pub fn setValue_int_int_int<'env>(&'env self, arg0: i32, arg1: i32, arg2: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn setValue_int_int_int<'env>(&'env self, arg0: i32, arg1: i32, arg2: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "setValue", .descriptor == "(III)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
@@ -4673,7 +5992,7 @@ pub mod android {
                 }
 
                 /// [setValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#setValue(int,%20int,%20int,%20int))
-                pub fn setValue_int_int_int_int<'env>(&'env self, arg0: i32, arg1: i32, arg2: i32, arg3: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn setValue_int_int_int_int<'env>(&'env self, arg0: i32, arg1: i32, arg2: i32, arg3: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "setValue", .descriptor == "(IIII)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2), ::java_spaghetti::AsJValue::as_jvalue(&arg3)];
@@ -4684,7 +6003,7 @@ pub mod android {
                 }
 
                 /// [setValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic.html#setValue(java.lang.String))
-                pub fn setValue_String<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn setValue_String<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattCharacteristic", java.flags == PUBLIC, .name == "setValue", .descriptor == "(Ljava/lang/String;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -4836,7 +6155,7 @@ pub mod android {
                 }
 
                 /// [getValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattDescriptor.html#getValue())
-                pub fn getValue<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getValue<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattDescriptor", java.flags == PUBLIC, .name == "getValue", .descriptor == "()[B"
                     unsafe {
                         let __jni_args = [];
@@ -4847,7 +6166,7 @@ pub mod android {
                 }
 
                 /// [setValue](https://developer.android.com/reference/android/bluetooth/BluetoothGattDescriptor.html#setValue(byte%5B%5D))
-                pub fn setValue<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn setValue<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattDescriptor", java.flags == PUBLIC, .name == "setValue", .descriptor == "([B)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -4978,13 +6297,24 @@ pub mod android {
                 }
 
                 /// [notifyCharacteristicChanged](https://developer.android.com/reference/android/bluetooth/BluetoothGattServer.html#notifyCharacteristicChanged(android.bluetooth.BluetoothDevice,%20android.bluetooth.BluetoothGattCharacteristic,%20boolean))
-                pub fn notifyCharacteristicChanged<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: bool) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn notifyCharacteristicChanged_BluetoothDevice_BluetoothGattCharacteristic_boolean<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: bool) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothGattServer", java.flags == PUBLIC, .name == "notifyCharacteristicChanged", .descriptor == "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothGattCharacteristic;Z)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattServer\0", "notifyCharacteristicChanged\0", "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothGattCharacteristic;Z)Z\0");
                         __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [notifyCharacteristicChanged](https://developer.android.com/reference/android/bluetooth/BluetoothGattServer.html#notifyCharacteristicChanged(android.bluetooth.BluetoothDevice,%20android.bluetooth.BluetoothGattCharacteristic,%20boolean,%20byte%5B%5D))
+                pub fn notifyCharacteristicChanged_BluetoothDevice_BluetoothGattCharacteristic_boolean_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothGattCharacteristic>>, arg2: bool, arg3: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothGattServer", java.flags == PUBLIC, .name == "notifyCharacteristicChanged", .descriptor == "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothGattCharacteristic;Z[B)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothGattServer\0", "notifyCharacteristicChanged\0", "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothGattCharacteristic;Z[B)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
 
@@ -5373,6 +6703,28 @@ pub mod android {
                     }
                 }
 
+                /// [isNoiseReductionSupported](https://developer.android.com/reference/android/bluetooth/BluetoothHeadset.html#isNoiseReductionSupported(android.bluetooth.BluetoothDevice))
+                pub fn isNoiseReductionSupported<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothHeadset", java.flags == PUBLIC, .name == "isNoiseReductionSupported", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHeadset\0", "isNoiseReductionSupported\0", "(Landroid/bluetooth/BluetoothDevice;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isVoiceRecognitionSupported](https://developer.android.com/reference/android/bluetooth/BluetoothHeadset.html#isVoiceRecognitionSupported(android.bluetooth.BluetoothDevice))
+                pub fn isVoiceRecognitionSupported<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothHeadset", java.flags == PUBLIC, .name == "isVoiceRecognitionSupported", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHeadset\0", "isVoiceRecognitionSupported\0", "(Landroid/bluetooth/BluetoothDevice;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [startVoiceRecognition](https://developer.android.com/reference/android/bluetooth/BluetoothHeadset.html#startVoiceRecognition(android.bluetooth.BluetoothDevice))
                 pub fn startVoiceRecognition<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHeadset", java.flags == PUBLIC, .name == "startVoiceRecognition", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)Z"
@@ -5469,10 +6821,10 @@ pub mod android {
 
         ::java_spaghetti::class! {
             /// public final class [BluetoothHealth](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html)
-            public final class BluetoothHealth ("android/bluetooth/BluetoothHealth\0") extends super::super::java::lang::Object, implements BluetoothProfile {
+            #[deprecated] public final class BluetoothHealth ("android/bluetooth/BluetoothHealth\0") extends super::super::java::lang::Object, implements BluetoothProfile {
 
                 /// [registerSinkAppConfiguration](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#registerSinkAppConfiguration(java.lang.String,%20int,%20android.bluetooth.BluetoothHealthCallback))
-                pub fn registerSinkAppConfiguration<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>, arg1: i32, arg2: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthCallback>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn registerSinkAppConfiguration<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::String>>, arg1: i32, arg2: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthCallback>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "registerSinkAppConfiguration", .descriptor == "(Ljava/lang/String;ILandroid/bluetooth/BluetoothHealthCallback;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into())];
@@ -5483,7 +6835,7 @@ pub mod android {
                 }
 
                 /// [unregisterAppConfiguration](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#unregisterAppConfiguration(android.bluetooth.BluetoothHealthAppConfiguration))
-                pub fn unregisterAppConfiguration<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn unregisterAppConfiguration<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "unregisterAppConfiguration", .descriptor == "(Landroid/bluetooth/BluetoothHealthAppConfiguration;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -5494,7 +6846,7 @@ pub mod android {
                 }
 
                 /// [connectChannelToSource](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#connectChannelToSource(android.bluetooth.BluetoothDevice,%20android.bluetooth.BluetoothHealthAppConfiguration))
-                pub fn connectChannelToSource<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn connectChannelToSource<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "connectChannelToSource", .descriptor == "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothHealthAppConfiguration;)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
@@ -5505,7 +6857,7 @@ pub mod android {
                 }
 
                 /// [disconnectChannel](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#disconnectChannel(android.bluetooth.BluetoothDevice,%20android.bluetooth.BluetoothHealthAppConfiguration,%20int))
-                pub fn disconnectChannel<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>, arg2: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn disconnectChannel<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>, arg2: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "disconnectChannel", .descriptor == "(Landroid/bluetooth/BluetoothDevice;Landroid/bluetooth/BluetoothHealthAppConfiguration;I)Z"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
@@ -5516,7 +6868,7 @@ pub mod android {
                 }
 
                 /// [getConnectionState](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#getConnectionState(android.bluetooth.BluetoothDevice))
-                pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "getConnectionState", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -5527,7 +6879,7 @@ pub mod android {
                 }
 
                 /// [getConnectedDevices](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#getConnectedDevices())
-                pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "getConnectedDevices", .descriptor == "()Ljava/util/List;"
                     unsafe {
                         let __jni_args = [];
@@ -5538,7 +6890,7 @@ pub mod android {
                 }
 
                 /// [getDevicesMatchingConnectionStates](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#getDevicesMatchingConnectionStates(int%5B%5D))
-                pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealth", java.flags == PUBLIC, .name == "getDevicesMatchingConnectionStates", .descriptor == "([I)Ljava/util/List;"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
@@ -5549,82 +6901,49 @@ pub mod android {
                 }
 
                 /// public static final [APP_CONFIG_REGISTRATION_FAILURE](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#APP_CONFIG_REGISTRATION_FAILURE)
-                pub const APP_CONFIG_REGISTRATION_FAILURE : i32 = 1;
+                #[deprecated] pub const APP_CONFIG_REGISTRATION_FAILURE : i32 = 1;
 
                 /// public static final [APP_CONFIG_REGISTRATION_SUCCESS](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#APP_CONFIG_REGISTRATION_SUCCESS)
-                pub const APP_CONFIG_REGISTRATION_SUCCESS : i32 = 0;
+                #[deprecated] pub const APP_CONFIG_REGISTRATION_SUCCESS : i32 = 0;
 
                 /// public static final [APP_CONFIG_UNREGISTRATION_FAILURE](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#APP_CONFIG_UNREGISTRATION_FAILURE)
-                pub const APP_CONFIG_UNREGISTRATION_FAILURE : i32 = 3;
+                #[deprecated] pub const APP_CONFIG_UNREGISTRATION_FAILURE : i32 = 3;
 
                 /// public static final [APP_CONFIG_UNREGISTRATION_SUCCESS](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#APP_CONFIG_UNREGISTRATION_SUCCESS)
-                pub const APP_CONFIG_UNREGISTRATION_SUCCESS : i32 = 2;
+                #[deprecated] pub const APP_CONFIG_UNREGISTRATION_SUCCESS : i32 = 2;
 
                 /// public static final [CHANNEL_TYPE_RELIABLE](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#CHANNEL_TYPE_RELIABLE)
-                pub const CHANNEL_TYPE_RELIABLE : i32 = 10;
+                #[deprecated] pub const CHANNEL_TYPE_RELIABLE : i32 = 10;
 
                 /// public static final [CHANNEL_TYPE_STREAMING](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#CHANNEL_TYPE_STREAMING)
-                pub const CHANNEL_TYPE_STREAMING : i32 = 11;
+                #[deprecated] pub const CHANNEL_TYPE_STREAMING : i32 = 11;
 
                 /// public static final [SINK_ROLE](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#SINK_ROLE)
-                pub const SINK_ROLE : i32 = 2;
+                #[deprecated] pub const SINK_ROLE : i32 = 2;
 
                 /// public static final [SOURCE_ROLE](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#SOURCE_ROLE)
-                pub const SOURCE_ROLE : i32 = 1;
+                #[deprecated] pub const SOURCE_ROLE : i32 = 1;
 
                 /// public static final [STATE_CHANNEL_CONNECTED](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#STATE_CHANNEL_CONNECTED)
-                pub const STATE_CHANNEL_CONNECTED : i32 = 2;
+                #[deprecated] pub const STATE_CHANNEL_CONNECTED : i32 = 2;
 
                 /// public static final [STATE_CHANNEL_CONNECTING](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#STATE_CHANNEL_CONNECTING)
-                pub const STATE_CHANNEL_CONNECTING : i32 = 1;
+                #[deprecated] pub const STATE_CHANNEL_CONNECTING : i32 = 1;
 
                 /// public static final [STATE_CHANNEL_DISCONNECTED](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#STATE_CHANNEL_DISCONNECTED)
-                pub const STATE_CHANNEL_DISCONNECTED : i32 = 0;
+                #[deprecated] pub const STATE_CHANNEL_DISCONNECTED : i32 = 0;
 
                 /// public static final [STATE_CHANNEL_DISCONNECTING](https://developer.android.com/reference/android/bluetooth/BluetoothHealth.html#STATE_CHANNEL_DISCONNECTING)
-                pub const STATE_CHANNEL_DISCONNECTING : i32 = 3;
+                #[deprecated] pub const STATE_CHANNEL_DISCONNECTING : i32 = 3;
             }
         }
 
         ::java_spaghetti::class! {
             /// public final class [BluetoothHealthAppConfiguration](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html)
-            public final class BluetoothHealthAppConfiguration ("android/bluetooth/BluetoothHealthAppConfiguration\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
-
-                /// [equals](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#equals(java.lang.Object))
-                pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
-                    // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
-                    unsafe {
-                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
-                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
-                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHealthAppConfiguration\0", "equals\0", "(Ljava/lang/Object;)Z\0");
-                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
-                    }
-                }
-
-                /// [hashCode](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#hashCode())
-                pub fn hashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
-                    // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "hashCode", .descriptor == "()I"
-                    unsafe {
-                        let __jni_args = [];
-                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
-                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHealthAppConfiguration\0", "hashCode\0", "()I\0");
-                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
-                    }
-                }
-
-                /// [toString](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#toString())
-                pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
-                    // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
-                    unsafe {
-                        let __jni_args = [];
-                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
-                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHealthAppConfiguration\0", "toString\0", "()Ljava/lang/String;\0");
-                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
-                    }
-                }
+            #[deprecated] public final class BluetoothHealthAppConfiguration ("android/bluetooth/BluetoothHealthAppConfiguration\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
 
                 /// [describeContents](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#describeContents())
-                pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
                     unsafe {
                         let __jni_args = [];
@@ -5635,7 +6954,7 @@ pub mod android {
                 }
 
                 /// [getDataType](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#getDataType())
-                pub fn getDataType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getDataType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "getDataType", .descriptor == "()I"
                     unsafe {
                         let __jni_args = [];
@@ -5646,7 +6965,7 @@ pub mod android {
                 }
 
                 /// [getName](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#getName())
-                pub fn getName<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getName<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "getName", .descriptor == "()Ljava/lang/String;"
                     unsafe {
                         let __jni_args = [];
@@ -5657,7 +6976,7 @@ pub mod android {
                 }
 
                 /// [getRole](https://developer.android.com/reference/android/bluetooth/BluetoothHealthAppConfiguration.html#getRole())
-                pub fn getRole<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn getRole<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthAppConfiguration", java.flags == PUBLIC, .name == "getRole", .descriptor == "()I"
                     unsafe {
                         let __jni_args = [];
@@ -5671,10 +6990,10 @@ pub mod android {
 
         ::java_spaghetti::class! {
             /// public class [BluetoothHealthCallback](https://developer.android.com/reference/android/bluetooth/BluetoothHealthCallback.html)
-            public class BluetoothHealthCallback ("android/bluetooth/BluetoothHealthCallback\0") extends super::super::java::lang::Object {
+            #[deprecated] public class BluetoothHealthCallback ("android/bluetooth/BluetoothHealthCallback\0") extends super::super::java::lang::Object {
 
                 /// [BluetoothHealthCallback](https://developer.android.com/reference/android/bluetooth/BluetoothHealthCallback.html#BluetoothHealthCallback())
-                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthCallback", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
                     unsafe {
                         let __jni_args = [];
@@ -5684,7 +7003,7 @@ pub mod android {
                 }
 
                 /// [onHealthAppConfigurationStatusChange](https://developer.android.com/reference/android/bluetooth/BluetoothHealthCallback.html#onHealthAppConfigurationStatusChange(android.bluetooth.BluetoothHealthAppConfiguration,%20int))
-                pub fn onHealthAppConfigurationStatusChange<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>, arg1: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                #[deprecated] pub fn onHealthAppConfigurationStatusChange<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothHealthAppConfiguration>>, arg1: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothHealthCallback", java.flags == PUBLIC, .name == "onHealthAppConfigurationStatusChange", .descriptor == "(Landroid/bluetooth/BluetoothHealthAppConfiguration;I)V"
                     unsafe {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1)];
@@ -5693,6 +7012,48 @@ pub mod android {
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothHearingAid](https://developer.android.com/reference/android/bluetooth/BluetoothHearingAid.html)
+            public final class BluetoothHearingAid ("android/bluetooth/BluetoothHearingAid\0") extends super::super::java::lang::Object, implements BluetoothProfile {
+
+                /// [getConnectedDevices](https://developer.android.com/reference/android/bluetooth/BluetoothHearingAid.html#getConnectedDevices())
+                pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothHearingAid", java.flags == PUBLIC, .name == "getConnectedDevices", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHearingAid\0", "getConnectedDevices\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getDevicesMatchingConnectionStates](https://developer.android.com/reference/android/bluetooth/BluetoothHearingAid.html#getDevicesMatchingConnectionStates(int%5B%5D))
+                pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothHearingAid", java.flags == PUBLIC, .name == "getDevicesMatchingConnectionStates", .descriptor == "([I)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHearingAid\0", "getDevicesMatchingConnectionStates\0", "([I)Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectionState](https://developer.android.com/reference/android/bluetooth/BluetoothHearingAid.html#getConnectionState(android.bluetooth.BluetoothDevice))
+                pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothHearingAid", java.flags == PUBLIC, .name == "getConnectionState", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothHearingAid\0", "getConnectionState\0", "(Landroid/bluetooth/BluetoothDevice;)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [ACTION_CONNECTION_STATE_CHANGED](https://developer.android.com/reference/android/bluetooth/BluetoothHearingAid.html#ACTION_CONNECTION_STATE_CHANGED)
+                pub const ACTION_CONNECTION_STATE_CHANGED : &'static str = "android.bluetooth.hearingaid.profile.action.CONNECTION_STATE_CHANGED";
             }
         }
 
@@ -6151,6 +7512,597 @@ pub mod android {
         }
 
         ::java_spaghetti::class! {
+            /// public final class [BluetoothLeAudio](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html)
+            public final class BluetoothLeAudio ("android/bluetooth/BluetoothLeAudio\0") extends super::super::java::lang::Object, implements BluetoothProfile {
+
+                /// [close](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#close())
+                pub fn close<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "close", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "close\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectedGroupLeadDevice](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#getConnectedGroupLeadDevice(int))
+                pub fn getConnectedGroupLeadDevice<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothDevice>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "getConnectedGroupLeadDevice", .descriptor == "(I)Landroid/bluetooth/BluetoothDevice;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "getConnectedGroupLeadDevice\0", "(I)Landroid/bluetooth/BluetoothDevice;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectedDevices](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#getConnectedDevices())
+                pub fn getConnectedDevices<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "getConnectedDevices", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "getConnectedDevices\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getDevicesMatchingConnectionStates](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#getDevicesMatchingConnectionStates(int%5B%5D))
+                pub fn getDevicesMatchingConnectionStates<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::IntArray>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "getDevicesMatchingConnectionStates", .descriptor == "([I)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "getDevicesMatchingConnectionStates\0", "([I)Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getConnectionState](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#getConnectionState(android.bluetooth.BluetoothDevice))
+                pub fn getConnectionState<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "getConnectionState", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "getConnectionState\0", "(Landroid/bluetooth/BluetoothDevice;)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getGroupId](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#getGroupId(android.bluetooth.BluetoothDevice))
+                pub fn getGroupId<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothDevice>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudio", java.flags == PUBLIC, .name == "getGroupId", .descriptor == "(Landroid/bluetooth/BluetoothDevice;)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudio\0", "getGroupId\0", "(Landroid/bluetooth/BluetoothDevice;)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [ACTION_LE_AUDIO_CONNECTION_STATE_CHANGED](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#ACTION_LE_AUDIO_CONNECTION_STATE_CHANGED)
+                pub const ACTION_LE_AUDIO_CONNECTION_STATE_CHANGED : &'static str = "android.bluetooth.action.LE_AUDIO_CONNECTION_STATE_CHANGED";
+
+                /// public static final [GROUP_ID_INVALID](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudio.html#GROUP_ID_INVALID)
+                pub const GROUP_ID_INVALID : i32 = -1;
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothLeAudioCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html)
+            public final class BluetoothLeAudioCodecConfig ("android/bluetooth/BluetoothLeAudioCodecConfig\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
+
+                /// [describeContents](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#describeContents())
+                pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "describeContents\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [toString](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#toString())
+                pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "toString\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecType](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getCodecType())
+                pub fn getCodecType<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getCodecType", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getCodecType\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecName](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getCodecName())
+                pub fn getCodecName<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getCodecName", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getCodecName\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getCodecPriority](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getCodecPriority())
+                pub fn getCodecPriority<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getCodecPriority", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getCodecPriority\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getSampleRate](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getSampleRate())
+                pub fn getSampleRate<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getSampleRate", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getSampleRate\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getBitsPerSample](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getBitsPerSample())
+                pub fn getBitsPerSample<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getBitsPerSample", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getBitsPerSample\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getChannelCount](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getChannelCount())
+                pub fn getChannelCount<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getChannelCount", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getChannelCount\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getFrameDuration](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getFrameDuration())
+                pub fn getFrameDuration<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getFrameDuration", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getFrameDuration\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getOctetsPerFrame())
+                pub fn getOctetsPerFrame<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getOctetsPerFrame", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getOctetsPerFrame\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getMinOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getMinOctetsPerFrame())
+                pub fn getMinOctetsPerFrame<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getMinOctetsPerFrame", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getMinOctetsPerFrame\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getMaxOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#getMaxOctetsPerFrame())
+                pub fn getMaxOctetsPerFrame<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "getMaxOctetsPerFrame", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "getMaxOctetsPerFrame\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [equals](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#equals(java.lang.Object))
+                pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [hashCode](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#hashCode())
+                pub fn hashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig", java.flags == PUBLIC, .name == "hashCode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig\0", "hashCode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [BITS_PER_SAMPLE_16](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#BITS_PER_SAMPLE_16)
+                pub const BITS_PER_SAMPLE_16 : i32 = 1;
+
+                /// public static final [BITS_PER_SAMPLE_24](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#BITS_PER_SAMPLE_24)
+                pub const BITS_PER_SAMPLE_24 : i32 = 2;
+
+                /// public static final [BITS_PER_SAMPLE_32](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#BITS_PER_SAMPLE_32)
+                pub const BITS_PER_SAMPLE_32 : i32 = 8;
+
+                /// public static final [BITS_PER_SAMPLE_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#BITS_PER_SAMPLE_NONE)
+                pub const BITS_PER_SAMPLE_NONE : i32 = 0;
+
+                /// public static final [CHANNEL_COUNT_1](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CHANNEL_COUNT_1)
+                pub const CHANNEL_COUNT_1 : i32 = 1;
+
+                /// public static final [CHANNEL_COUNT_2](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CHANNEL_COUNT_2)
+                pub const CHANNEL_COUNT_2 : i32 = 2;
+
+                /// public static final [CHANNEL_COUNT_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CHANNEL_COUNT_NONE)
+                pub const CHANNEL_COUNT_NONE : i32 = 0;
+
+                /// public static final [CODEC_PRIORITY_DEFAULT](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CODEC_PRIORITY_DEFAULT)
+                pub const CODEC_PRIORITY_DEFAULT : i32 = 0;
+
+                /// public static final [CODEC_PRIORITY_DISABLED](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CODEC_PRIORITY_DISABLED)
+                pub const CODEC_PRIORITY_DISABLED : i32 = -1;
+
+                /// public static final [CODEC_PRIORITY_HIGHEST](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#CODEC_PRIORITY_HIGHEST)
+                pub const CODEC_PRIORITY_HIGHEST : i32 = 1000000;
+
+                /// public static final [FRAME_DURATION_10000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#FRAME_DURATION_10000)
+                pub const FRAME_DURATION_10000 : i32 = 2;
+
+                /// public static final [FRAME_DURATION_7500](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#FRAME_DURATION_7500)
+                pub const FRAME_DURATION_7500 : i32 = 1;
+
+                /// public static final [FRAME_DURATION_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#FRAME_DURATION_NONE)
+                pub const FRAME_DURATION_NONE : i32 = 0;
+
+                /// public static final [SAMPLE_RATE_16000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_16000)
+                pub const SAMPLE_RATE_16000 : i32 = 4;
+
+                /// public static final [SAMPLE_RATE_24000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_24000)
+                pub const SAMPLE_RATE_24000 : i32 = 16;
+
+                /// public static final [SAMPLE_RATE_32000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_32000)
+                pub const SAMPLE_RATE_32000 : i32 = 32;
+
+                /// public static final [SAMPLE_RATE_44100](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_44100)
+                pub const SAMPLE_RATE_44100 : i32 = 64;
+
+                /// public static final [SAMPLE_RATE_48000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_48000)
+                pub const SAMPLE_RATE_48000 : i32 = 128;
+
+                /// public static final [SAMPLE_RATE_8000](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_8000)
+                pub const SAMPLE_RATE_8000 : i32 = 1;
+
+                /// public static final [SAMPLE_RATE_NONE](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SAMPLE_RATE_NONE)
+                pub const SAMPLE_RATE_NONE : i32 = 0;
+
+                /// public static final [SOURCE_CODEC_TYPE_INVALID](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SOURCE_CODEC_TYPE_INVALID)
+                pub const SOURCE_CODEC_TYPE_INVALID : i32 = 1000000;
+
+                /// public static final [SOURCE_CODEC_TYPE_LC3](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.html#SOURCE_CODEC_TYPE_LC3)
+                pub const SOURCE_CODEC_TYPE_LC3 : i32 = 0;
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothLeAudioCodecConfig.Builder](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html)
+            public final class BluetoothLeAudioCodecConfig_Builder ("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0") extends super::super::java::lang::Object {
+
+                /// [Builder](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#Builder())
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "<init>\0", "()V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [Builder](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#Builder(android.bluetooth.BluetoothLeAudioCodecConfig))
+                pub fn new_BluetoothLeAudioCodecConfig<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothLeAudioCodecConfig>>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "<init>", .descriptor == "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "<init>\0", "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecType](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setCodecType(int))
+                pub fn setCodecType<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecType", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setCodecType\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setCodecPriority](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setCodecPriority(int))
+                pub fn setCodecPriority<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setCodecPriority", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setCodecPriority\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setSampleRate](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setSampleRate(int))
+                pub fn setSampleRate<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setSampleRate", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setSampleRate\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setBitsPerSample](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setBitsPerSample(int))
+                pub fn setBitsPerSample<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setBitsPerSample", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setBitsPerSample\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setChannelCount](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setChannelCount(int))
+                pub fn setChannelCount<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setChannelCount", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setChannelCount\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setFrameDuration](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setFrameDuration(int))
+                pub fn setFrameDuration<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setFrameDuration", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setFrameDuration\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setOctetsPerFrame(int))
+                pub fn setOctetsPerFrame<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setOctetsPerFrame", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setOctetsPerFrame\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setMinOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setMinOctetsPerFrame(int))
+                pub fn setMinOctetsPerFrame<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setMinOctetsPerFrame", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setMinOctetsPerFrame\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [setMaxOctetsPerFrame](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#setMaxOctetsPerFrame(int))
+                pub fn setMaxOctetsPerFrame<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig_Builder>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "setMaxOctetsPerFrame", .descriptor == "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "setMaxOctetsPerFrame\0", "(I)Landroid/bluetooth/BluetoothLeAudioCodecConfig$Builder;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [build](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecConfig.Builder.html#build())
+                pub fn build<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecConfig$Builder", java.flags == PUBLIC, .name == "build", .descriptor == "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecConfig$Builder\0", "build\0", "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothLeAudioCodecStatus](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html)
+            public final class BluetoothLeAudioCodecStatus ("android/bluetooth/BluetoothLeAudioCodecStatus\0") extends super::super::java::lang::Object, implements super::os::Parcelable {
+
+                /// [BluetoothLeAudioCodecStatus](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#BluetoothLeAudioCodecStatus(android.bluetooth.BluetoothLeAudioCodecConfig,%20android.bluetooth.BluetoothLeAudioCodecConfig,%20java.util.List,%20java.util.List,%20java.util.List,%20java.util.List))
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothLeAudioCodecConfig>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env BluetoothLeAudioCodecConfig>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::util::List>>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "<init>", .descriptor == "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;Landroid/bluetooth/BluetoothLeAudioCodecConfig;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "<init>\0", "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;Landroid/bluetooth/BluetoothLeAudioCodecConfig;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [equals](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#equals(java.lang.Object))
+                pub fn equals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "equals", .descriptor == "(Ljava/lang/Object;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "equals\0", "(Ljava/lang/Object;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isInputCodecConfigSelectable](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#isInputCodecConfigSelectable(android.bluetooth.BluetoothLeAudioCodecConfig))
+                pub fn isInputCodecConfigSelectable<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothLeAudioCodecConfig>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "isInputCodecConfigSelectable", .descriptor == "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "isInputCodecConfigSelectable\0", "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isOutputCodecConfigSelectable](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#isOutputCodecConfigSelectable(android.bluetooth.BluetoothLeAudioCodecConfig))
+                pub fn isOutputCodecConfigSelectable<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env BluetoothLeAudioCodecConfig>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "isOutputCodecConfigSelectable", .descriptor == "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "isOutputCodecConfigSelectable\0", "(Landroid/bluetooth/BluetoothLeAudioCodecConfig;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [hashCode](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#hashCode())
+                pub fn hashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "hashCode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "hashCode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [toString](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#toString())
+                pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::String>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "toString\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [describeContents](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#describeContents())
+                pub fn describeContents<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "describeContents", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "describeContents\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getInputCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getInputCodecConfig())
+                pub fn getInputCodecConfig<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getInputCodecConfig", .descriptor == "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getInputCodecConfig\0", "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getOutputCodecConfig](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getOutputCodecConfig())
+                pub fn getOutputCodecConfig<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, BluetoothLeAudioCodecConfig>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getOutputCodecConfig", .descriptor == "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getOutputCodecConfig\0", "()Landroid/bluetooth/BluetoothLeAudioCodecConfig;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getInputCodecLocalCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getInputCodecLocalCapabilities())
+                pub fn getInputCodecLocalCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getInputCodecLocalCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getInputCodecLocalCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getOutputCodecLocalCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getOutputCodecLocalCapabilities())
+                pub fn getOutputCodecLocalCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getOutputCodecLocalCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getOutputCodecLocalCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getInputCodecSelectableCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getInputCodecSelectableCapabilities())
+                pub fn getInputCodecSelectableCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getInputCodecSelectableCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getInputCodecSelectableCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getOutputCodecSelectableCapabilities](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#getOutputCodecSelectableCapabilities())
+                pub fn getOutputCodecSelectableCapabilities<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::util::List>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothLeAudioCodecStatus", java.flags == PUBLIC, .name == "getOutputCodecSelectableCapabilities", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothLeAudioCodecStatus\0", "getOutputCodecSelectableCapabilities\0", "()Ljava/util/List;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// public static final [EXTRA_LE_AUDIO_CODEC_STATUS](https://developer.android.com/reference/android/bluetooth/BluetoothLeAudioCodecStatus.html#EXTRA_LE_AUDIO_CODEC_STATUS)
+                pub const EXTRA_LE_AUDIO_CODEC_STATUS : &'static str = "android.bluetooth.extra.LE_AUDIO_CODEC_STATUS";
+            }
+        }
+
+        ::java_spaghetti::class! {
             /// public final class [BluetoothManager](https://developer.android.com/reference/android/bluetooth/BluetoothManager.html)
             public final class BluetoothManager ("android/bluetooth/BluetoothManager\0") extends super::super::java::lang::Object {
 
@@ -6240,6 +8192,9 @@ pub mod android {
                 /// public static final [A2DP](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#A2DP)
                 pub const A2DP : i32 = 2;
 
+                /// public static final [CSIP_SET_COORDINATOR](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#CSIP_SET_COORDINATOR)
+                pub const CSIP_SET_COORDINATOR : i32 = 25;
+
                 /// public static final [EXTRA_PREVIOUS_STATE](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#EXTRA_PREVIOUS_STATE)
                 pub const EXTRA_PREVIOUS_STATE : &'static str = "android.bluetooth.profile.extra.PREVIOUS_STATE";
 
@@ -6252,14 +8207,23 @@ pub mod android {
                 /// public static final [GATT_SERVER](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#GATT_SERVER)
                 pub const GATT_SERVER : i32 = 8;
 
+                /// public static final [HAP_CLIENT](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#HAP_CLIENT)
+                pub const HAP_CLIENT : i32 = 28;
+
                 /// public static final [HEADSET](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#HEADSET)
                 pub const HEADSET : i32 = 1;
 
                 /// public static final [HEALTH](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#HEALTH)
-                pub const HEALTH : i32 = 3;
+                #[deprecated] pub const HEALTH : i32 = 3;
+
+                /// public static final [HEARING_AID](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#HEARING_AID)
+                pub const HEARING_AID : i32 = 21;
 
                 /// public static final [HID_DEVICE](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#HID_DEVICE)
                 pub const HID_DEVICE : i32 = 19;
+
+                /// public static final [LE_AUDIO](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#LE_AUDIO)
+                pub const LE_AUDIO : i32 = 22;
 
                 /// public static final [SAP](https://developer.android.com/reference/android/bluetooth/BluetoothProfile.html#SAP)
                 pub const SAP : i32 = 10;
@@ -6340,6 +8304,17 @@ pub mod android {
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothServerSocket\0", "close\0", "()V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getPsm](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket.html#getPsm())
+                pub fn getPsm<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothServerSocket", java.flags == PUBLIC, .name == "getPsm", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothServerSocket\0", "getPsm\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
 
@@ -6445,6 +8420,45 @@ pub mod android {
 
                 /// public static final [TYPE_SCO](https://developer.android.com/reference/android/bluetooth/BluetoothSocket.html#TYPE_SCO)
                 pub const TYPE_SCO : i32 = 2;
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public final class [BluetoothStatusCodes](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html)
+            public final class BluetoothStatusCodes ("android/bluetooth/BluetoothStatusCodes\0") extends super::super::java::lang::Object {
+
+                /// public static final [ERROR_BLUETOOTH_NOT_ALLOWED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_BLUETOOTH_NOT_ALLOWED)
+                pub const ERROR_BLUETOOTH_NOT_ALLOWED : i32 = 2;
+
+                /// public static final [ERROR_BLUETOOTH_NOT_ENABLED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_BLUETOOTH_NOT_ENABLED)
+                pub const ERROR_BLUETOOTH_NOT_ENABLED : i32 = 1;
+
+                /// public static final [ERROR_DEVICE_NOT_BONDED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_DEVICE_NOT_BONDED)
+                pub const ERROR_DEVICE_NOT_BONDED : i32 = 3;
+
+                /// public static final [ERROR_GATT_WRITE_NOT_ALLOWED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_GATT_WRITE_NOT_ALLOWED)
+                pub const ERROR_GATT_WRITE_NOT_ALLOWED : i32 = 200;
+
+                /// public static final [ERROR_GATT_WRITE_REQUEST_BUSY](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_GATT_WRITE_REQUEST_BUSY)
+                pub const ERROR_GATT_WRITE_REQUEST_BUSY : i32 = 201;
+
+                /// public static final [ERROR_MISSING_BLUETOOTH_CONNECT_PERMISSION](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_MISSING_BLUETOOTH_CONNECT_PERMISSION)
+                pub const ERROR_MISSING_BLUETOOTH_CONNECT_PERMISSION : i32 = 6;
+
+                /// public static final [ERROR_PROFILE_SERVICE_NOT_BOUND](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_PROFILE_SERVICE_NOT_BOUND)
+                pub const ERROR_PROFILE_SERVICE_NOT_BOUND : i32 = 9;
+
+                /// public static final [ERROR_UNKNOWN](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#ERROR_UNKNOWN)
+                pub const ERROR_UNKNOWN : i32 = 2147483647;
+
+                /// public static final [FEATURE_NOT_SUPPORTED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#FEATURE_NOT_SUPPORTED)
+                pub const FEATURE_NOT_SUPPORTED : i32 = 11;
+
+                /// public static final [FEATURE_SUPPORTED](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#FEATURE_SUPPORTED)
+                pub const FEATURE_SUPPORTED : i32 = 10;
+
+                /// public static final [SUCCESS](https://developer.android.com/reference/android/bluetooth/BluetoothStatusCodes.html#SUCCESS)
+                pub const SUCCESS : i32 = 0;
             }
         }
     }
@@ -6593,6 +8607,17 @@ pub mod android {
                     }
                 }
 
+                /// [contains](https://developer.android.com/reference/android/util/SparseArray.html#contains(int))
+                pub fn contains<'env>(&'env self, arg0: i32) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/util/SparseArray", java.flags == PUBLIC, .name == "contains", .descriptor == "(I)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "contains\0", "(I)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [get](https://developer.android.com/reference/android/util/SparseArray.html#get(int))
                 pub fn get_int<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::lang::Object>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/util/SparseArray", java.flags == PUBLIC, .name == "get", .descriptor == "(I)Ljava/lang/Object;"
@@ -6655,6 +8680,17 @@ pub mod android {
                         let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1)];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "removeAtRange\0", "(II)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [set](https://developer.android.com/reference/android/util/SparseArray.html#set(int,%20java.lang.Object))
+                pub fn set<'env>(&'env self, arg0: i32, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::super::java::lang::Object>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/util/SparseArray", java.flags == PUBLIC, .name == "set", .descriptor == "(ILjava/lang/Object;)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "set\0", "(ILjava/lang/Object;)V\0");
                         __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -6766,6 +8802,28 @@ pub mod android {
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "toString\0", "()Ljava/lang/String;\0");
                         __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [contentEquals](https://developer.android.com/reference/android/util/SparseArray.html#contentEquals(android.util.SparseArray))
+                pub fn contentEquals<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env SparseArray>>) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/util/SparseArray", java.flags == PUBLIC, .name == "contentEquals", .descriptor == "(Landroid/util/SparseArray;)Z"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "contentEquals\0", "(Landroid/util/SparseArray;)Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [contentHashCode](https://developer.android.com/reference/android/util/SparseArray.html#contentHashCode())
+                pub fn contentHashCode<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/util/SparseArray", java.flags == PUBLIC, .name == "contentHashCode", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/util/SparseArray\0", "contentHashCode\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
             }
@@ -6923,7 +8981,7 @@ pub mod java {
 
                 /// [wait](https://developer.android.com/reference/java/lang/Object.html#wait())
                 pub fn wait<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, Throwable>> {
-                    // class.path == "java/lang/Object", java.flags == PUBLIC | FINAL | NATIVE, .name == "wait", .descriptor == "()V"
+                    // class.path == "java/lang/Object", java.flags == PUBLIC | FINAL, .name == "wait", .descriptor == "()V"
                     unsafe {
                         let __jni_args = [];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
@@ -7603,6 +9661,50 @@ pub mod java {
                     }
                 }
 
+                /// [strip](https://developer.android.com/reference/java/lang/String.html#strip())
+                pub fn strip<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, String>>, ::java_spaghetti::Local<'env, Throwable>> {
+                    // class.path == "java/lang/String", java.flags == PUBLIC, .name == "strip", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "strip\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [stripLeading](https://developer.android.com/reference/java/lang/String.html#stripLeading())
+                pub fn stripLeading<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, String>>, ::java_spaghetti::Local<'env, Throwable>> {
+                    // class.path == "java/lang/String", java.flags == PUBLIC, .name == "stripLeading", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "stripLeading\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [stripTrailing](https://developer.android.com/reference/java/lang/String.html#stripTrailing())
+                pub fn stripTrailing<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, String>>, ::java_spaghetti::Local<'env, Throwable>> {
+                    // class.path == "java/lang/String", java.flags == PUBLIC, .name == "stripTrailing", .descriptor == "()Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "stripTrailing\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [isBlank](https://developer.android.com/reference/java/lang/String.html#isBlank())
+                pub fn isBlank<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, Throwable>> {
+                    // class.path == "java/lang/String", java.flags == PUBLIC, .name == "isBlank", .descriptor == "()Z"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "isBlank\0", "()Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [toString](https://developer.android.com/reference/java/lang/String.html#toString())
                 pub fn toString<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, String>>, ::java_spaghetti::Local<'env, Throwable>> {
                     // class.path == "java/lang/String", java.flags == PUBLIC, .name == "toString", .descriptor == "()Ljava/lang/String;"
@@ -7752,6 +9854,17 @@ pub mod java {
                         let __jni_args = [];
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "intern\0", "()Ljava/lang/String;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [repeat](https://developer.android.com/reference/java/lang/String.html#repeat(int))
+                pub fn repeat<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, String>>, ::java_spaghetti::Local<'env, Throwable>> {
+                    // class.path == "java/lang/String", java.flags == PUBLIC, .name == "repeat", .descriptor == "(I)Ljava/lang/String;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/lang/String\0", "repeat\0", "(I)Ljava/lang/String;\0");
                         __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
@@ -8168,6 +10281,126 @@ pub mod java {
                         __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of())
+                pub fn of<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "()Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "()Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object))
+                pub fn of_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/List.html#of(java.lang.Object...))
+                pub fn of_Object_array<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ObjectArray<super::lang::Object, super::lang::Throwable>>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, List>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/List", java.flags == PUBLIC | STATIC | VARARGS, .name == "of", .descriptor == "([Ljava/lang/Object;)Ljava/util/List;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/List\0", "of\0", "([Ljava/lang/Object;)Ljava/util/List;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
             }
         }
 
@@ -8372,6 +10605,146 @@ pub mod java {
                         __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
                     }
                 }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of())
+                pub fn of<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "()Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "()Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg10: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg11: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg10.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg11.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg10: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg11: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg12: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg13: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg10.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg11.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg12.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg13.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg10: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg11: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg12: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg13: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg14: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg15: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg10.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg11.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg12.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg13.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg14.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg15.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg10: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg11: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg12: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg13: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg14: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg15: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg16: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg17: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg10.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg11.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg12.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg13.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg14.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg15.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg16.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg17.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Map.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg10: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg11: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg12: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg13: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg14: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg15: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg16: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg17: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg18: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg19: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg10.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg11.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg12.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg13.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg14.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg15.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg16.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg17.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg18.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg19.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [ofEntries](https://developer.android.com/reference/java/util/Map.html#ofEntries(java.util.Map.Entry...))
+                pub fn ofEntries<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ObjectArray<Map_Entry, super::lang::Throwable>>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC | VARARGS, .name == "ofEntries", .descriptor == "([Ljava/util/Map$Entry;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "ofEntries\0", "([Ljava/util/Map$Entry;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [entry](https://developer.android.com/reference/java/util/Map.html#entry(java.lang.Object,%20java.lang.Object))
+                pub fn entry<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map_Entry>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "entry", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map$Entry;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "entry\0", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map$Entry;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [copyOf](https://developer.android.com/reference/java/util/Map.html#copyOf(java.util.Map))
+                pub fn copyOf<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env Map>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Map>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Map", java.flags == PUBLIC | STATIC, .name == "copyOf", .descriptor == "(Ljava/util/Map;)Ljava/util/Map;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Map\0", "copyOf\0", "(Ljava/util/Map;)Ljava/util/Map;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
             }
         }
 
@@ -8558,6 +10931,126 @@ pub mod java {
                         let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
                         let (__jni_class, __jni_method) = __jni_env.require_class_method("java/util/Set\0", "hashCode\0", "()I\0");
                         __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of())
+                pub fn of<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "()Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "()Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object))
+                pub fn of_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object,%20java.lang.Object))
+                pub fn of_Object_Object_Object_Object_Object_Object_Object_Object_Object_Object<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg1: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg2: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg3: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg4: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg5: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg6: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg7: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg8: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>, arg9: impl ::std::convert::Into<::std::option::Option<&'env super::lang::Object>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC, .name == "of", .descriptor == "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg2.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg3.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg4.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg5.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg6.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg7.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg8.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg9.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [of](https://developer.android.com/reference/java/util/Set.html#of(java.lang.Object...))
+                pub fn of_Object_array<'env>(__jni_env: ::java_spaghetti::Env<'env>, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ObjectArray<super::lang::Object, super::lang::Throwable>>>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, Set>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/util/Set", java.flags == PUBLIC | STATIC | VARARGS, .name == "of", .descriptor == "([Ljava/lang/Object;)Ljava/util/Set;"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/util/Set\0", "of\0", "([Ljava/lang/Object;)Ljava/util/Set;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
                     }
                 }
             }
