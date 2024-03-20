@@ -8346,6 +8346,28 @@ pub mod android {
                     }
                 }
 
+                /// [getInputStream](https://developer.android.com/reference/android/bluetooth/BluetoothSocket.html#getInputStream())
+                pub fn getInputStream<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::io::InputStream>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothSocket", java.flags == PUBLIC, .name == "getInputStream", .descriptor == "()Ljava/io/InputStream;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothSocket\0", "getInputStream\0", "()Ljava/io/InputStream;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [getOutputStream](https://developer.android.com/reference/android/bluetooth/BluetoothSocket.html#getOutputStream())
+                pub fn getOutputStream<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, super::super::java::io::OutputStream>>, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
+                    // class.path == "android/bluetooth/BluetoothSocket", java.flags == PUBLIC, .name == "getOutputStream", .descriptor == "()Ljava/io/OutputStream;"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("android/bluetooth/BluetoothSocket\0", "getOutputStream\0", "()Ljava/io/OutputStream;\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
                 /// [isConnected](https://developer.android.com/reference/android/bluetooth/BluetoothSocket.html#isConnected())
                 pub fn isConnected<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::super::java::lang::Throwable>> {
                     // class.path == "android/bluetooth/BluetoothSocket", java.flags == PUBLIC, .name == "isConnected", .descriptor == "()Z"
@@ -8885,6 +8907,259 @@ pub mod com {
 }
 
 pub mod java {
+
+    pub mod io {
+
+        ::java_spaghetti::class! {
+            /// public class [InputStream](https://developer.android.com/reference/java/io/InputStream.html)
+            public class InputStream ("java/io/InputStream\0") extends super::lang::Object {
+
+                /// [InputStream](https://developer.android.com/reference/java/io/InputStream.html#InputStream())
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "<init>\0", "()V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [nullInputStream](https://developer.android.com/reference/java/io/InputStream.html#nullInputStream())
+                pub fn nullInputStream<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, InputStream>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC | STATIC, .name == "nullInputStream", .descriptor == "()Ljava/io/InputStream;"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/io/InputStream\0", "nullInputStream\0", "()Ljava/io/InputStream;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [read](https://developer.android.com/reference/java/io/InputStream.html#read())
+                pub fn read<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC | ABSTRACT, .name == "read", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "read\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [read](https://developer.android.com/reference/java/io/InputStream.html#read(byte%5B%5D))
+                pub fn read_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "read", .descriptor == "([B)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "read\0", "([B)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [read](https://developer.android.com/reference/java/io/InputStream.html#read(byte%5B%5D,%20int,%20int))
+                pub fn read_byte_array_int_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg1: i32, arg2: i32) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "read", .descriptor == "([BII)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "read\0", "([BII)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [readAllBytes](https://developer.android.com/reference/java/io/InputStream.html#readAllBytes())
+                pub fn readAllBytes<'env>(&'env self) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "readAllBytes", .descriptor == "()[B"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "readAllBytes\0", "()[B\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [readNBytes](https://developer.android.com/reference/java/io/InputStream.html#readNBytes(int))
+                pub fn readNBytes_int<'env>(&'env self, arg0: i32) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, ::java_spaghetti::ByteArray>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "readNBytes", .descriptor == "(I)[B"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "readNBytes\0", "(I)[B\0");
+                        __jni_env.call_object_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [readNBytes](https://developer.android.com/reference/java/io/InputStream.html#readNBytes(byte%5B%5D,%20int,%20int))
+                pub fn readNBytes_byte_array_int_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg1: i32, arg2: i32) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "readNBytes", .descriptor == "([BII)I"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "readNBytes\0", "([BII)I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [skip](https://developer.android.com/reference/java/io/InputStream.html#skip(long))
+                pub fn skip<'env>(&'env self, arg0: i64) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "skip", .descriptor == "(J)J"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "skip\0", "(J)J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [available](https://developer.android.com/reference/java/io/InputStream.html#available())
+                pub fn available<'env>(&'env self) -> ::std::result::Result<i32, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "available", .descriptor == "()I"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "available\0", "()I\0");
+                        __jni_env.call_int_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [close](https://developer.android.com/reference/java/io/InputStream.html#close())
+                pub fn close<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "close", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "close\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [mark](https://developer.android.com/reference/java/io/InputStream.html#mark(int))
+                pub fn mark<'env>(&'env self, arg0: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC | SYNCRONIZED, .name == "mark", .descriptor == "(I)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "mark\0", "(I)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [reset](https://developer.android.com/reference/java/io/InputStream.html#reset())
+                pub fn reset<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC | SYNCRONIZED, .name == "reset", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "reset\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [markSupported](https://developer.android.com/reference/java/io/InputStream.html#markSupported())
+                pub fn markSupported<'env>(&'env self) -> ::std::result::Result<bool, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "markSupported", .descriptor == "()Z"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "markSupported\0", "()Z\0");
+                        __jni_env.call_boolean_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [transferTo](https://developer.android.com/reference/java/io/InputStream.html#transferTo(java.io.OutputStream))
+                pub fn transferTo<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env OutputStream>>) -> ::std::result::Result<i64, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/InputStream", java.flags == PUBLIC, .name == "transferTo", .descriptor == "(Ljava/io/OutputStream;)J"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/InputStream\0", "transferTo\0", "(Ljava/io/OutputStream;)J\0");
+                        __jni_env.call_long_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+            }
+        }
+
+        ::java_spaghetti::class! {
+            /// public class [OutputStream](https://developer.android.com/reference/java/io/OutputStream.html)
+            public class OutputStream ("java/io/OutputStream\0") extends super::lang::Object {
+
+                /// [OutputStream](https://developer.android.com/reference/java/io/OutputStream.html#OutputStream())
+                pub fn new<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC, .name == "<init>", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "<init>\0", "()V\0");
+                        __jni_env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [nullOutputStream](https://developer.android.com/reference/java/io/OutputStream.html#nullOutputStream())
+                pub fn nullOutputStream<'env>(__jni_env: ::java_spaghetti::Env<'env>) -> ::std::result::Result<::std::option::Option<::java_spaghetti::Local<'env, OutputStream>>, ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC | STATIC, .name == "nullOutputStream", .descriptor == "()Ljava/io/OutputStream;"
+                    unsafe {
+                        let __jni_args = [];
+                        let (__jni_class, __jni_method) = __jni_env.require_class_static_method("java/io/OutputStream\0", "nullOutputStream\0", "()Ljava/io/OutputStream;\0");
+                        __jni_env.call_static_object_method_a(__jni_class, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [write](https://developer.android.com/reference/java/io/OutputStream.html#write(int))
+                pub fn write_int<'env>(&'env self, arg0: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC | ABSTRACT, .name == "write", .descriptor == "(I)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "write\0", "(I)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [write](https://developer.android.com/reference/java/io/OutputStream.html#write(byte%5B%5D))
+                pub fn write_byte_array<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC, .name == "write", .descriptor == "([B)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into())];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "write\0", "([B)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [write](https://developer.android.com/reference/java/io/OutputStream.html#write(byte%5B%5D,%20int,%20int))
+                pub fn write_byte_array_int_int<'env>(&'env self, arg0: impl ::std::convert::Into<::std::option::Option<&'env ::java_spaghetti::ByteArray>>, arg1: i32, arg2: i32) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC, .name == "write", .descriptor == "([BII)V"
+                    unsafe {
+                        let __jni_args = [::java_spaghetti::AsJValue::as_jvalue(&arg0.into()), ::java_spaghetti::AsJValue::as_jvalue(&arg1), ::java_spaghetti::AsJValue::as_jvalue(&arg2)];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "write\0", "([BII)V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [flush](https://developer.android.com/reference/java/io/OutputStream.html#flush())
+                pub fn flush<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC, .name == "flush", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "flush\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+
+                /// [close](https://developer.android.com/reference/java/io/OutputStream.html#close())
+                pub fn close<'env>(&'env self) -> ::std::result::Result<(), ::java_spaghetti::Local<'env, super::lang::Throwable>> {
+                    // class.path == "java/io/OutputStream", java.flags == PUBLIC, .name == "close", .descriptor == "()V"
+                    unsafe {
+                        let __jni_args = [];
+                        let __jni_env = ::java_spaghetti::Env::from_raw(self.0.env);
+                        let (__jni_class, __jni_method) = __jni_env.require_class_method("java/io/OutputStream\0", "close\0", "()V\0");
+                        __jni_env.call_void_method_a(self.0.object, __jni_method, __jni_args.as_ptr())
+                    }
+                }
+            }
+        }
+    }
 
     pub mod lang {
 
