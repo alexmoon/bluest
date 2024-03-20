@@ -109,6 +109,9 @@ async fn check_descriptor_apis(descriptor: Descriptor) -> Result<()> {
 
 #[allow(unused)]
 async fn check_apis() -> Result<()> {
+    #[cfg(target_os = "android")]
+    let adapter: Result<Adapter> = unsafe { Adapter::new(core::ptr::null_mut(), core::ptr::null_mut()) };
+    #[cfg(not(target_os = "android"))]
     let adapter: Option<Adapter> = assert_send(Adapter::default()).await;
     let device = check_adapter_apis(adapter.unwrap()).await?;
     let service = check_device_apis(device).await?;

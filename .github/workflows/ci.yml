@@ -51,5 +51,11 @@ jobs:
           rustup target add aarch64-apple-ios
           cargo clippy --all-targets --target=aarch64-apple-ios -- -D warnings
 
+      - name: Clippy (Android)
+        run: |
+          rustup target add aarch64-linux-android
+          # not using --all-targets because examples don't build for Android due to `Adapter::default()`
+          cargo clippy --lib --tests --target=aarch64-linux-android -- -D warnings
+
       - name: Test
         run: cargo test --all
