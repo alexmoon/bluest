@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
-use futures_channel::mpsc::{Receiver, Sender};
+use async_channel::{Receiver, Sender};
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
 use java_spaghetti::{Arg, ByteArray, Env, Global, Local, PrimitiveArray, VM};
@@ -96,7 +96,7 @@ impl AdapterImpl {
                 });
             });
 
-            Ok(receiver.map(move |x| {
+            Ok(Box::pin(receiver).map(move |x| {
                 let _guard = &guard;
                 x
             }))
@@ -174,7 +174,7 @@ impl<T: Send + 'static> CallbackRouter<T> {
 
     fn allocate(&'static self) -> CallbackReceiver<T> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let (sender, receiver) = futures_channel::mpsc::channel(16);
+        let (sender, receiver) = async_channel::bounded(16);
         self.map
             .lock()
             .unwrap()
@@ -190,7 +190,7 @@ impl<T: Send + 'static> CallbackRouter<T> {
 
     fn callback(&'static self, id: i32, val: T) {
         if let Some(sender) = self.map.lock().unwrap().as_mut().unwrap().get_mut(&id) {
-            if let Err(e) = sender.try_send(val) {
+            if let Err(e) = sender.send_blocking(val) {
                 warn!("failed to send scan callback: {:?}", e)
             }
         }
