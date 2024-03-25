@@ -143,6 +143,7 @@ pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
 pub use device::{Device, ServicesChanged};
 pub use error::Error;
+pub use l2cap_channel::{L2capChannel, L2capChannelReader, L2capChannelWriter};
 pub use service::Service;
 pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]
