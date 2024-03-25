@@ -62,6 +62,16 @@ impl L2capChannelReader {
         self.reader.read(buf).await
     }
 
+    /// Try reading a packet from the L2CAP channel.
+    ///
+    /// The packet is written to the start of `buf`, and the packet length is returned.
+    ///
+    /// If no packet is immediately available for reading, this returns an error with kind `NotReady`.
+    #[inline]
+    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        self.reader.try_read(buf)
+    }
+
     /// Close the L2CAP channel.
     ///
     /// This closes the entire channel, not just the read half.
@@ -76,9 +86,19 @@ impl L2capChannelReader {
 
 impl L2capChannelWriter {
     /// Write a packet to the L2CAP channel.
+    ///
+    /// If the buffer is full, this will wait until there's buffer space for the packet.
     #[inline]
     pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
         self.writer.write(packet).await
+    }
+
+    /// Try writing a packet to the L2CAP channel.
+    ///
+    /// If there's no buffer space, this returns an error with kind `NotReady`.
+    #[inline]
+    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
+        self.writer.try_write(packet)
     }
 
     /// Close the L2CAP channel.

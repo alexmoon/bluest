@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{fmt, slice, thread};
 
-use async_channel::{Receiver, Sender};
+use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, warn};
 
@@ -151,7 +151,27 @@ impl L2capChannelReader {
             .stream
             .recv()
             .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "L2CAP channel is closed".to_string()))?;
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
+
+        if packet.len() > buf.len() {
+            return Err(Error::new(
+                ErrorKind::InvalidParameter,
+                None,
+                "Buffer is too small".to_string(),
+            ));
+        }
+
+        buf[..packet.len()].copy_from_slice(&packet);
+
+        Ok(packet.len())
+    }
+
+    #[inline]
+    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let packet = self.stream.try_recv().map_err(|e| match e {
+            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue".to_string()),
+            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
+        })?;
 
         if packet.len() > buf.len() {
             return Err(Error::new(
@@ -188,7 +208,14 @@ impl L2capChannelWriter {
         self.stream
             .send(packet.to_vec())
             .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "L2CAP channel is closed".to_string()))
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))
+    }
+
+    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
+        self.stream.try_send(packet.to_vec()).map_err(|e| match e {
+            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
+            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write".to_string()),
+        })
     }
 
     pub async fn close(&mut self) -> Result<()> {

@@ -12,6 +12,10 @@ impl L2capChannelReader {
         todo!()
     }
 
+    pub fn try_read(&mut self, _buf: &mut [u8]) -> Result<usize> {
+        todo!()
+    }
+
     pub async fn close(&mut self) -> Result<()> {
         todo!()
     }
@@ -29,6 +33,10 @@ pub struct L2capChannelWriter {
 
 impl L2capChannelWriter {
     pub async fn write(&mut self, _packet: &[u8]) -> Result<()> {
+        todo!()
+    }
+
+    pub fn try_write(&mut self, _packet: &[u8]) -> Result<()> {
         todo!()
     }
 
