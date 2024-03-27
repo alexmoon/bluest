@@ -2,7 +2,10 @@
 
 set -euxo pipefail
 
-export ANDROID_HOME=/home/dirbaio/Android/Sdk/
+if [[ -z "$ANDROID_HOME" ]] then 
+    echo ANDROID_HOME is not set!
+    exit 1
+fi
 
 rm -rf build
 mkdir build
