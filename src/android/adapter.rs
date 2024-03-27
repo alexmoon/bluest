@@ -11,7 +11,7 @@ use java_spaghetti::{Arg, ByteArray, Env, Global, Local, PrimitiveArray, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-use super::bindings::android::bluetooth::le::{BluetoothLeScanner, ScanResult};
+use super::bindings::android::bluetooth::le::{BluetoothLeScanner, ScanResult, ScanSettings, ScanSettings_Builder};
 use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothManager};
 use super::bindings::android::os::ParcelUuid;
 use super::bindings::com::github::alexmoon::bluest::android::BluestScanCallback;
@@ -83,7 +83,10 @@ impl AdapterImpl {
             let callback = BluestScanCallback::new(env, receiver.id)?;
             let callback_global = callback.as_global();
             let scanner = self.inner.le_scanner.as_ref(env);
-            scanner.startScan_ScanCallback(&**callback)?;
+            let settings = ScanSettings_Builder::new(env)?;
+            settings.setScanMode(ScanSettings::SCAN_MODE_LOW_LATENCY)?;
+            let settings = settings.build()?.non_null()?;
+            scanner.startScan_List_ScanSettings_ScanCallback(None, &*settings, &**callback)?;
 
             let guard = defer(move || {
                 self.inner.manager.vm().with_env(|env| {
