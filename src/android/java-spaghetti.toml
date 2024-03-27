@@ -18,6 +18,9 @@ include = [
     "java/util/Map",
     "java/util/Set",
     "java/util/Map$Entry",
+    
+    "java/io/InputStream",
+    "java/io/OutputStream",
 ]
 
 [[documentation.pattern]]
@@ -33,7 +36,7 @@ verbose = true
 
 [input]
 files = [
-    "/home/dirbaio/Android/Sdk/platforms/android-28/android.jar",
+    "/home/dirbaio/Android/Sdk/platforms/android-33/android.jar",
     "build/bluest.jar",
 ]
 

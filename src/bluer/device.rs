@@ -3,6 +3,7 @@ use std::sync::Arc;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
+use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::DeviceId;
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
@@ -289,6 +290,14 @@ impl DeviceImpl {
             tx_power_level,
             is_connectable,
         }
+    }
+
+    pub async fn open_l2cap_channel(
+        &self,
+        _psm: u16,
+        _secure: bool,
+    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+        Err(ErrorKind::NotSupported.into())
     }
 }
 
