@@ -52,7 +52,7 @@ pub fn open_l2cap_channel(
                 let arr: Local<ByteArray> = ByteArray::new(env, 1024);
 
                 loop {
-                    match stream.read_byte_array(&*arr) {
+                    match stream.read_byte_array(&arr) {
                         Ok(n) if n < 0 => {
                             warn!("failed to read from l2cap channel: {}", n);
                             break;
@@ -90,8 +90,8 @@ pub fn open_l2cap_channel(
                             break;
                         }
                         Ok(packet) => {
-                            let b = PrimitiveArray::from(env, u8toi8(&packet));
-                            if let Err(e) = stream.write_byte_array(Some(&*b)) {
+                            let b = ByteArray::new_from(env, u8toi8(&packet));
+                            if let Err(e) = stream.write_byte_array(b) {
                                 warn!("failed to write to l2cap channel: {:?}", e);
                                 break;
                             };

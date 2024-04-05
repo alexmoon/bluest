@@ -7,7 +7,7 @@ use std::task::{Context, Poll};
 use async_channel::{Receiver, Sender};
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
-use java_spaghetti::{Arg, ByteArray, Env, Global, Local, PrimitiveArray, VM};
+use java_spaghetti::{Arg, ByteArray, Env, Global, Local, Null, PrimitiveArray, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
@@ -86,13 +86,13 @@ impl AdapterImpl {
             let settings = ScanSettings_Builder::new(env)?;
             settings.setScanMode(ScanSettings::SCAN_MODE_LOW_LATENCY)?;
             let settings = settings.build()?.non_null()?;
-            scanner.startScan_List_ScanSettings_ScanCallback(None, &*settings, &**callback)?;
+            scanner.startScan_List_ScanSettings_ScanCallback(Null, settings, callback)?;
 
             let guard = defer(move || {
                 self.inner.manager.vm().with_env(|env| {
                     let callback = callback_global.as_ref(env);
                     let scanner = self.inner.le_scanner.as_ref(env);
-                    match scanner.stopScan_ScanCallback(&**callback) {
+                    match scanner.stopScan_ScanCallback(callback) {
                         Ok(()) => debug!("stopped scan"),
                         Err(e) => warn!("failed to stop scan: {:?}", e),
                     };
