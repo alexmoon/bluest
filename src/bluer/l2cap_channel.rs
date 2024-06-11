@@ -1,52 +1,108 @@
-use std::fmt;
+use std::{
+    io::Result,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 
-use crate::Result;
+use bluer::l2cap::{SocketAddr, Stream};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tracing::{debug, trace};
 
-pub struct L2capChannelReader {
-    _private: (),
+use crate::error::ErrorKind;
+
+const SECURE_CHANNEL_KEY_SIZE: u8 = 16;
+
+#[derive(Debug)]
+pub struct Channel {
+    stream: Pin<Box<bluer::l2cap::Stream>>,
 }
 
-impl L2capChannelReader {
-    #[inline]
-    pub async fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
+enum ChannelCreationError {
+    StreamCreationError(std::io::Error),
+    SetSecurityError(std::io::Error),
+    ConnectionError(std::io::Error),
+    ConnectionTimeout(tokio::time::error::Elapsed),
+}
 
-    pub fn try_read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
+impl Channel {
+    pub async fn new(sa: SocketAddr, secure: bool) -> crate::Result<Self> {
+        let stream = Stream::connect(sa)
+            .await
+            .map_err(ChannelCreationError::ConnectionError)?;
 
-    pub async fn close(&mut self) -> Result<()> {
-        todo!()
+        if secure {
+            stream
+                .as_ref()
+                .set_security(bluer::l2cap::Security {
+                    level: bluer::l2cap::SecurityLevel::High,
+                    key_size: SECURE_CHANNEL_KEY_SIZE,
+                })
+                .map_err(ChannelCreationError::SetSecurityError)?;
+        }
+
+        trace!(name: "Bluetooth Stream",
+            "Local address: {:?}\n Remote address: {:?}\n Send MTU: {:?}\n Recv MTU: {:?}\n Security: {:?}\n Flow control: {:?}",
+            stream.as_ref().local_addr(),
+            stream.peer_addr(),
+            stream.as_ref().send_mtu(),
+            stream.as_ref().recv_mtu(),
+            stream.as_ref().security(),
+            stream.as_ref().flow_control(),
+        );
+
+        Ok(Self {
+            stream: Box::pin(stream),
+        })
     }
 }
 
-impl fmt::Debug for L2capChannelReader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelReader")
+impl AsyncRead for Channel {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        self.stream.as_mut().poll_read(cx, buf)
     }
 }
 
-pub struct L2capChannelWriter {
-    _private: (),
-}
-
-impl L2capChannelWriter {
-    pub async fn write(&mut self, _packet: &[u8]) -> Result<()> {
-        todo!()
+impl AsyncWrite for Channel {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
+        self.stream.as_mut().poll_write(cx, buf)
     }
 
-    pub fn try_write(&mut self, _packet: &[u8]) -> Result<()> {
-        todo!()
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        self.stream.as_mut().poll_flush(cx)
     }
 
-    pub async fn close(&mut self) -> Result<()> {
-        todo!()
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        self.stream.as_mut().poll_shutdown(cx)
     }
 }
 
-impl fmt::Debug for L2capChannelWriter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelWriter")
+impl From<ChannelCreationError> for crate::Error {
+    fn from(value: ChannelCreationError) -> Self {
+        let kind = match &value {
+            ChannelCreationError::StreamCreationError(_) | ChannelCreationError::SetSecurityError(_) => {
+                ErrorKind::Internal
+            }
+            ChannelCreationError::ConnectionError(_) => ErrorKind::ConnectionFailed,
+            ChannelCreationError::ConnectionTimeout(_) => ErrorKind::Timeout,
+        };
+        let message = match &value {
+            ChannelCreationError::StreamCreationError(_) => "Error creating a new l2cap stream.",
+            ChannelCreationError::SetSecurityError(_) => "Error setting connection security level.",
+            ChannelCreationError::ConnectionError(_) => "Error connecting to l2cap stream.",
+            ChannelCreationError::ConnectionTimeout(_) => {
+                "Timeout occured before stream parameters could be determined."
+            }
+        };
+        crate::Error::new(
+            kind,
+            match value {
+                ChannelCreationError::StreamCreationError(io)
+                | ChannelCreationError::SetSecurityError(io)
+                | ChannelCreationError::ConnectionError(io) => Some(Box::new(io)),
+                ChannelCreationError::ConnectionTimeout(elapsed) => Some(Box::new(elapsed)),
+            },
+            message.to_owned(),
+        )
     }
 }

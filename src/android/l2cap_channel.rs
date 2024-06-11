@@ -1,128 +1,152 @@
-use std::sync::Arc;
-use std::{fmt, slice, thread};
+use std::{
+    fmt,
+    io::Result,
+    pin::Pin,
+    slice,
+    task::{Context, Poll},
+    thread,
+};
 
-use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, DuplexStream, ReadBuf};
+use tokio::runtime::Handle;
 use tracing::{debug, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
+use super::bindings::java::io::{InputStream, OutputStream};
 use super::OptionExt;
-use crate::error::ErrorKind;
-use crate::{Error, Result};
 
-pub fn open_l2cap_channel(
-    device: Global<BluetoothDevice>,
-    psm: u16,
-    secure: bool,
-) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-    device.vm().with_env(|env| {
-        let device = device.as_local(env);
-
-        let channel = if secure {
-            device.createL2capChannel(psm as _)?.non_null()?
-        } else {
-            device.createInsecureL2capChannel(psm as _)?.non_null()?
-        };
-
-        channel.connect()?;
-
-        // The L2capCloser closes the l2cap channel when dropped.
-        // We put it in an Arc held by both the reader and writer, so it gets dropped
-        // when
-        let closer = Arc::new(L2capCloser {
-            channel: channel.as_global(),
-        });
-
-        let (read_sender, read_receiver) = async_channel::bounded::<Vec<u8>>(16);
-        let (write_sender, write_receiver) = async_channel::bounded::<Vec<u8>>(16);
-        let input_stream = channel.getInputStream()?.non_null()?.as_global();
-        let output_stream = channel.getOutputStream()?.non_null()?.as_global();
-
-        // Unfortunately, Android's API for L2CAP channels is only blocking. Only way to deal with it
-        // is to launch two background threads with blocking loops for reading and writing, which communicate
-        // with the async Rust world via async channels.
-        //
-        // The loops stop when either Android returns an error (for example if the channel is closed), or the
-        // async channel gets closed because the user dropped the reader or writer structs.
-        thread::spawn(move || {
-            debug!("l2cap read thread running!");
-
-            input_stream.vm().with_env(|env| {
-                let stream = input_stream.as_local(env);
-                let arr: Local<ByteArray> = ByteArray::new(env, 1024);
-
-                loop {
-                    match stream.read_byte_array(&arr) {
-                        Ok(n) if n < 0 => {
-                            warn!("failed to read from l2cap channel: {}", n);
-                            break;
-                        }
-                        Err(e) => {
-                            warn!("failed to read from l2cap channel: {:?}", e);
-                            break;
-                        }
-                        Ok(n) => {
-                            let n = n as usize;
-                            let mut buf = vec![0u8; n];
-                            arr.get_region(0, u8toi8_mut(&mut buf));
-                            if let Err(e) = read_sender.send_blocking(buf) {
-                                warn!("failed to enqueue received l2cap packet: {:?}", e);
-                                break;
-                            }
-                        }
-                    }
-                }
-            });
-
-            debug!("l2cap read thread exiting!");
-        });
-
-        thread::spawn(move || {
-            debug!("l2cap write thread running!");
-
-            output_stream.vm().with_env(|env| {
-                let stream = output_stream.as_local(env);
-
-                loop {
-                    match write_receiver.recv_blocking() {
-                        Err(e) => {
-                            warn!("failed to dequeue l2cap packet to send: {:?}", e);
-                            break;
-                        }
-                        Ok(packet) => {
-                            let b = ByteArray::new_from(env, u8toi8(&packet));
-                            if let Err(e) = stream.write_byte_array(b) {
-                                warn!("failed to write to l2cap channel: {:?}", e);
-                                break;
-                            };
-                        }
-                    }
-                }
-            });
-
-            debug!("l2cap write thread exiting!");
-        });
-
-        Ok((
-            L2capChannelReader {
-                closer: closer.clone(),
-                stream: read_receiver,
-            },
-            L2capChannelWriter {
-                closer,
-                stream: write_sender,
-            },
-        ))
-    })
-}
-
-/// Utility struct to close the channel on drop.
-pub(super) struct L2capCloser {
+const BUFFER_CAPACITY: usize = 4096;
+pub struct Channel {
+    stream: Pin<Box<DuplexStream>>,
     channel: Global<BluetoothSocket>,
 }
 
-impl L2capCloser {
-    fn close(&self) {
+impl Channel {
+    pub fn new(device: Global<BluetoothDevice>, psm: u16, secure: bool) -> crate::Result<Self> {
+        let rt = tokio::runtime::Handle::current();
+
+        device.vm().with_env(|env| {
+            let device = device.as_local(env);
+
+            let channel = if secure {
+                device.createL2capChannel(psm as _)?.non_null()?
+            } else {
+                device.createInsecureL2capChannel(psm as _)?.non_null()?
+            };
+
+            channel.connect()?;
+
+            let global_channel = channel.as_global();
+
+            let (native_in_stream, native_out_stream) = tokio::io::duplex(BUFFER_CAPACITY);
+
+            let (read_out, write_out) = tokio::io::split(native_out_stream);
+
+            let input_stream = channel.getInputStream()?.non_null()?.as_global();
+            let output_stream = channel.getOutputStream()?.non_null()?.as_global();
+
+            // Unfortunately, Android's API for L2CAP channels is only blocking. Only way to deal with it
+            // is to launch two background threads with blocking loops for reading and writing, which communicate
+            // with the async Rust world via the stream channels.
+            let read_rt = rt.clone();
+            thread::spawn(move || Self::read_thread(input_stream, write_out, Box::pin(read_rt)));
+
+            let transmit_size = usize::try_from(channel.getMaxTransmitPacketSize()?).unwrap();
+            thread::spawn(move || Self::write_thread(output_stream, read_out, Box::pin(rt), transmit_size));
+
+            Ok(Self {
+                stream: Box::pin(native_in_stream),
+                channel: global_channel,
+            })
+        })
+    }
+
+    //
+    // The loops stop when either Android returns an error (for example if the channel is closed), or the
+    // async channel gets closed because the user dropped the reader or writer structs.
+    fn read_thread(
+        input_stream: Global<InputStream>,
+        mut write_output: impl AsyncWrite + Unpin,
+        mut rt: Pin<Box<Handle>>,
+    ) {
+        debug!("l2cap read thread running!");
+
+        input_stream.vm().with_env(|env| {
+            let stream = input_stream.as_local(env);
+            let arr: Local<ByteArray> = ByteArray::new(env, 1024);
+
+            loop {
+                match stream.read_byte_array(&arr) {
+                    Ok(n) if n < 0 => {
+                        warn!("failed to read from l2cap channel: {}", n);
+                        break;
+                    }
+                    Err(e) => {
+                        warn!("failed to read from l2cap channel: {:?}", e);
+                        break;
+                    }
+                    Ok(n) => {
+                        let n = n as usize;
+                        let mut buf = vec![0u8; n];
+                        arr.get_region(0, u8toi8_mut(&mut buf));
+
+                        if let Err(e) = rt.as_mut().block_on(write_output.write_all(&mut buf)) {
+                            warn!("failed to enqueue received l2cap packet: {:?}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        debug!("l2cap read thread exiting!");
+    }
+
+    //
+    // The loops stop when either Android returns an error (for example if the channel is closed), or the
+    // async channel gets closed because the user dropped the reader or writer structs.
+
+    fn write_thread(
+        output_stream: Global<OutputStream>,
+        mut read_output: impl AsyncRead + Unpin,
+        rt: Pin<Box<Handle>>,
+        transmit_size: usize,
+    ) {
+        debug!("l2cap write thread running!");
+
+        output_stream.vm().with_env(|env| {
+            let stream = output_stream.as_local(env);
+
+            let mut buf = vec![0u8; transmit_size];
+
+            loop {
+                match rt.block_on(read_output.read(&mut buf)) {
+                    Err(e) => {
+                        warn!("failed to dequeue l2cap packet to send: {:?}", e);
+                        break;
+                    }
+                    Ok(0) => {
+                        debug!("End of stream reached");
+                        break;
+                    }
+                    Ok(packet_size) => {
+                        let b = ByteArray::new_from(env, u8toi8(&buf[..packet_size]));
+                        if let Err(e) = stream.write_byte_array(b) {
+                            warn!("failed to write to l2cap channel: {:?}", e);
+                            break;
+                        };
+                    }
+                }
+            }
+        });
+
+        debug!("l2cap write thread exiting!");
+    }
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
         self.channel.vm().with_env(|env| {
             let channel = self.channel.as_local(env);
             match channel.close() {
@@ -133,100 +157,35 @@ impl L2capCloser {
     }
 }
 
-impl Drop for L2capCloser {
-    fn drop(&mut self) {
-        self.close()
+impl AsyncRead for Channel {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<Result<()>> {
+        self.stream.as_mut().poll_read(cx, buf)
     }
 }
 
-pub struct L2capChannelReader {
-    stream: Receiver<Vec<u8>>,
-    closer: Arc<L2capCloser>,
-}
-
-impl L2capChannelReader {
-    #[inline]
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self
-            .stream
-            .recv()
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-
-        Ok(packet.len())
+impl AsyncWrite for Channel {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
+        self.stream.as_mut().poll_write(cx, buf)
     }
 
-    #[inline]
-    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self.stream.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue".to_string()),
-            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
-        })?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-
-        Ok(packet.len())
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        self.stream.as_mut().poll_flush(cx)
     }
 
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
+    fn poll_shutdown(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<()>> {
+        self.stream.as_mut().poll_shutdown(cx)
     }
 }
 
-impl fmt::Debug for L2capChannelReader {
+impl std::fmt::Debug for Channel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelReader")
-    }
-}
-
-pub struct L2capChannelWriter {
-    stream: Sender<Vec<u8>>,
-    closer: Arc<L2capCloser>,
-}
-
-impl L2capChannelWriter {
-    pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream
-            .send(packet.to_vec())
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))
-    }
-
-    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream.try_send(packet.to_vec()).map_err(|e| match e {
-            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
-            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write".to_string()),
-        })
-    }
-
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
-    }
-}
-
-impl fmt::Debug for L2capChannelWriter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelWriter")
+        f.debug_struct("Channel")
+            .field("stream", &self.stream)
+            .field("channel", &"Android Bluetooth Channel")
+            .finish()
     }
 }
 

@@ -2,8 +2,10 @@ pub mod adapter;
 pub mod characteristic;
 pub mod descriptor;
 pub mod device;
-pub mod l2cap_channel;
 pub mod service;
+
+#[cfg(feature = "l2cap")]
+pub mod l2cap_channel;
 
 mod error;
 

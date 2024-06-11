@@ -277,7 +277,7 @@ impl DeviceImpl {
         &self,
         _psm: u16,
         _secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+    ) -> Result<(L2capChannelReader, L2capChannelWriter)> {
         Err(ErrorKind::NotSupported.into())
     }
 }

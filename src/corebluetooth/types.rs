@@ -4,16 +4,17 @@
 
 use std::collections::HashMap;
 use std::ffi::c_ulong;
+use std::num::TryFromIntError;
 use std::os::raw::{c_char, c_void};
 
 use objc::rc::autoreleasepool;
 use objc::runtime::{Object, BOOL, NO};
-use objc::{msg_send, sel, sel_impl};
+use objc::{msg_send, sel, sel_impl, Message};
 use objc_foundation::{
     object_struct, INSData, INSDictionary, INSFastEnumeration, INSObject, INSString, NSArray, NSData, NSDictionary,
     NSObject, NSString,
 };
-use objc_id::{Id, ShareId};
+use objc_id::{Id, Owned, ShareId, Shared};
 
 use super::delegates::{CentralDelegate, PeripheralDelegate};
 use crate::btuuid::BluetoothUuidExt;
@@ -144,6 +145,20 @@ impl CBATTError {
     pub const INSUFFICIENT_RESOURCES: CBATTError = CBATTError(17);
 }
 
+#[non_exhaustive]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum NSStreamStatus {
+    #[default]
+    NotOpen = 0,
+    Opening = 1,
+    Open = 2,
+    Reading = 3,
+    Writing = 4,
+    AtEnd = 5,
+    Closed = 6,
+    Error = 7,
+}
+
 impl AdvertisementData {
     pub(super) fn from_nsdictionary(adv_data: &ShareId<NSDictionary<NSString, NSObject>>) -> Self {
         let is_connectable = adv_data
@@ -228,6 +243,10 @@ extern "C" {
     // CBConnectionEventMatchingOption
     static CBConnectionEventMatchingOptionPeripheralUUIDs: id;
     static CBConnectionEventMatchingOptionServiceUUIDs: id;
+
+    //For Handling L2Cap Streams
+    #[cfg(feature = "l2cap")]
+    pub(super) static kCFStreamPropertySocketNativeHandle: id;
 }
 
 pub const QOS_CLASS_USER_INTERACTIVE: isize = 0x21;
@@ -269,6 +288,9 @@ object_struct!(CBService);
 object_struct!(CBCharacteristic);
 object_struct!(CBDescriptor);
 object_struct!(CBL2CAPChannel);
+
+object_struct!(NSInputStream);
+object_struct!(NSOutputStream);
 
 impl NSError {
     pub fn code(&self) -> NSInteger {
@@ -492,6 +514,10 @@ impl CBPeripheral {
     pub fn read_rssi(&self) {
         unsafe { msg_send![self, readRSSI] }
     }
+
+    pub fn open_l2_cap_channel(&self, psm: u16) {
+        unsafe { msg_send![self, openL2CAPChannel: psm] }
+    }
 }
 
 impl CBService {
@@ -562,3 +588,93 @@ impl CBDescriptor {
         autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, value]) })
     }
 }
+
+impl CBL2CAPChannel {
+    pub fn input_stream(&self) -> ShareId<NSInputStream> {
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, inputStream]) })
+    }
+    pub fn output_stream(&self) -> ShareId<NSOutputStream> {
+        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, outputStream]) })
+    }
+}
+
+/// Trait for Objects that inherit from [NSStream](https://developer.apple.com/documentation/foundation/nsstream)
+///
+/// # Safety
+/// Only implement for objective C objects that inherit from NSStream.
+pub(super) unsafe trait NSStream: Sized + Message {
+    fn open(&self) {
+        unsafe { msg_send![self, open] }
+    }
+
+    fn close(&self) {
+        unsafe { msg_send![self, close] }
+    }
+
+    fn stream_error(&self) -> Option<ShareId<NSError>> {
+        unsafe { option_from_ptr(msg_send![self, streamError]) }
+    }
+
+    fn stream_status(&self) -> Result<NSStreamStatus, &'static str> {
+        let status: NSUInteger = unsafe { msg_send![self, streamStatus] };
+        NSStreamStatus::try_from(status)
+    }
+}
+
+pub(super) unsafe trait CFStream: Sized + Message {
+    fn property(&self, key: &id) -> Option<&NSData> {
+        let key = unsafe { extern_nsstring(*key) };
+        let obj_ptr: *const NSObject = unsafe { msg_send![self, propertyForKey: key] };
+        if obj_ptr.is_null() {
+            println!("Object Pointer Null");
+            return None;
+        }
+        let class = NSData::class();
+        let is_ns_data: BOOL = unsafe { msg_send![self, isKindOfClass:class] };
+        Some(unsafe { &*(obj_ptr as *const Object as *const NSData) })
+    }
+}
+unsafe impl<S: NSStream> CFStream for S {}
+
+impl TryFrom<NSUInteger> for NSStreamStatus {
+    type Error = &'static str;
+
+    fn try_from(value: NSUInteger) -> Result<Self, <NSStreamStatus as TryFrom<NSUInteger>>::Error> {
+        Ok(match value {
+            0 => Self::NotOpen,
+            1 => Self::Opening,
+            2 => Self::Open,
+            3 => Self::Reading,
+            4 => Self::Writing,
+            5 => Self::AtEnd,
+            6 => Self::Closed,
+            7 => Self::Error,
+            _ => return Err("Invalid Stream Status"),
+        })
+    }
+}
+
+impl NSInputStream {
+    pub fn has_bytes_available(&self) -> bool {
+        let b: BOOL = unsafe { msg_send![self, hasBytesAvailable] };
+        b != NO
+    }
+
+    pub fn read(&self, buffer: &mut [u8]) -> isize {
+        unsafe { msg_send![self, read:buffer.as_mut_ptr() maxLength:buffer.len()] }
+    }
+}
+
+unsafe impl NSStream for NSInputStream {}
+
+impl NSOutputStream {
+    pub fn has_space_available(&self) -> bool {
+        let b: BOOL = unsafe { msg_send![self, hasSpaceAvailable] };
+        b != NO
+    }
+    pub fn write(&self, buffer: &[u8]) -> isize {
+        unsafe { msg_send![self, write: buffer.as_ptr() maxLength:buffer.len()] }
+    }
+}
+
+unsafe impl NSStream for NSOutputStream {}
