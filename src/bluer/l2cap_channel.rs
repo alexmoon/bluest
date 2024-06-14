@@ -2,12 +2,11 @@ use std::{
     io::Result,
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
 };
 
 use bluer::l2cap::{SocketAddr, Stream};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use tracing::{debug, trace};
+use tracing::trace;
 
 use crate::error::ErrorKind;
 
@@ -19,10 +18,8 @@ pub struct Channel {
 }
 
 enum ChannelCreationError {
-    StreamCreationError(std::io::Error),
     SetSecurityError(std::io::Error),
     ConnectionError(std::io::Error),
-    ConnectionTimeout(tokio::time::error::Elapsed),
 }
 
 impl Channel {
@@ -80,27 +77,19 @@ impl AsyncWrite for Channel {
 impl From<ChannelCreationError> for crate::Error {
     fn from(value: ChannelCreationError) -> Self {
         let kind = match &value {
-            ChannelCreationError::StreamCreationError(_) | ChannelCreationError::SetSecurityError(_) => {
-                ErrorKind::Internal
-            }
+            ChannelCreationError::SetSecurityError(_) => ErrorKind::Internal,
             ChannelCreationError::ConnectionError(_) => ErrorKind::ConnectionFailed,
-            ChannelCreationError::ConnectionTimeout(_) => ErrorKind::Timeout,
         };
         let message = match &value {
-            ChannelCreationError::StreamCreationError(_) => "Error creating a new l2cap stream.",
             ChannelCreationError::SetSecurityError(_) => "Error setting connection security level.",
             ChannelCreationError::ConnectionError(_) => "Error connecting to l2cap stream.",
-            ChannelCreationError::ConnectionTimeout(_) => {
-                "Timeout occured before stream parameters could be determined."
-            }
         };
         crate::Error::new(
             kind,
             match value {
-                ChannelCreationError::StreamCreationError(io)
-                | ChannelCreationError::SetSecurityError(io)
-                | ChannelCreationError::ConnectionError(io) => Some(Box::new(io)),
-                ChannelCreationError::ConnectionTimeout(elapsed) => Some(Box::new(elapsed)),
+                ChannelCreationError::SetSecurityError(io) | ChannelCreationError::ConnectionError(io) => {
+                    Some(Box::new(io))
+                }
             },
             message.to_owned(),
         )

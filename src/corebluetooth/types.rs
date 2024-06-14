@@ -621,6 +621,8 @@ pub(super) unsafe trait NSStream: Sized + Message {
     }
 }
 
+/// # Safety
+/// Only implement for objective C object that inherit from CFStream (https://developer.apple.com/documentation/corefoundation/cfstream)
 pub(super) unsafe trait CFStream: Sized + Message {
     fn property(&self, key: &id) -> Option<&NSData> {
         let key = unsafe { extern_nsstring(*key) };
