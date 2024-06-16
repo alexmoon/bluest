@@ -273,11 +273,12 @@ impl DeviceImpl {
         Err(ErrorKind::NotSupported.into())
     }
 
+    #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(
         &self,
         _psm: u16,
         _secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+    ) -> Result<(L2capChannelReader, L2capChannelWriter)> {
         Err(ErrorKind::NotSupported.into())
     }
 }

@@ -119,7 +119,6 @@ mod characteristic;
 mod descriptor;
 mod device;
 pub mod error;
-mod l2cap_channel;
 pub mod pairing;
 mod service;
 mod util;
@@ -143,7 +142,6 @@ pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
 pub use device::{Device, ServicesChanged};
 pub use error::Error;
-pub use l2cap_channel::{L2capChannel, L2capChannelReader, L2capChannelWriter};
 pub use service::Service;
 pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]
@@ -157,6 +155,17 @@ use crate::bluer as sys;
 use crate::corebluetooth as sys;
 #[cfg(target_os = "windows")]
 use crate::windows as sys;
+
+#[cfg(all(
+    feature = "l2cap",
+    any(target_os = "android", target_os = "linux", target_os = "macos", target_os = "ios")
+))]
+mod l2cap_channel;
+#[cfg(all(
+    feature = "l2cap",
+    any(target_os = "android", target_os = "linux", target_os = "macos", target_os = "ios")
+))]
+pub use l2cap_channel::L2capChannel;
 
 /// Convenience alias for a result with [`Error`]
 pub type Result<T, E = Error> = core::result::Result<T, E>;

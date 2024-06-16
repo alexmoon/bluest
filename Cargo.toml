@@ -21,6 +21,7 @@ targets = [
 
 [features]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
+l2cap = ["dep:tokio", "bluer/l2cap"]
 
 [dependencies]
 async-trait = "0.1.57"
@@ -30,7 +31,12 @@ serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
 
 [dev-dependencies]
-tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.20.1", features = [
+    "macros",
+    "rt-multi-thread",
+    "time",
+    "io-util",
+] }
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
@@ -57,13 +63,19 @@ tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 [target.'cfg(target_os = "android")'.dependencies]
 java-spaghetti = "0.2.0"
 async-channel = "2.2.0"
+tokio = { version = "1.20.1", features = ["rt", "io-util"], optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.5.1"
 objc = "0.2.7"
 objc_id = "0.1.1"
 objc-foundation = "0.1.1"
+tokio = { version = "1.20.1", features = ["net"], optional = true }
 
 [[example]]
 name = "scan"
 doc-scrape-examples = true
+
+[[example]]
+name = "l2cap_client"
+required-features = ["l2cap"]

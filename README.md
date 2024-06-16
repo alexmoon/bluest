@@ -99,6 +99,7 @@ below.
 | [`Device::pair_with_agent`][Device::pair_with_agent]             |    ✨     |   ✅    |  ✅   |
 | [`Device::unpair`][Device::unpair]                               |    ❌     |   ✅    |  ✅   |
 | [`Device::rssi`][Device::rssi]                                   |    ✅     |   ❌    |  ❌   |
+| [`Device::open_l2cap_channel`][Device::open_l2cap_channel]       |    ⌛️     |   ❌    |  ⌛️   |
 | [`Service::uuid`][Service::uuid]                                 |    ✅     |   ✅    |  ⌛️   |
 | [`Service::is_primary`][Service::is_primary]                     |    ✅     |   ❌    |  ✅   |
 | [`Characteristic::uuid`][Characteristic::uuid]                   |    ✅     |   ✅    |  ⌛️   |
@@ -149,6 +150,7 @@ Refer to the [API documentation] for more details.
 [Device::unpair]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.unpair
 [Device::discover_services]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.discover_services
 [Device::rssi]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.rssi
+[Device::open_l2cap_channel]: https://docs.rs/bluest/latest/bluest/struct.Device.html#method.open_l2cap_channel
 [Service::uuid]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.uuid
 [Service::is_primary]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.is_primary
 [Service::discover_characteristics]: https://docs.rs/bluest/latest/bluest/struct.Service.html#method.discover_characteristics
