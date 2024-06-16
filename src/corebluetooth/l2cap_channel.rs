@@ -1,19 +1,16 @@
-use std::{
-    io::Result,
-    os::fd::{FromRawFd, RawFd},
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::io::Result;
+use std::os::fd::{FromRawFd, RawFd};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use objc_foundation::INSData;
 use objc_id::{Id, Shared};
-use tokio::{
-    io::{AsyncRead, AsyncWrite, ReadBuf},
-    net::UnixStream,
-};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tokio::net::UnixStream;
 
 use super::types::{kCFStreamPropertySocketNativeHandle, CBL2CAPChannel, CFStream};
-use crate::{error::ErrorKind, Error};
+use crate::error::ErrorKind;
+use crate::Error;
 
 // This implementation is based upon the fact that that CBL2CAPChannel::outputStream -> an NS Output Stream; (https://developer.apple.com/documentation/foundation/outputstream)
 // NS Output stream is toll free bridged to CFWriteStream (https://developer.apple.com/documentation/corefoundation/cfwritestream)

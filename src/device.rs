@@ -4,11 +4,10 @@ use futures_core::Stream;
 use futures_lite::StreamExt;
 
 use crate::error::ErrorKind;
-use crate::pairing::PairingAgent;
-use crate::{sys, DeviceId, Error, Result, Service, Uuid};
-
 #[cfg(feature = "l2cap")]
 use crate::l2cap_channel::L2capChannel;
+use crate::pairing::PairingAgent;
+use crate::{sys, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

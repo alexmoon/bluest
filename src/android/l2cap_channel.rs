@@ -1,11 +1,7 @@
-use std::{
-    fmt,
-    io::Result,
-    pin::Pin,
-    slice,
-    task::{Context, Poll},
-    thread,
-};
+use std::io::Result;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use std::{fmt, slice, thread};
 
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, DuplexStream, ReadBuf};

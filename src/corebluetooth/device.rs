@@ -6,14 +6,13 @@ use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
+#[cfg(feature = "l2cap")]
+use super::l2cap_channel::Channel;
 use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
 use crate::{Device, DeviceId, Error, Result, Service, Uuid};
-
-#[cfg(feature = "l2cap")]
-use super::l2cap_channel::Channel;
 
 /// A Bluetooth LE device
 #[derive(Clone)]
