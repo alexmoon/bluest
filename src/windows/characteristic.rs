@@ -158,7 +158,7 @@ impl CharacteristicImpl {
             return Err(Error::new(
                 ErrorKind::NotSupported,
                 None,
-                "characteristic does not support indications or notifications".to_string(),
+                "characteristic does not support indications or notifications",
             ));
         };
 

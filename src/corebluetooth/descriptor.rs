@@ -68,13 +68,10 @@ impl DescriptorImpl {
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<Vec<u8>> {
-        self.inner.value().map(|val| value_to_slice(&val)).ok_or_else(|| {
-            Error::new(
-                ErrorKind::NotReady,
-                None,
-                "the descriptor value has not been read".to_string(),
-            )
-        })
+        self.inner
+            .value()
+            .map(|val| value_to_slice(&val))
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "the descriptor value has not been read"))
     }
 
     /// Read the value of this descriptor from the device

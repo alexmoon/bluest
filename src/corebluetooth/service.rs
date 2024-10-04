@@ -103,13 +103,7 @@ impl ServiceImpl {
                     .map(|x| Characteristic::new(x, self.delegate.clone()))
                     .collect()
             })
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::NotReady,
-                    None,
-                    "no characteristics have been discovered".to_string(),
-                )
-            })
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no characteristics have been discovered"))
     }
 
     /// Discover the included services of this service.
@@ -175,12 +169,6 @@ impl ServiceImpl {
         self.inner
             .included_services()
             .map(|s| s.enumerator().map(|x| Service::new(x, self.delegate.clone())).collect())
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::NotReady,
-                    None,
-                    "no included services have been discovered".to_string(),
-                )
-            })
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no included services have been discovered"))
     }
 }

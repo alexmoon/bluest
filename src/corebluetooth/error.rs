@@ -7,11 +7,7 @@ use crate::error::{AttError, ErrorKind};
 
 impl crate::Error {
     pub(super) fn from_recv_error(err: async_broadcast::RecvError) -> Self {
-        crate::Error::new(
-            ErrorKind::Internal,
-            Some(Box::new(err)),
-            "receiving delegate event".to_string(),
-        )
+        crate::Error::new(ErrorKind::Internal, Some(Box::new(err)), "receiving delegate event")
     }
 
     pub(super) fn from_nserror(err: ShareId<NSError>) -> Self {

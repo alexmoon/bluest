@@ -107,13 +107,7 @@ impl AdapterImpl {
                 .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
-                .ok_or_else(|| {
-                    Error::new(
-                        ErrorKind::Internal,
-                        None,
-                        "adapter event stream closed unexpectedly".to_string(),
-                    )
-                })??;
+                .ok_or_else(|| Error::new(ErrorKind::Internal, None, "adapter event stream closed unexpectedly"))??;
         }
         Ok(())
     }
@@ -125,7 +119,7 @@ impl AdapterImpl {
         peripherals
             .first_object()
             .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
-            .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device".to_string()))
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device"))
     }
 
     /// Finds all connected Bluetooth LE devices

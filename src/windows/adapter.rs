@@ -103,13 +103,7 @@ impl AdapterImpl {
                 .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
-                .ok_or_else(|| {
-                    Error::new(
-                        ErrorKind::Internal,
-                        None,
-                        "adapter event stream closed unexpectedly".to_string(),
-                    )
-                })??;
+                .ok_or_else(|| Error::new(ErrorKind::Internal, None, "adapter event stream closed unexpectedly"))??;
         }
         Ok(())
     }

@@ -59,12 +59,6 @@ trait OptionExt<T> {
 impl<T> OptionExt<T> for Option<T> {
     #[track_caller]
     fn non_null(self) -> Result<T, crate::Error> {
-        self.ok_or_else(|| {
-            crate::Error::new(
-                ErrorKind::Internal,
-                None,
-                "Java call unexpectedly returned null.".to_string(),
-            )
-        })
+        self.ok_or_else(|| crate::Error::new(ErrorKind::Internal, None, "Java call unexpectedly returned null."))
     }
 }

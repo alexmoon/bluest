@@ -60,7 +60,7 @@ pub(super) fn check_communication_status(
         _ => Err(Error::new(
             kind_from_communication_status(status, protocol_error)?,
             Some(Box::new(CommunicationError(status))),
-            message.to_string(),
+            message,
         )),
     }
 }

@@ -115,6 +115,7 @@ pub enum PeripheralEvent {
     ServicesChanged {
         invalidated_services: Vec<ShareId<CBService>>,
     },
+    #[allow(unused)]
     L2CAPChannelOpened {
         channel: ShareId<CBL2CAPChannel>,
         error: Option<ShareId<NSError>>,

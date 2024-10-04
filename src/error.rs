@@ -9,12 +9,16 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) fn new(
+    pub(crate) fn new<S: ToString>(
         kind: ErrorKind,
         source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
-        message: String,
+        message: S,
     ) -> Self {
-        Error { kind, source, message }
+        Error {
+            kind,
+            source,
+            message: message.to_string(),
+        }
     }
 
     /// Returns the corresponding [`ErrorKind`] for this error.

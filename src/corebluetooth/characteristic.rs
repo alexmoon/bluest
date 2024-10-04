@@ -48,13 +48,10 @@ impl CharacteristicImpl {
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<Vec<u8>> {
-        self.inner.value().map(|val| val.bytes().to_vec()).ok_or_else(|| {
-            Error::new(
-                ErrorKind::NotReady,
-                None,
-                "the characteristic value has not been read".to_string(),
-            )
-        })
+        self.inner
+            .value()
+            .map(|val| val.bytes().to_vec())
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "the characteristic value has not been read"))
     }
 
     /// Read the value of this characteristic from the device
@@ -308,12 +305,6 @@ impl CharacteristicImpl {
                     .map(|x| Descriptor::new(x, self.delegate.clone()))
                     .collect()
             })
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::NotReady,
-                    None,
-                    "no descriptors have been discovered".to_string(),
-                )
-            })
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no descriptors have been discovered"))
     }
 }

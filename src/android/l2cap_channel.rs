@@ -151,14 +151,10 @@ impl L2capChannelReader {
             .stream
             .recv()
             .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"))?;
 
         if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
+            return Err(Error::new(ErrorKind::InvalidParameter, None, "Buffer is too small"));
         }
 
         buf[..packet.len()].copy_from_slice(&packet);
@@ -169,16 +165,12 @@ impl L2capChannelReader {
     #[inline]
     pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let packet = self.stream.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue".to_string()),
-            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
+            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue"),
+            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"),
         })?;
 
         if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
+            return Err(Error::new(ErrorKind::InvalidParameter, None, "Buffer is too small"));
         }
 
         buf[..packet.len()].copy_from_slice(&packet);
@@ -208,13 +200,13 @@ impl L2capChannelWriter {
         self.stream
             .send(packet.to_vec())
             .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"))
     }
 
     pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
         self.stream.try_send(packet.to_vec()).map_err(|e| match e {
-            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
-            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write".to_string()),
+            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"),
+            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write"),
         })
     }
 

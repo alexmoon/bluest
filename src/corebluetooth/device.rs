@@ -170,13 +170,7 @@ impl DeviceImpl {
         self.peripheral
             .services()
             .map(|s| s.enumerator().map(|x| Service::new(x, self.delegate.clone())).collect())
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::NotReady,
-                    None,
-                    "no services have been discovered".to_string(),
-                )
-            })
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no services have been discovered"))
     }
 
     /// Monitors the device for services changed events.
