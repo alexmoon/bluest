@@ -499,8 +499,8 @@ impl CBService {
         autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
-    pub fn peripheral(&self) -> ShareId<CBPeripheral> {
-        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, peripheral]) })
+    pub fn peripheral(&self) -> Option<ShareId<CBPeripheral>> {
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, peripheral]) })
     }
 
     pub fn is_primary(&self) -> bool {
@@ -522,8 +522,8 @@ impl CBCharacteristic {
         autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
-    pub fn service(&self) -> ShareId<CBService> {
-        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, service]) })
+    pub fn service(&self) -> Option<ShareId<CBService>> {
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, service]) })
     }
 
     pub fn value(&self) -> Option<ShareId<NSData>> {
@@ -554,8 +554,8 @@ impl CBDescriptor {
         autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, UUID]) })
     }
 
-    pub fn characteristic(&self) -> ShareId<CBCharacteristic> {
-        autoreleasepool(move || unsafe { ShareId::from_ptr(msg_send![self, characteristic]) })
+    pub fn characteristic(&self) -> Option<ShareId<CBCharacteristic>> {
+        autoreleasepool(move || unsafe { option_from_ptr(msg_send![self, characteristic]) })
     }
 
     pub fn value(&self) -> Option<ShareId<NSObject>> {

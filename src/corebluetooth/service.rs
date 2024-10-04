@@ -55,7 +55,10 @@ impl ServiceImpl {
     }
 
     async fn discover_characteristics_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Characteristic>> {
-        let peripheral = self.inner.peripheral();
+        let peripheral =
+            self.inner
+                .peripheral()
+                .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());
@@ -123,7 +126,10 @@ impl ServiceImpl {
     }
 
     async fn discover_included_services_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Service>> {
-        let peripheral = self.inner.peripheral();
+        let peripheral =
+            self.inner
+                .peripheral()
+                .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
             return Err(ErrorKind::NotConnected.into());

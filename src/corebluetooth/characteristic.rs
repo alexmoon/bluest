@@ -56,8 +56,13 @@ impl CharacteristicImpl {
 
     /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<Vec<u8>> {
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
+        let service = self
+            .inner
+            .service()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -92,8 +97,13 @@ impl CharacteristicImpl {
     /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
     /// a successful write.
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
+        let service = self
+            .inner
+            .service()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -126,8 +136,13 @@ impl CharacteristicImpl {
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
+        let service = self
+            .inner
+            .service()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -156,7 +171,11 @@ impl CharacteristicImpl {
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
     pub fn max_write_len(&self) -> Result<usize> {
-        let peripheral = self.inner.service().peripheral();
+        let peripheral = self.inner.service().and_then(|x| x.peripheral()).ok_or(Error::new(
+            ErrorKind::NotFound,
+            None,
+            "peripheral not found",
+        ))?;
         Ok(peripheral.maximum_write_value_length_for_type(CBCharacteristicWriteType::WithoutResponse))
     }
 
@@ -174,12 +193,17 @@ impl CharacteristicImpl {
             return Err(Error::new(
                 ErrorKind::NotSupported,
                 None,
-                "characteristic does not support indications or notifications".to_string(),
+                "characteristic does not support indications or notifications",
             ));
         };
 
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
+        let service = self
+            .inner
+            .service()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -188,8 +212,9 @@ impl CharacteristicImpl {
 
         peripheral.set_notify(&self.inner, true);
         let guard = defer(move || {
-            let peripheral = self.inner.service().peripheral();
-            peripheral.set_notify(&self.inner, false);
+            if let Some(peripheral) = self.inner.service().and_then(|x| x.peripheral()) {
+                peripheral.set_notify(&self.inner, false);
+            }
         });
 
         loop {
@@ -254,8 +279,13 @@ impl CharacteristicImpl {
 
     /// Discover the descriptors associated with this characteristic.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
-        let service = self.inner.service();
-        let peripheral = service.peripheral();
+        let service = self
+            .inner
+            .service()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {

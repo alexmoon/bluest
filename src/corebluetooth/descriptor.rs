@@ -76,8 +76,14 @@ impl DescriptorImpl {
 
     /// Read the value of this descriptor from the device
     pub async fn read(&self) -> Result<Vec<u8>> {
-        let service = self.inner.characteristic().service();
-        let peripheral = service.peripheral();
+        let service = self.inner.characteristic().and_then(|x| x.service()).ok_or(Error::new(
+            ErrorKind::NotFound,
+            None,
+            "service not found",
+        ))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
@@ -108,8 +114,14 @@ impl DescriptorImpl {
 
     /// Write the value of this descriptor on the device to `value`
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let service = self.inner.characteristic().service();
-        let peripheral = service.peripheral();
+        let service = self.inner.characteristic().and_then(|x| x.service()).ok_or(Error::new(
+            ErrorKind::NotFound,
+            None,
+            "service not found",
+        ))?;
+        let peripheral = service
+            .peripheral()
+            .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
         let mut receiver = self.delegate.sender().new_receiver();
 
         if peripheral.state() != CBPeripheralState::CONNECTED {
