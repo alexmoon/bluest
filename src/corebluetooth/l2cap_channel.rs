@@ -1,3 +1,5 @@
+#![cfg(feature = "l2cap")]
+
 use std::fmt;
 
 use crate::Result;

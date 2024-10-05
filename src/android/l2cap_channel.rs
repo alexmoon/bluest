@@ -1,3 +1,5 @@
+#![cfg(feature = "l2cap")]
+
 use std::sync::Arc;
 use std::{fmt, slice, thread};
 

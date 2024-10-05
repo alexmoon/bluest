@@ -124,6 +124,15 @@ pub mod pairing;
 mod service;
 mod util;
 
+#[cfg(all(target_os = "android", not(feature = "unstable")))]
+compile_error!("Android support is unstable and requires the 'unstable' feature to be enabled");
+
+#[cfg(all(windows, feature = "l2cap"))]
+compile_error!("L2CAP support is not available on Windows");
+
+#[cfg(all(feature = "l2cap", not(feature = "unstable")))]
+compile_error!("L2CAP support is unstable and requires the 'unstable' feature to be enabled");
+
 #[cfg(target_os = "android")]
 mod android;
 #[cfg(target_os = "linux")]
@@ -143,6 +152,7 @@ pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
 pub use device::{Device, ServicesChanged};
 pub use error::Error;
+#[cfg(feature = "l2cap")]
 pub use l2cap_channel::{L2capChannel, L2capChannelReader, L2capChannelWriter};
 pub use service::Service;
 pub use sys::DeviceId;

@@ -6,6 +6,7 @@ use objc_foundation::{INSArray, INSFastEnumeration, INSString, NSArray};
 use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
+#[cfg(feature = "l2cap")]
 use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
@@ -209,6 +210,7 @@ impl DeviceImpl {
         }
     }
 
+    #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(
         &self,
         _psm: u16,

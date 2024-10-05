@@ -42,6 +42,7 @@ jobs:
           cargo clippy --all-targets -- -D warnings
 
       - name: Clippy (all features)
+        if: ${{ runner.os != 'Windows' }}
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
 
@@ -55,7 +56,7 @@ jobs:
         run: |
           rustup target add aarch64-linux-android
           # not using --all-targets because examples don't build for Android due to `Adapter::default()`
-          cargo clippy --lib --tests --target=aarch64-linux-android -- -D warnings
+          cargo clippy --lib --tests --target=aarch64-linux-android --features unstable -- -D warnings
 
       - name: Test
         run: cargo test --all
