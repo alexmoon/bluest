@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.6.7
+
+- Fix a panic on CoreBluetooth when parent object references become `nil`
+- Add `unstable` and `l2cap` features
+- (unstable) Add minimal Android platform support
+- (unstable) Add support for L2CAP connection-oriented channels (Android only)
+
 ## 0.6.6
 
 - Fix compilation on iOS
