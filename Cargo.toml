@@ -11,15 +11,18 @@ keywords = ["bluetooth", "BLE", "gatt", "bluez", "corebluetooth"]
 categories = ["asynchronous", "hardware-support", "os"]
 
 [package.metadata.docs.rs]
-features = ["serde"]
+features = ["serde", "unstable", "l2cap"]
 default-target = "x86_64-apple-darwin"
 targets = [
     "x86_64-apple-darwin",
     "x86_64-pc-windows-msvc",
     "x86_64-unknown-linux-gnu",
+    "aarch64-linux-android"
 ]
 
 [features]
+unstable = []
+l2cap = []
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]

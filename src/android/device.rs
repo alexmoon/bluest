@@ -4,6 +4,7 @@ use java_spaghetti::Global;
 use uuid::Uuid;
 
 use super::bindings::android::bluetooth::BluetoothDevice;
+#[cfg(feature = "l2cap")]
 use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use crate::pairing::PairingAgent;
 use crate::{DeviceId, Result, Service, ServicesChanged};
@@ -11,6 +12,7 @@ use crate::{DeviceId, Result, Service, ServicesChanged};
 #[derive(Clone)]
 pub struct DeviceImpl {
     pub(super) id: DeviceId,
+    #[cfg_attr(not(feature = "l2cap"), allow(unused))]
     pub(super) device: Global<BluetoothDevice>,
 }
 
@@ -97,6 +99,7 @@ impl DeviceImpl {
         todo!()
     }
 
+    #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(
         &self,
         psm: u16,

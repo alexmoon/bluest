@@ -3,6 +3,7 @@ use std::sync::Arc;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
+#[cfg(feature = "l2cap")]
 use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::DeviceId;
 use crate::device::ServicesChanged;
@@ -292,6 +293,7 @@ impl DeviceImpl {
         }
     }
 
+    #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(
         &self,
         _psm: u16,

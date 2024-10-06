@@ -4,6 +4,7 @@ use futures_core::Stream;
 use futures_lite::StreamExt;
 
 use crate::error::ErrorKind;
+#[cfg(feature = "l2cap")]
 use crate::l2cap_channel::L2capChannel;
 use crate::pairing::PairingAgent;
 use crate::{sys, DeviceId, Error, Result, Service, Uuid};
@@ -158,8 +159,10 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on iOS/MacOS, Windows and Linux.
+    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on iOS/MacOS and Linux.
+    /// The `l2cap` feature is not available on Windows.
     #[inline]
+    #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<L2capChannel> {
         let (reader, writer) = self.0.open_l2cap_channel(psm, secure).await?;
         Ok(L2capChannel { reader, writer })

@@ -1,3 +1,5 @@
+#![cfg(feature = "l2cap")]
+
 use crate::{sys, Result};
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
