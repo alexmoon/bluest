@@ -26,13 +26,13 @@ impl Advertisement {
     }
 
     /// Starts advertising for the specified duration.
-    pub async fn advertise(&self, data: &Vec<u8>, advertise_duration: Option<Duration>) -> Result<(), io::Error> {
+    pub async fn advertise(&mut self, data: &Vec<u8>, advertise_duration: Option<Duration>) -> Result<(), io::Error> {
         self.inner.advertise(data, advertise_duration).await
     }
 
     /// Stops the advertisement.
-    pub fn stop(&self) -> Result<(), io::Error> {
-        //self.inner.stop()
-        Ok(())
+    pub fn stop(&mut self) -> Result<(), io::Error> {
+        self.inner.stop()
+        //Ok(())
     }
 }
