@@ -18,7 +18,7 @@ use windows::Devices::Radios::{Radio, RadioState};
 use windows::Foundation::Collections::{IIterable, IVector};
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
-
+use windows::Storage::Streams::IBuffer;
 use super::types::StringVec;
 use crate::error::{Error, ErrorKind};
 use crate::util::defer;
@@ -28,7 +28,7 @@ use crate::{
 };
 use windows::Foundation::IReference;
 use windows::Storage::Streams::DataWriter;
-
+use windows::Devices::Bluetooth::Advertisement::*;
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be created with the [`Adapter::default()`] method.
@@ -258,8 +258,6 @@ impl AdapterImpl {
                         if let Err(err) = res {
                             error!("Unable to send AdvertisingDevice: {:?}", err);
                         }
-                    } else {
-                        println!("no event args");
                     }
                 } else if let Some(watcher) = watcher {
                     let res = watcher.Stop();
@@ -283,7 +281,7 @@ impl AdapterImpl {
         let build_watcher = |uuid: Option<Uuid>| {
             let watcher = BluetoothLEAdvertisementWatcher::new()?;
             watcher.SetScanningMode(BluetoothLEScanningMode::Active)?;
-            watcher.SetAllowExtendedAdvertisements(false)?;
+            watcher.SetAllowExtendedAdvertisements(true)?;
             watcher.Received(&received_handler)?;
             watcher.Stopped(&stopped_handler)?;
 
@@ -305,7 +303,6 @@ impl AdapterImpl {
         };
 
         let watchers = if services.is_empty() {
-            println!("build_watcher NONE");
             vec![build_watcher(None)?]
         } else {
             services
@@ -329,9 +326,35 @@ impl AdapterImpl {
         Ok(receiver
             .then(move |event_args| {
                 let _guard = &guard;
+
                 Box::pin(async move {
                     if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
-                        println!("NON DEVICE{:?}",event_args);
+//                         // Function to convert IBuffer to Vec<u8>
+// // Function to convert IBuffer to Vec<u8>
+// fn buffer_to_vec(buffer: &IBuffer) -> Result<Vec<u8>> {
+//      // Create a DataReader from the IBuffer
+//      let reader = DataReader::FromBuffer(buffer)?;
+//      let len = reader.UnconsumedBufferLength()? as usize;
+//      let mut data = vec![0; len];
+//      reader.ReadBytes(&mut data)?; // Read the bytes into the Vec
+//      Ok(data)
+// }
+//                         // Function to print ManufacturerData details
+// // Function to print ManufacturerData details
+// fn print_manufacturer_data(manufacturer_data: &IVector<BluetoothLEManufacturerData>) -> Result<()> {
+//     for data in manufacturer_data {
+//         let manufacturer_id = data.CompanyId()?;
+//         let data_payload = buffer_to_vec(&data.Data()?)?; // Convert IBuffer to Vec<u8>
+
+//         println!("Manufacturer ID: {:#X}", manufacturer_id);
+//         println!("Data Payload: {:?}", data_payload); // Print payload as raw bytes
+//     }
+//     Ok(())
+// }
+// let addr = event_args.Advertisement().unwrap().ManufacturerData().unwrap();
+
+// print_manufacturer_data(&addr);
+//                         println!("NON DEVICE{:?}",addr);
                         // Device cannot be created from a non-connectable advertisement
                         return None;
                     }
@@ -340,7 +363,7 @@ impl AdapterImpl {
                     let kind = event_args.BluetoothAddressType().ok()?;
                     let rssi = event_args.RawSignalStrengthInDBm().ok();
                     let adv_data = AdvertisementData::from(event_args);
-                    println!("{:?}",adv_data);
+
                     match Device::from_addr(addr, kind).await {
                         Ok(device) => Some(AdvertisingDevice { device, rssi, adv_data }),
                         Err(err) => {
@@ -358,7 +381,21 @@ impl AdapterImpl {
     }
 
     pub async fn send_ad<'a>(
-        &'a self,) -> Result<()>{
+        &'a self,data: &Vec<u8>) -> Result<()>{
+
+            let manufacturer_data = BluetoothLEManufacturerData::new()?;
+            manufacturer_data.SetCompanyId(0x0059)?;
+            let writer = DataWriter::new()?;
+            writer.WriteBytes(data)?;
+        
+            let buffer = writer.DetachBuffer()?;
+            manufacturer_data.SetData(&buffer)?;
+            let publisher = BluetoothLEAdvertisementPublisher::new()?;
+            publisher.Advertisement()?.ManufacturerData()?.Append(&manufacturer_data)?;
+            publisher.Start()?;
+        
+            // publisher.Stop()?;
+            println!("\nStopped.");
         println!("---------------------------");
         let blue = BluetoothLEAdvertisement::new()?;
 
@@ -370,7 +407,6 @@ impl AdapterImpl {
     // Example: Set manufacturer data (can be changed as needed)
     let manufacturer_data = BluetoothLEAdvertisementDataSection::new()?;
         println!("----manu");
-    let data: [u8; 4] = [0x00, 0x59, 0x03, 0x04]; // Example data
     let writer = DataWriter::new()?;
     writer.WriteBytes(&data)?;
         println!("----write");
@@ -491,7 +527,6 @@ impl From<BluetoothLEAdvertisementReceivedEventArgs> for AdvertisementData {
     fn from(event_args: BluetoothLEAdvertisementReceivedEventArgs) -> Self {
         let is_connectable = event_args.IsConnectable().unwrap_or(false);
         let tx_power_level = event_args.TransmitPowerLevelInDBm().ok().and_then(|x| x.Value().ok());
-        println!("{:?}",event_args);
         let (local_name, manufacturer_data, services, service_data) = if let Ok(adv) = event_args.Advertisement() {
             let local_name = adv
                 .LocalName()

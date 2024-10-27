@@ -148,8 +148,8 @@ impl Adapter {
         self.0.disconnect_device(device).await
     }
     pub async fn send_ad<'a>(
-        &'a self,) -> Result<()>{
-        self.0.send_ad().await
+        &'a self,data: &Vec<u8>) -> Result<()>{
+        self.0.send_ad(&data).await
     }
 
     /// Monitors a device for connection/disconnection events.

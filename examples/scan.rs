@@ -21,13 +21,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
     adapter.wait_available().await?;
-    adapter.send_ad().await;
 
     info!("starting scan");
     let mut scan = adapter.scan(&[]).await?;
     info!("scan started");
     while let Some(discovered_device) = scan.next().await {
-        if !discovered_device.device.name().unwrap().contains("Samsung") {
         info!(
             "{}{}: {:?}",
             discovered_device.device.name().as_deref().unwrap_or("(unknown)"),
@@ -37,7 +35,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .unwrap_or_default(),
             discovered_device.adv_data.services
         );
-        }
     }
 
     Ok(())
