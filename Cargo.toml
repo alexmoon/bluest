@@ -1,6 +1,6 @@
 [package]
 name = "bluest"
-version = "0.6.7"
+version = "0.6.8"
 authors = ["Alex Moon"]
 edition = "2021"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
@@ -23,7 +23,7 @@ targets = [
 [features]
 unstable = []
 l2cap = []
-serde = ["dep:serde", "uuid/serde", "bluer/serde"]
+#serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
 async-trait = "0.1.57"
@@ -52,20 +52,6 @@ windows = { version = "0.48.0", features = [
     "Devices_Radios",
     "Storage_Streams",
 ] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-bluer = { version = "0.16.1", features = ["bluetoothd"] }
-tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
-
-[target.'cfg(target_os = "android")'.dependencies]
-java-spaghetti = "0.2.0"
-async-channel = "2.2.0"
-
-[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
-async-broadcast = "0.5.1"
-objc = "0.2.7"
-objc_id = "0.1.1"
-objc-foundation = "0.1.1"
 
 [[example]]
 name = "scan"

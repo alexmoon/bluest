@@ -147,6 +147,10 @@ impl Adapter {
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         self.0.disconnect_device(device).await
     }
+    pub async fn send_ad<'a>(
+        &'a self,) -> Result<()>{
+        self.0.send_ad().await
+    }
 
     /// Monitors a device for connection/disconnection events.
     ///

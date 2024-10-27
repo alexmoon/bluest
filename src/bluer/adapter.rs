@@ -6,6 +6,7 @@ use futures_lite::StreamExt;
 
 use crate::error::ErrorKind;
 use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
+dave
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -124,15 +125,19 @@ impl AdapterImpl {
         &'a self,
         services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
+
+                            println!("jack!");
         Ok(self
             .inner
             .discover_devices()
             .await?
             .then(move |event| {
                 Box::pin(async move {
+                            println!("{:?}",event);
                     match event {
                         bluer::AdapterEvent::DeviceAdded(addr) => {
                             let device = Device::new(self.session.clone(), &self.inner, addr).ok()?;
+                            println!("{:?}",device);
                             if !device.is_connected().await {
                                 let adv_data = device.0.adv_data().await;
                                 let rssi = device.rssi().await.ok();
@@ -150,7 +155,7 @@ impl AdapterImpl {
                 services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))
             }))
     }
-
+dave
     /// Finds Bluetooth devices providing any service in `services`.
     ///
     /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
