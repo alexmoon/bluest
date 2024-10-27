@@ -41,6 +41,12 @@ impl AdvertisementImpl {
 
     pub async fn advertise(&mut self, data: &Vec<u8>, advertise_duration: Option<Duration>) -> Result<(), io::Error> {
 
+        // Start the publisher if it exists
+        if let Some(publisher) = &self.publisher {
+            publisher.Stop()?;
+            self.publisher=None;
+        }
+
         if self.publisher.is_none() {
             // Initialize BluetoothLEAdvertisement and publisher if not already created
             let manufacturer_data = BluetoothLEManufacturerData::new()?;
@@ -53,20 +59,26 @@ impl AdvertisementImpl {
             manufacturer_data.SetData(&buffer)?;
             
             let blue = BluetoothLEAdvertisement::new()?;
-            blue.SetFlags(None)?;
-            let manufacturer_data_section = BluetoothLEAdvertisementDataSection::new()?;
-            blue.DataSections()?.Append(&manufacturer_data_section)?;
+            // blue.SetFlags(None)?;
+            //let manufacturer_data_section = BluetoothLEAdvertisementDataSection::new()?;
+          //  manufacturer_data_section.SetData(&buffer)?;
+            //blue.DataSections()?.Append(&manufacturer_data_section)?;
 
             // Create the publisher and start advertising
-            let publisher = BluetoothLEAdvertisementPublisher::Create(&blue)?;
-            publisher.Start()?; // Start the publisher before assigning it to `self.publisher`
+            //let publisher = BluetoothLEAdvertisementPublisher::Create(&blue)?;
+            let publisher = BluetoothLEAdvertisementPublisher::new()?;
+            publisher.Advertisement()?.ManufacturerData()?.Append(&manufacturer_data)?;
+            //  publisher.Start()?; // Start the publisher before assigning it to `self.publisher`
     
             // Assign the successfully started publisher to `self.publisher`
             self.publisher = Some(publisher);
-        }
+        } 
         
-        // let publisher = BluetoothLEAdvertisementPublisher::new()?;
-        // publisher.Advertisement()?.ManufacturerData()?.Append(&manufacturer_data)?;
+
+        if let Some(publisher) = &self.publisher {
+            println!("{:?}",publisher.Status());
+            publisher.Start()?;
+        }
 
         if let Some(duration) = advertise_duration {
             tokio::time::sleep(duration).await;
