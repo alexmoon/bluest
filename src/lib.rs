@@ -134,7 +134,9 @@ compile_error!("L2CAP support is not available on Windows");
 compile_error!("L2CAP support is unstable and requires the 'unstable' feature to be enabled");
 
 mod advertisement; // Ensure advertisement.rs is part of the module tree
-pub use advertisement::Advertisement; // Re-export Advertisement for project-wide access
+pub use advertisement::Advertisement;
+use windows::adapter::AdapterImpl;
+use windows_advertisement::AdvertisementImpl; // Re-export Advertisement for project-wide access
 // Conditionally include platform-specific modules
 
 #[cfg(target_os = "android")]
@@ -293,5 +295,18 @@ impl CharacteristicProperties {
             | (u32::from(self.extended_properties) << 7)
             | (u32::from(self.reliable_write) << 8)
             | (u32::from(self.writable_auxiliaries) << 9)
+    }
+}
+
+pub struct AdvertisingGuard {
+    pub adapter: AdapterImpl,
+    pub publisher: AdvertisementImpl,
+}
+
+impl Drop for AdvertisingGuard {
+    fn drop(&mut self) {
+        // Stop advertising when `AdvertisingGuard` is dropped.
+        // self.adapter.stop_advertising().expect("Failed to stop advertising");
+        self.publisher.stop();
     }
 }

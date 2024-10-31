@@ -25,17 +25,16 @@ use crate::{
 };
 use windows::Storage::Streams::DataWriter;
 
+#[derive(Debug, Clone)]
 pub struct AdvertisementImpl {
     publisher: Option<BluetoothLEAdvertisementPublisher>,
-    company_id: u16,
 }
 
 impl AdvertisementImpl {
     /// Creates a new `Advertisement` instance with the specified company ID.
-    pub fn new(company_id: u16) -> Self {
+    pub fn new() -> Self {
         Self {
             publisher: None, // Initialize without publisher
-            company_id,
         }
     }
 
@@ -43,15 +42,16 @@ impl AdvertisementImpl {
 
         // Start the publisher if it exists
         if let Some(publisher) = &self.publisher {
+            println!("stop on publisher");
             publisher.Stop()?;
             self.publisher=None;
         }
 
         if self.publisher.is_none() {
             // Initialize BluetoothLEAdvertisement and publisher if not already created
-            let manufacturer_data = BluetoothLEManufacturerData::new()?;
-            manufacturer_data.SetCompanyId(self.company_id)?;
-            println!("Windows advertisement started with company ID: {:X}.", self.company_id);
+            let manufacturer_data: BluetoothLEManufacturerData = BluetoothLEManufacturerData::new()?;
+            // manufacturer_data.SetCompanyId(self.company_id)?;
+            // println!("Windows advertisement started with company ID: {:X}.", self.company_id);
             let writer = DataWriter::new()?;
             writer.WriteBytes(data)?;
         
@@ -99,4 +99,38 @@ impl AdvertisementImpl {
         }
         Ok(())
     }
+
+    pub fn start(&mut self, data: AdvertisementData) -> Result<(), String> {
+        // Create a new Bluetooth advertisement
+        let advertisement = BluetoothLEAdvertisement::new()
+            .map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
+        
+        // Set manufacturer data from AdvertisementData
+        if let Some(manufacturer_data) = data.manufacturer_data {
+            let manufacturer_section = BluetoothLEManufacturerData::new()
+                .map_err(|e| format!("Failed to create manufacturer data: {:?}", e))?;
+            manufacturer_section.SetCompanyId(manufacturer_data.company_id);
+
+            // Convert Vec<u8> to IBuffer and set it in manufacturer section
+            let writer = DataWriter::new().map_err(|e| format!("Failed to create DataWriter: {:?}", e))?;
+            writer.WriteBytes(&manufacturer_data.data).map_err(|e| format!("Failed to write bytes: {:?}", e))?;
+            let buffer = writer.DetachBuffer().map_err(|e| format!("Failed to detach buffer: {:?}", e))?;
+            manufacturer_section.SetData(&buffer).map_err(|e| format!("Failed to set data: {:?}", e))?;
+            
+            advertisement.ManufacturerData()
+                .map_err(|e| format!("Failed to access ManufacturerData: {:?}", e))?
+                .Append(&manufacturer_section)
+                .map_err(|e| format!("Failed to append manufacturer data: {:?}", e))?;
+        }
+
+        // Create and start the publisher
+        let publisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)
+            .map_err(|e| format!("Failed to create publisher: {:?}", e))?;
+        publisher.Start().map_err(|e| format!("Failed to start advertising: {:?}", e))?;
+        
+        // Store publisher in AdvertisementImpl for later control
+        self.publisher = Some(publisher);
+        Ok(())
+    }
+
 }

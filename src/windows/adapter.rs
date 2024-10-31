@@ -2,33 +2,33 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::sync::Arc;
 
+use super::types::StringVec;
+use crate::error::{Error, ErrorKind};
+use crate::util::defer;
+use crate::windows_advertisement::AdvertisementImpl;
+use crate::{
+    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, BluetoothUuidExt, ConnectionEvent, Device, DeviceId, ManufacturerData, Result, Uuid
+};
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::HSTRING;
+use windows::Devices::Bluetooth::Advertisement::*;
 use windows::Devices::Bluetooth::Advertisement::{
     BluetoothLEAdvertisement, BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementFilter,
-    BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher,
-    BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData, BluetoothLEScanningMode,
-    BluetoothLEAdvertisementFlags, BluetoothLEAdvertisementPublisher,
+    BluetoothLEAdvertisementFlags, BluetoothLEAdvertisementPublisher, BluetoothLEAdvertisementReceivedEventArgs,
+    BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher, BluetoothLEAdvertisementWatcherStoppedEventArgs,
+    BluetoothLEManufacturerData, BluetoothLEScanningMode,
 };
 use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
 use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
 use windows::Devices::Radios::{Radio, RadioState};
 use windows::Foundation::Collections::{IIterable, IVector};
+use windows::Foundation::IReference;
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
-use windows::Storage::Streams::IBuffer;
-use super::types::StringVec;
-use crate::error::{Error, ErrorKind};
-use crate::util::defer;
-use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ConnectionEvent, Device, DeviceId,
-    ManufacturerData, Result, Uuid,
-};
-use windows::Foundation::IReference;
 use windows::Storage::Streams::DataWriter;
-use windows::Devices::Bluetooth::Advertisement::*;
+use windows::Storage::Streams::IBuffer;
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be created with the [`Adapter::default()`] method.
@@ -286,18 +286,16 @@ impl AdapterImpl {
             watcher.Stopped(&stopped_handler)?;
 
             if let Some(uuid) = uuid {
-
-            println!("SOME UUID {:?}",uuid);
                 // let service_uuids = advertisement.ServiceUuids()?;
                 // service_uuids.Append(windows::core::GUID::from_u128(uuid.as_u128()))?;
-            }
-                let advertisement = BluetoothLEAdvertisement::new()?;
+                // let advertisement = BluetoothLEAdvertisement::new()?;
                 // advertisement.GetManufacturerDataByCompanyId(0x69);
-                advertisement.GetManufacturerDataByCompanyId(0x6969);
-                let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
-                advertisement_filter.SetAdvertisement(&advertisement)?;
-                
-                watcher.SetAdvertisementFilter(&advertisement_filter)?;
+                // advertisement.GetManufacturerDataByCompanyId(0x0059);
+                // let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
+                // advertisement_filter.SetAdvertisement(&advertisement)?;
+
+                // watcher.SetAdvertisementFilter(&advertisement_filter)?;
+            }
 
             Ok::<_, windows::core::Error>(watcher)
         };
@@ -324,37 +322,44 @@ impl AdapterImpl {
         });
 
         Ok(receiver
+            .filter(move |event_args| {
+                event_args
+                    .Advertisement()
+                    .ok()
+                    .and_then(|ad| ad.GetManufacturerDataByCompanyId(0x0059).ok())
+                    .map_or(false, |data| data.Size() != Ok(0))
+            })
             .then(move |event_args| {
                 let _guard = &guard;
 
                 Box::pin(async move {
                     if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
-//                         // Function to convert IBuffer to Vec<u8>
-// // Function to convert IBuffer to Vec<u8>
-// fn buffer_to_vec(buffer: &IBuffer) -> Result<Vec<u8>> {
-//      // Create a DataReader from the IBuffer
-//      let reader = DataReader::FromBuffer(buffer)?;
-//      let len = reader.UnconsumedBufferLength()? as usize;
-//      let mut data = vec![0; len];
-//      reader.ReadBytes(&mut data)?; // Read the bytes into the Vec
-//      Ok(data)
-// }
-//                         // Function to print ManufacturerData details
-// // Function to print ManufacturerData details
-// fn print_manufacturer_data(manufacturer_data: &IVector<BluetoothLEManufacturerData>) -> Result<()> {
-//     for data in manufacturer_data {
-//         let manufacturer_id = data.CompanyId()?;
-//         let data_payload = buffer_to_vec(&data.Data()?)?; // Convert IBuffer to Vec<u8>
+                        //                         // Function to convert IBuffer to Vec<u8>
+                        // // Function to convert IBuffer to Vec<u8>
+                        // fn buffer_to_vec(buffer: &IBuffer) -> Result<Vec<u8>> {
+                        //      // Create a DataReader from the IBuffer
+                        //      let reader = DataReader::FromBuffer(buffer)?;
+                        //      let len = reader.UnconsumedBufferLength()? as usize;
+                        //      let mut data = vec![0; len];
+                        //      reader.ReadBytes(&mut data)?; // Read the bytes into the Vec
+                        //      Ok(data)
+                        // }
+                        //                         // Function to print ManufacturerData details
+                        // // Function to print ManufacturerData details
+                        // fn print_manufacturer_data(manufacturer_data: &IVector<BluetoothLEManufacturerData>) -> Result<()> {
+                        //     for data in manufacturer_data {
+                        //         let manufacturer_id = data.CompanyId()?;
+                        //         let data_payload = buffer_to_vec(&data.Data()?)?; // Convert IBuffer to Vec<u8>
 
-//         println!("Manufacturer ID: {:#X}", manufacturer_id);
-//         println!("Data Payload: {:?}", data_payload); // Print payload as raw bytes
-//     }
-//     Ok(())
-// }
-// let addr = event_args.Advertisement().unwrap().ManufacturerData().unwrap();
+                        //         println!("Manufacturer ID: {:#X}", manufacturer_id);
+                        //         println!("Data Payload: {:?}", data_payload); // Print payload as raw bytes
+                        //     }
+                        //     Ok(())
+                        // }
+                        // let addr = event_args.Advertisement().unwrap().ManufacturerData().unwrap();
 
-// print_manufacturer_data(&addr);
-//                         println!("NON DEVICE{:?}",addr);
+                        // print_manufacturer_data(&addr);
+                        //                         println!("NON DEVICE{:?}",addr);
                         // Device cannot be created from a non-connectable advertisement
                         return None;
                     }
@@ -380,48 +385,41 @@ impl AdapterImpl {
             .filter_map(|x| x))
     }
 
-    pub async fn send_ad<'a>(
-        &'a self,data: &Vec<u8>) -> Result<()>{
+    pub async fn send_ad<'a>(&'a self, data: &Vec<u8>) -> Result<()> {
+        let manufacturer_data = BluetoothLEManufacturerData::new()?;
+        manufacturer_data.SetCompanyId(0x0059)?;
+        let writer = DataWriter::new()?;
+        writer.WriteBytes(data)?;
 
-            let manufacturer_data = BluetoothLEManufacturerData::new()?;
-            manufacturer_data.SetCompanyId(0x0059)?;
-            let writer = DataWriter::new()?;
-            writer.WriteBytes(data)?;
-        
-            let buffer = writer.DetachBuffer()?;
-            manufacturer_data.SetData(&buffer)?;
-            let publisher = BluetoothLEAdvertisementPublisher::new()?;
-            publisher.Advertisement()?.ManufacturerData()?.Append(&manufacturer_data)?;
-            publisher.Start()?;
-        
-            // publisher.Stop()?;
-            println!("\nStopped.");
-        println!("---------------------------");
+        let buffer = writer.DetachBuffer()?;
+        manufacturer_data.SetData(&buffer)?;
+        let publisher = BluetoothLEAdvertisementPublisher::new()?;
+        publisher
+            .Advertisement()?
+            .ManufacturerData()?
+            .Append(&manufacturer_data)?;
+        publisher.Start()?;
+
+        // publisher.Stop()?;
         let blue = BluetoothLEAdvertisement::new()?;
 
-        println!("----clear");
         // Clear flags
         blue.SetFlags(None)?;
 
+        // Example: Set manufacturer data (can be changed as needed)
+        let manufacturer_data = BluetoothLEAdvertisementDataSection::new()?;
+        let writer = DataWriter::new()?;
+        writer.WriteBytes(&data)?;
 
-    // Example: Set manufacturer data (can be changed as needed)
-    let manufacturer_data = BluetoothLEAdvertisementDataSection::new()?;
-        println!("----manu");
-    let writer = DataWriter::new()?;
-    writer.WriteBytes(&data)?;
-        println!("----write");
+        // Attach the data to the manufacturer data section
+        let buffer = writer.DetachBuffer()?;
+        manufacturer_data.SetData(&buffer)?;
 
-    // Attach the data to the manufacturer data section
-    let buffer = writer.DetachBuffer()?;
-    manufacturer_data.SetData(&buffer)?;
-
-    // Add the data section to the advertisement
-    blue.DataSections()?.Append(&manufacturer_data)?;
-
+        // Add the data section to the advertisement
+        blue.DataSections()?.Append(&manufacturer_data)?;
 
         let publisher = BluetoothLEAdvertisementPublisher::Create(&blue)?;
         publisher.Start()?;
-        println!("---------------------------");
         Ok(())
     }
 
@@ -499,6 +497,58 @@ impl AdapterImpl {
             ConnectionEvent::from(x)
         }))
     }
+
+    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        let mut advertisement_impl = AdvertisementImpl::new();
+        advertisement_impl.start(data)?;
+        
+        // Return the guard which will stop advertising automatically when dropped
+        Ok(AdvertisingGuard {adapter:self.clone(), publisher: advertisement_impl })
+        // // Create a new Bluetooth advertisement
+        // let advertisement = BluetoothLEAdvertisement::new().map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
+        
+        // // Set manufacturer data, service UUIDs, etc., from AdvertisementData
+        // if let Some(manufacturer_data) = data.manufacturer_data {
+        //     let manufacturer_section = BluetoothLEManufacturerData::new().map_err(|e| format!("Failed to create manufacturer data: {:?}", e))?;
+        //     manufacturer_section.SetCompanyId(manufacturer_data.company_id);
+        //     // Convert Vec<u8> to IBuffer
+        //     let writer = DataWriter::new().map_err(|e| format!("Failed to create DataWriter: {:?}", e))?;
+        //     writer.WriteBytes(&manufacturer_data.data).map_err(|e| format!("Failed to write bytes: {:?}", e))?;
+        //     let buffer = writer.DetachBuffer().map_err(|e| format!("Failed to detach buffer: {:?}", e))?;
+        //     manufacturer_section.SetData(&buffer).map_err(|e| format!("Failed to set data: {:?}", e))?;
+        //     let manufacturer_data = advertisement
+        //     .ManufacturerData()
+        //     .map_err(|e| format!("Failed to access ManufacturerData: {:?}", e))
+        //     .and_then(|data| {
+        //         data.Append(&manufacturer_section)
+        //             .map_err(|e| format!("Failed to append manufacturer data: {:?}", e))
+        //     })?;
+        
+        // // Create the publisher and start advertising
+        // let publisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)
+        //     .map_err(|e| format!("Failed to create publisher: {:?}", e))?;
+        // publisher
+        //     .Start()
+
+        //     .map_err(|e| format!("Failed to start advertising: {:?}", e))?
+        //     ;
+        //     Ok(AdvertisingGuard {adapter:self.clone(), publisher: publisher })
+        // }
+        // Err("no data to send.".to_owned())
+        // // publisher.Start().map_err(|e| format!("Failed to start advertising: {:?}", e))?;
+
+        // Return an AdvertisingGuard that will stop advertising when it’s dropped
+    }
+
+    pub fn stop_advertising(&self) -> Result<(), String> {
+        // Platform-specific code to stop advertising goes here.
+        // Example: self.stop_platform_advertising();
+
+        println!("Stopped advertising.");
+        Ok(())
+    }
+
+
 }
 
 impl From<BluetoothConnectionStatus> for ConnectionEvent {

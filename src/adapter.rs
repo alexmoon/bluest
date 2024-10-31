@@ -2,7 +2,7 @@
 
 use futures_core::Stream;
 
-use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
+use crate::{sys, AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, ConnectionEvent, Device, DeviceId, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -169,4 +169,12 @@ impl Adapter {
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         self.0.device_connection_events(device).await
     }
+    fn stop_advertising(&self) -> Result<(), String> {
+        self.0.stop_advertising()
+    }
+
+    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        self.0.start_advertising(data)
+    }
+
 }

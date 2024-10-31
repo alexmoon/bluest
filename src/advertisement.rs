@@ -1,6 +1,7 @@
 use std::time::Duration;
 use std::io; // Use std::io::Error for simplicity
 
+use crate::windows::adapter::AdapterImpl;
 #[cfg(target_os = "windows")]
 use crate::windows_advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
 
@@ -12,16 +13,18 @@ use crate::corebluetooth::advertisement::AdvertisementImpl as PlatformAdvertisem
 
 #[cfg(target_os = "linux")]
 use crate::bluer::advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
+use crate::AdvertisementData;
 
+#[derive(Debug, Clone)]
 pub struct Advertisement {
     inner: PlatformAdvertisementImpl,
 }
 
 impl Advertisement {
     /// Creates a new `Advertisement` instance with the specified company ID.
-    pub fn new(company_id: u16) -> Self {
+    pub fn new() -> Self {
         Self {
-            inner: PlatformAdvertisementImpl::new(company_id),
+            inner: PlatformAdvertisementImpl::new(),
         }
     }
 
@@ -34,5 +37,17 @@ impl Advertisement {
     pub fn stop(&mut self) -> Result<(), io::Error> {
         self.inner.stop()
         //Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdvertisingGuard {
+    pub(crate) advertisement: Advertisement,
+}
+
+impl Drop for AdvertisingGuard {
+    fn drop(&mut self) {
+        // Stop advertising when `AdvertisingGuard` is dropped.
+        self.advertisement.stop().expect("Failed to stop advertising");
     }
 }
