@@ -298,15 +298,14 @@ impl CharacteristicProperties {
     }
 }
 
+/// Represents a guard for advertisements that stops advertisements when dropped.
 pub struct AdvertisingGuard {
-    pub adapter: AdapterImpl,
-    pub publisher: AdvertisementImpl,
+    /// the actual advertisment
+    pub advertisement: AdvertisementImpl,
 }
 
 impl Drop for AdvertisingGuard {
     fn drop(&mut self) {
-        // Stop advertising when `AdvertisingGuard` is dropped.
-        // self.adapter.stop_advertising().expect("Failed to stop advertising");
-        self.publisher.stop();
+        let _ = self.advertisement.stop_advertising();
     }
 }

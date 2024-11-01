@@ -20,8 +20,7 @@ use windows::Devices::Radios::{Radio, RadioState};
 use windows::Foundation::Collections::{IIterable, IVector};
 use crate::error::{Error, ErrorKind};
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ConnectionEvent, Device, DeviceId,
-    ManufacturerData, Result, Uuid,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, BluetoothUuidExt, ConnectionEvent, Device, DeviceId, ManufacturerData, Result, Uuid
 };
 use windows::Storage::Streams::DataWriter;
 
@@ -91,46 +90,44 @@ impl AdvertisementImpl {
         Ok(())
     }
 
-    pub fn stop(&mut self) -> Result<(), io::Error> {
+    pub fn stop_advertising(&mut self) -> Result<(), io::Error> {
         println!("Windows advertisement manually stopped.");
         if let Some(publisher) = &self.publisher {
-            publisher.Stop()?; // Stop the advertisement
+            let _ = publisher.Stop()?; // Stop the advertisement
             self.publisher = None; // Clear the publisher to ensure it can be restarted if needed
         }
         Ok(())
     }
-
-    pub fn start(&mut self, data: AdvertisementData) -> Result<(), String> {
+    
+    pub fn start_advertising(&mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         // Create a new Bluetooth advertisement
-        let advertisement = BluetoothLEAdvertisement::new()
-            .map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
+        let advertisement = BluetoothLEAdvertisement::new().map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
         
-        // Set manufacturer data from AdvertisementData
+        // Set manufacturer data, service UUIDs, etc., from AdvertisementData
         if let Some(manufacturer_data) = data.manufacturer_data {
-            let manufacturer_section = BluetoothLEManufacturerData::new()
-                .map_err(|e| format!("Failed to create manufacturer data: {:?}", e))?;
-            manufacturer_section.SetCompanyId(manufacturer_data.company_id);
-
-            // Convert Vec<u8> to IBuffer and set it in manufacturer section
+            let manufacturer_section = BluetoothLEManufacturerData::new().map_err(|e| format!("Failed to create manufacturer data: {:?}", e))?;
+            let _ = manufacturer_section.SetCompanyId(manufacturer_data.company_id);
+            // Convert Vec<u8> to IBuffer
             let writer = DataWriter::new().map_err(|e| format!("Failed to create DataWriter: {:?}", e))?;
             writer.WriteBytes(&manufacturer_data.data).map_err(|e| format!("Failed to write bytes: {:?}", e))?;
             let buffer = writer.DetachBuffer().map_err(|e| format!("Failed to detach buffer: {:?}", e))?;
             manufacturer_section.SetData(&buffer).map_err(|e| format!("Failed to set data: {:?}", e))?;
-            
-            advertisement.ManufacturerData()
-                .map_err(|e| format!("Failed to access ManufacturerData: {:?}", e))?
-                .Append(&manufacturer_section)
-                .map_err(|e| format!("Failed to append manufacturer data: {:?}", e))?;
-        }
-
-        // Create and start the publisher
-        let publisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)
-            .map_err(|e| format!("Failed to create publisher: {:?}", e))?;
-        publisher.Start().map_err(|e| format!("Failed to start advertising: {:?}", e))?;
+            let _manufacturer_data = advertisement
+            .ManufacturerData()
+            .map_err(|e| format!("Failed to access ManufacturerData: {:?}", e))
+            .and_then(|data| {
+                data.Append(&manufacturer_section)
+                    .map_err(|e| format!("Failed to append manufacturer data: {:?}", e))
+            })?;
         
-        // Store publisher in AdvertisementImpl for later control
-        self.publisher = Some(publisher);
-        Ok(())
+            // Create the publisher and start advertising
+            let publisher: BluetoothLEAdvertisementPublisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)
+            .map_err(|e| format!("Failed to create publisher: {:?}", e))?;
+            publisher
+            .Start()
+            .map_err(|e| format!("Failed to start advertising: {:?}", e))?;
+            return Ok(AdvertisingGuard { advertisement: AdvertisementImpl { publisher: Some(publisher) } });
+        }
+        Err("no data to send.".to_owned())
     }
-
 }

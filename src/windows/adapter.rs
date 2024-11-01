@@ -385,50 +385,6 @@ impl AdapterImpl {
             .filter_map(|x| x))
     }
 
-    pub async fn send_ad<'a>(&'a self, data: &Vec<u8>) -> Result<()> {
-        let manufacturer_data = BluetoothLEManufacturerData::new()?;
-        manufacturer_data.SetCompanyId(0x0059)?;
-        let writer = DataWriter::new()?;
-        writer.WriteBytes(data)?;
-
-        let buffer = writer.DetachBuffer()?;
-        manufacturer_data.SetData(&buffer)?;
-        let publisher = BluetoothLEAdvertisementPublisher::new()?;
-        publisher
-            .Advertisement()?
-            .ManufacturerData()?
-            .Append(&manufacturer_data)?;
-        publisher.Start()?;
-
-        // publisher.Stop()?;
-        let blue = BluetoothLEAdvertisement::new()?;
-
-        // Clear flags
-        blue.SetFlags(None)?;
-
-        // Example: Set manufacturer data (can be changed as needed)
-        let manufacturer_data = BluetoothLEAdvertisementDataSection::new()?;
-        let writer = DataWriter::new()?;
-        writer.WriteBytes(&data)?;
-
-        // Attach the data to the manufacturer data section
-        let buffer = writer.DetachBuffer()?;
-        manufacturer_data.SetData(&buffer)?;
-
-        // Add the data section to the advertisement
-        blue.DataSections()?.Append(&manufacturer_data)?;
-
-        let publisher = BluetoothLEAdvertisementPublisher::Create(&blue)?;
-        publisher.Start()?;
-        Ok(())
-    }
-
-    /// Finds Bluetooth devices providing any service in `services`.
-    ///
-    /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
-    /// dropped before all matching connected devices are consumed then scanning will begin for devices advertising any
-    /// of the `services`. Scanning will continue until the stream is dropped. Inclusion of duplicate devices is a
-    /// platform-specific implementation detail.
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
@@ -500,55 +456,10 @@ impl AdapterImpl {
 
     pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         let mut advertisement_impl = AdvertisementImpl::new();
-        advertisement_impl.start(data)?;
-        
-        // Return the guard which will stop advertising automatically when dropped
-        Ok(AdvertisingGuard {adapter:self.clone(), publisher: advertisement_impl })
-        // // Create a new Bluetooth advertisement
-        // let advertisement = BluetoothLEAdvertisement::new().map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
-        
-        // // Set manufacturer data, service UUIDs, etc., from AdvertisementData
-        // if let Some(manufacturer_data) = data.manufacturer_data {
-        //     let manufacturer_section = BluetoothLEManufacturerData::new().map_err(|e| format!("Failed to create manufacturer data: {:?}", e))?;
-        //     manufacturer_section.SetCompanyId(manufacturer_data.company_id);
-        //     // Convert Vec<u8> to IBuffer
-        //     let writer = DataWriter::new().map_err(|e| format!("Failed to create DataWriter: {:?}", e))?;
-        //     writer.WriteBytes(&manufacturer_data.data).map_err(|e| format!("Failed to write bytes: {:?}", e))?;
-        //     let buffer = writer.DetachBuffer().map_err(|e| format!("Failed to detach buffer: {:?}", e))?;
-        //     manufacturer_section.SetData(&buffer).map_err(|e| format!("Failed to set data: {:?}", e))?;
-        //     let manufacturer_data = advertisement
-        //     .ManufacturerData()
-        //     .map_err(|e| format!("Failed to access ManufacturerData: {:?}", e))
-        //     .and_then(|data| {
-        //         data.Append(&manufacturer_section)
-        //             .map_err(|e| format!("Failed to append manufacturer data: {:?}", e))
-        //     })?;
-        
-        // // Create the publisher and start advertising
-        // let publisher = BluetoothLEAdvertisementPublisher::Create(&advertisement)
-        //     .map_err(|e| format!("Failed to create publisher: {:?}", e))?;
-        // publisher
-        //     .Start()
+        advertisement_impl.start_advertising(data)?;
 
-        //     .map_err(|e| format!("Failed to start advertising: {:?}", e))?
-        //     ;
-        //     Ok(AdvertisingGuard {adapter:self.clone(), publisher: publisher })
-        // }
-        // Err("no data to send.".to_owned())
-        // // publisher.Start().map_err(|e| format!("Failed to start advertising: {:?}", e))?;
-
-        // Return an AdvertisingGuard that will stop advertising when it’s dropped
+        Ok(AdvertisingGuard { advertisement: advertisement_impl })
     }
-
-    pub fn stop_advertising(&self) -> Result<(), String> {
-        // Platform-specific code to stop advertising goes here.
-        // Example: self.stop_platform_advertising();
-
-        println!("Stopped advertising.");
-        Ok(())
-    }
-
-
 }
 
 impl From<BluetoothConnectionStatus> for ConnectionEvent {

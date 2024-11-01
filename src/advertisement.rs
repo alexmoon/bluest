@@ -15,6 +15,8 @@ use crate::corebluetooth::advertisement::AdvertisementImpl as PlatformAdvertisem
 use crate::bluer::advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
 use crate::AdvertisementData;
 
+
+/// A Bluetooth Advertisement
 #[derive(Debug, Clone)]
 pub struct Advertisement {
     inner: PlatformAdvertisementImpl,
@@ -28,15 +30,9 @@ impl Advertisement {
         }
     }
 
-    /// Starts advertising for the specified duration.
-    pub async fn advertise(&mut self, data: &Vec<u8>, advertise_duration: Option<Duration>) -> Result<(), io::Error> {
-        self.inner.advertise(data, advertise_duration).await
-    }
-
     /// Stops the advertisement.
-    pub fn stop(&mut self) -> Result<(), io::Error> {
-        self.inner.stop()
-        //Ok(())
+    pub fn stop_advertising(&mut self) -> Result<(), io::Error> {
+        self.inner.stop_advertising()
     }
 }
 
@@ -48,6 +44,8 @@ pub struct AdvertisingGuard {
 impl Drop for AdvertisingGuard {
     fn drop(&mut self) {
         // Stop advertising when `AdvertisingGuard` is dropped.
-        self.advertisement.stop().expect("Failed to stop advertising");
+        if let Err(e) = self.advertisement.stop_advertising() {
+            eprintln!("Warning: Failed to stop advertising: {:?}", e);
+        }
     }
 }

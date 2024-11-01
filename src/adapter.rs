@@ -147,10 +147,6 @@ impl Adapter {
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
         self.0.disconnect_device(device).await
     }
-    pub async fn send_ad<'a>(
-        &'a self,data: &Vec<u8>) -> Result<()>{
-        self.0.send_ad(&data).await
-    }
 
     /// Monitors a device for connection/disconnection events.
     ///
@@ -169,10 +165,10 @@ impl Adapter {
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
         self.0.device_connection_events(device).await
     }
-    fn stop_advertising(&self) -> Result<(), String> {
-        self.0.stop_advertising()
-    }
 
+
+    /// Advertise.
+    ///
     pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         self.0.start_advertising(data)
     }
