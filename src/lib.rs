@@ -133,6 +133,12 @@ compile_error!("L2CAP support is not available on Windows");
 #[cfg(all(feature = "l2cap", not(feature = "unstable")))]
 compile_error!("L2CAP support is unstable and requires the 'unstable' feature to be enabled");
 
+mod advertisement; // Ensure advertisement.rs is part of the module tree
+pub use advertisement::Advertisement;
+use windows::adapter::AdapterImpl;
+use windows_advertisement::AdvertisementImpl; // Re-export Advertisement for project-wide access
+// Conditionally include platform-specific modules
+
 #[cfg(target_os = "android")]
 mod android;
 #[cfg(target_os = "linux")]
@@ -141,6 +147,12 @@ mod bluer;
 mod corebluetooth;
 #[cfg(target_os = "windows")]
 mod windows;
+
+#[cfg(target_os = "windows")]
+#[path = "windows/advertisement.rs"]
+mod windows_advertisement;
+
+
 
 use std::collections::HashMap;
 
@@ -158,6 +170,8 @@ pub use service::Service;
 pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]
 pub use uuid::Uuid;
+#[cfg(target_os = "android")]
+pub use crate::android::advertisement::AdvertisementImpl;
 
 #[cfg(target_os = "android")]
 use crate::android as sys;
@@ -165,6 +179,9 @@ use crate::android as sys;
 use crate::bluer as sys;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use crate::corebluetooth as sys;
+#[cfg(target_os = "android")]
+pub use android::advertisement::AdvertisementImpl;
+
 #[cfg(target_os = "windows")]
 use crate::windows as sys;
 
@@ -278,5 +295,17 @@ impl CharacteristicProperties {
             | (u32::from(self.extended_properties) << 7)
             | (u32::from(self.reliable_write) << 8)
             | (u32::from(self.writable_auxiliaries) << 9)
+    }
+}
+
+/// Represents a guard for advertisements that stops advertisements when dropped.
+pub struct AdvertisingGuard {
+    /// the actual advertisment
+    pub advertisement: AdvertisementImpl,
+}
+
+impl Drop for AdvertisingGuard {
+    fn drop(&mut self) {
+        let _ = self.advertisement.stop_advertising();
     }
 }

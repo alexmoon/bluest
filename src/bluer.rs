@@ -4,6 +4,7 @@ pub mod descriptor;
 pub mod device;
 pub mod l2cap_channel;
 pub mod service;
+pub mod advertisement;
 
 mod error;
 
