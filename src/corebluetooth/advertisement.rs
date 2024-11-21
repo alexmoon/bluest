@@ -76,7 +76,7 @@ impl AdvertisementImpl {
         self.peripheral_manager = None;
     }
 
-    pub fn start_advertising(&mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+    pub fn start_advertising(mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         //self.stop_advertising();
         
         // Initialize CBPeripheralManager if not already created
@@ -117,8 +117,15 @@ impl AdvertisementImpl {
             debug!("starting ADVERT");
             unsafe {
                 let description: *mut Object = msg_send![advertisement_data, description];
-                debug!("Advertisement Dictionary Description: {:?}", description);
+                let c_str: *const i8 = msg_send![description, UTF8String];
+                if !c_str.is_null() {
+                    let ad_description = std::ffi::CStr::from_ptr(c_str).to_string_lossy().into_owned();
+                    debug!("Advertisement Dictionary Description: {}", ad_description);
+                } else {
+                    debug!("Failed to get Advertisement Dictionary Description");
+                }
             }
+            
             // Start advertising
             unsafe {
                 let _: () = msg_send![**peripheral_manager, startAdvertising: advertisement_data];
@@ -126,12 +133,16 @@ impl AdvertisementImpl {
             debug!("done ADVERT");
 
             return Ok(AdvertisingGuard {
-                advertisement: AdvertisementImpl {
-                    peripheral_manager: self.peripheral_manager.clone(),
-                },
+                advertisement:self,
             });
         }
         Err("Failed to start CoreBluetooth advertising".to_owned())
+    }
+}
+
+impl Drop for AdvertisementImpl {
+    fn drop(&mut self) {
+        println!("AdvertisementImpl dropped.");
     }
 }
 

@@ -1,4 +1,6 @@
 
+use tracing::debug;
+
 #[cfg(target_os = "windows")]
 use crate::windows::adapter::AdapterImpl;
 #[cfg(target_os = "windows")]
@@ -41,6 +43,7 @@ pub struct AdvertisingGuard {
 
 impl Drop for AdvertisingGuard {
     fn drop(&mut self) {
+        debug!("dropping adveristment");
         // Stop advertising when `AdvertisingGuard` is dropped.
         self.advertisement.stop_advertising()
     }
