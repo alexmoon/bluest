@@ -9,13 +9,14 @@ use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
 use objc_id::ShareId;
 use tracing::{debug, error, info, warn};
 
+use super::advertisement::AdvertisementImpl;
 use super::delegates::{self, CentralDelegate};
 use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID, NSUUID};
 use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, ConnectionEvent, Device, DeviceId, Error, Result, Uuid
 };
 
 /// The system's Bluetooth adapter interface.
@@ -396,5 +397,11 @@ impl AdapterImpl {
                 }
                 _ => None,
             }))
+    }
+
+
+    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        let mut advertisement_impl = AdvertisementImpl::new();
+        advertisement_impl.start_advertising(data)
     }
 }

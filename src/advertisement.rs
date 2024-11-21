@@ -1,6 +1,5 @@
-use std::time::Duration;
-use std::io; // Use std::io::Error for simplicity
 
+#[cfg(target_os = "windows")]
 use crate::windows::adapter::AdapterImpl;
 #[cfg(target_os = "windows")]
 use crate::windows_advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
@@ -13,7 +12,6 @@ use crate::corebluetooth::advertisement::AdvertisementImpl as PlatformAdvertisem
 
 #[cfg(target_os = "linux")]
 use crate::bluer::advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
-use crate::AdvertisementData;
 
 
 /// A Bluetooth Advertisement
@@ -31,7 +29,7 @@ impl Advertisement {
     }
 
     /// Stops the advertisement.
-    pub fn stop_advertising(&mut self) -> Result<(), io::Error> {
+    pub fn stop_advertising(&mut self) {
         self.inner.stop_advertising()
     }
 }
@@ -44,8 +42,6 @@ pub struct AdvertisingGuard {
 impl Drop for AdvertisingGuard {
     fn drop(&mut self) {
         // Stop advertising when `AdvertisingGuard` is dropped.
-        if let Err(e) = self.advertisement.stop_advertising() {
-            eprintln!("Warning: Failed to stop advertising: {:?}", e);
-        }
+        self.advertisement.stop_advertising()
     }
 }

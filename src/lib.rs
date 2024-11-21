@@ -135,7 +135,9 @@ compile_error!("L2CAP support is unstable and requires the 'unstable' feature to
 
 mod advertisement; // Ensure advertisement.rs is part of the module tree
 pub use advertisement::Advertisement;
+#[cfg(target_os = "windows")]
 use windows::adapter::AdapterImpl;
+#[cfg(target_os = "windows")]
 use windows_advertisement::AdvertisementImpl; // Re-export Advertisement for project-wide access
 // Conditionally include platform-specific modules
 
@@ -143,8 +145,10 @@ use windows_advertisement::AdvertisementImpl; // Re-export Advertisement for pro
 mod android;
 #[cfg(target_os = "linux")]
 mod bluer;
+
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod corebluetooth;
+
 #[cfg(target_os = "windows")]
 mod windows;
 
@@ -179,6 +183,8 @@ use crate::android as sys;
 use crate::bluer as sys;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use crate::corebluetooth as sys;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use crate::corebluetooth::advertisement::AdvertisementImpl;
 #[cfg(target_os = "android")]
 pub use android::advertisement::AdvertisementImpl;
 
@@ -306,6 +312,7 @@ pub struct AdvertisingGuard {
 
 impl Drop for AdvertisingGuard {
     fn drop(&mut self) {
+        println!("AdvertisingGuard dropped. Stopping advertisement.");
         let _ = self.advertisement.stop_advertising();
     }
 }

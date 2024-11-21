@@ -68,6 +68,7 @@ async-broadcast = "0.5.1"
 objc = "0.2.7"
 objc_id = "0.1.1"
 objc-foundation = "0.1.1"
+core-foundation = "0.10.0"
 
 [[example]]
 name = "scan"

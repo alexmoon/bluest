@@ -371,7 +371,7 @@ impl CentralDelegate {
                     adv_data: ShareId::from_ptr(adv_data.cast()),
                     rssi,
                 };
-                debug!("CentralDelegate received {:?}", event);
+                // debug!("CentralDelegate received {:?}", event);
                 let _res = (*ptr).try_broadcast(event);
             }
         }
