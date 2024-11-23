@@ -1,8 +1,15 @@
-
 use tracing::debug;
+
+use std::convert::Infallible;
+use std::time::Duration;
+#[cfg(target_os = "linux")]
+use std::io; use crate::bluer::adapter::AdapterImpl;
+// Use std::io::Error for simplicity
+use crate::{Adapter, AdvertisementData, AdvertisingGuard};
 
 #[cfg(target_os = "windows")]
 use crate::windows::adapter::AdapterImpl;
+
 #[cfg(target_os = "windows")]
 use crate::windows_advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
 
@@ -16,35 +23,52 @@ use crate::corebluetooth::advertisement::AdvertisementImpl as PlatformAdvertisem
 use crate::bluer::advertisement::AdvertisementImpl as PlatformAdvertisementImpl;
 
 
-/// A Bluetooth Advertisement
-#[derive(Debug, Clone)]
+// /// A Bluetooth Advertisement
+// #[derive(Debug)]
+// pub struct Advertisement {
+//     inner: PlatformAdvertisementImpl,
+// }
+
+// impl Advertisement {
+//     /// Creates a new `Advertisement` instance with the specified company ID.
+//     pub fn new(adapter: AdapterImpl) -> Self {
+//         Self {
+//             inner: PlatformAdvertisementImpl::new(adapter),
+//         }
+//     }
+
+//     /// Stops the advertisement.
+//     pub fn stop_advertising(&mut self) -> Result<(), bluer::Error> {
+//         self.inner.stop_advertising()
+//     }
+
+//     pub async fn start_advertising(&mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+//         self.inner.start_advertising(data).await
+//     }
+// }
+
+
+#[derive(Debug)]
 pub struct Advertisement {
     inner: PlatformAdvertisementImpl,
 }
 
 impl Advertisement {
-    /// Creates a new `Advertisement` instance with the specified company ID.
+    /// Creates a new `Advertisement` instance with the specified adapter.
     pub fn new() -> Self {
         Self {
             inner: PlatformAdvertisementImpl::new(),
         }
     }
 
+    /// Starts advertising with the given data.
+    pub async fn start_advertising(mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        self.inner.start_advertising(data).await
+    }
+
     /// Stops the advertisement.
-    pub fn stop_advertising(&mut self) {
+    pub fn stop_advertising(mut self) -> Result<(),bluer::Error> {
         self.inner.stop_advertising()
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct AdvertisingGuard {
-    pub(crate) advertisement: Advertisement,
-}
-
-impl Drop for AdvertisingGuard {
-    fn drop(&mut self) {
-        debug!("dropping adveristment");
-        // Stop advertising when `AdvertisingGuard` is dropped.
-        self.advertisement.stop_advertising()
-    }
-}

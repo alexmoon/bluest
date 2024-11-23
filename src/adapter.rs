@@ -169,8 +169,8 @@ impl Adapter {
 
     /// Advertise.
     ///
-    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
-        self.0.start_advertising(data)
+    pub async fn start_advertising(self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        self.0.start_advertising(data).await
     }
 
 }

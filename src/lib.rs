@@ -135,6 +135,10 @@ compile_error!("L2CAP support is unstable and requires the 'unstable' feature to
 
 mod advertisement; // Ensure advertisement.rs is part of the module tree
 pub use advertisement::Advertisement;
+#[cfg(target_os = "linux")]
+use bluer::adapter::AdapterImpl;
+#[cfg(target_os = "linux")]
+use bluer::advertisement::AdvertisementImpl;
 #[cfg(target_os = "windows")]
 use windows::adapter::AdapterImpl;
 #[cfg(target_os = "windows")]
@@ -305,12 +309,24 @@ impl CharacteristicProperties {
 }
 
 /// Represents a guard for advertisements that stops advertisements when dropped.
+// pub struct AdvertisingGuard {
+//     /// the actual advertisment
+//     pub advertisement: AdvertisementImpl,
+// }
+
+// impl Drop for AdvertisingGuard {
+//     fn drop(&mut self) {
+//         let _ = self.advertisement.stop_advertising();
+//     }
+// }
+
+#[derive(Debug)]
 pub struct AdvertisingGuard {
-    /// the actual advertisment
-    pub advertisement: AdvertisementImpl,
+    /// The owned advertisement
+    advertisement: AdvertisementImpl,
 }
 
-impl Drop for AdvertisingGuard {
+impl<'a> Drop for AdvertisingGuard {
     fn drop(&mut self) {
         println!("AdvertisingGuard dropped. Stopping advertisement.");
         let _ = self.advertisement.stop_advertising();
