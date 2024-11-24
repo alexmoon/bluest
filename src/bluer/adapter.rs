@@ -5,14 +5,15 @@ use futures_core::Stream;
 use futures_lite::StreamExt;
 
 use crate::error::ErrorKind;
-use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
-
+use crate::{AdapterEvent, Advertisement, AdvertisementData, AdvertisingDevice, AdvertisingGuard, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
+#[cfg(target_os = "linux")]
+use crate::AdvertisementImpl;
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Debug, Clone)]
 pub struct AdapterImpl {
-    inner: bluer::Adapter,
+    pub inner: bluer::Adapter,
     session: Arc<bluer::Session>,
 }
 
@@ -145,10 +146,10 @@ impl AdapterImpl {
                     }
                 })
             })
-            .filter_map(|x| x)
-            .filter(|x: &AdvertisingDevice| {
-                services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))
-            }))
+            .filter_map(|x| x))
+            // .filter(|x: &AdvertisingDevice| {
+            //     services.is_empty() || x.adv_data.services.iter().any(|y| services.contains(y))
+            // }))
     }
 
     /// Finds Bluetooth devices providing any service in `services`.
@@ -223,5 +224,11 @@ impl AdapterImpl {
             }
             _ => None,
         }))
+    }
+
+    pub async fn start_advertising(self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        println!("START ADVERTISING");
+        let advertisement_impl = AdvertisementImpl::new();
+        advertisement_impl.start_advertising(data).await
     }
 }

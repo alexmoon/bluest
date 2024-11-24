@@ -2,30 +2,33 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::sync::Arc;
 
+use super::types::StringVec;
+use crate::error::{Error, ErrorKind};
+use crate::util::defer;
+use crate::windows_advertisement::AdvertisementImpl;
+use crate::{
+    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, BluetoothUuidExt, ConnectionEvent, Device, DeviceId, ManufacturerData, Result, Uuid
+};
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
 use tracing::{debug, error, trace, warn};
 use windows::core::HSTRING;
+use windows::Devices::Bluetooth::Advertisement::*;
 use windows::Devices::Bluetooth::Advertisement::{
     BluetoothLEAdvertisement, BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementFilter,
-    BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher,
-    BluetoothLEAdvertisementWatcherStoppedEventArgs, BluetoothLEManufacturerData, BluetoothLEScanningMode,
+    BluetoothLEAdvertisementFlags, BluetoothLEAdvertisementPublisher, BluetoothLEAdvertisementReceivedEventArgs,
+    BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher, BluetoothLEAdvertisementWatcherStoppedEventArgs,
+    BluetoothLEManufacturerData, BluetoothLEScanningMode,
 };
 use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
 use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
 use windows::Devices::Radios::{Radio, RadioState};
 use windows::Foundation::Collections::{IIterable, IVector};
+use windows::Foundation::IReference;
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
-
-use super::types::StringVec;
-use crate::error::{Error, ErrorKind};
-use crate::util::defer;
-use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, BluetoothUuidExt, ConnectionEvent, Device, DeviceId,
-    ManufacturerData, Result, Uuid,
-};
-
+use windows::Storage::Streams::DataWriter;
+use windows::Storage::Streams::IBuffer;
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be created with the [`Adapter::default()`] method.
@@ -283,12 +286,15 @@ impl AdapterImpl {
             watcher.Stopped(&stopped_handler)?;
 
             if let Some(uuid) = uuid {
-                let advertisement = BluetoothLEAdvertisement::new()?;
-                let service_uuids = advertisement.ServiceUuids()?;
-                service_uuids.Append(windows::core::GUID::from_u128(uuid.as_u128()))?;
-                let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
-                advertisement_filter.SetAdvertisement(&advertisement)?;
-                watcher.SetAdvertisementFilter(&advertisement_filter)?;
+                // let service_uuids = advertisement.ServiceUuids()?;
+                // service_uuids.Append(windows::core::GUID::from_u128(uuid.as_u128()))?;
+                // let advertisement = BluetoothLEAdvertisement::new()?;
+                // advertisement.GetManufacturerDataByCompanyId(0x69);
+                // advertisement.GetManufacturerDataByCompanyId(0x0059);
+                // let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
+                // advertisement_filter.SetAdvertisement(&advertisement)?;
+
+                // watcher.SetAdvertisementFilter(&advertisement_filter)?;
             }
 
             Ok::<_, windows::core::Error>(watcher)
@@ -316,11 +322,44 @@ impl AdapterImpl {
         });
 
         Ok(receiver
+            .filter(move |event_args| {
+                event_args
+                    .Advertisement()
+                    .ok()
+                    .and_then(|ad| ad.GetManufacturerDataByCompanyId(0x0059).ok())
+                    .map_or(false, |data| data.Size() != Ok(0))
+            })
             .then(move |event_args| {
                 let _guard = &guard;
 
                 Box::pin(async move {
                     if event_args.AdvertisementType().ok()? == BluetoothLEAdvertisementType::NonConnectableUndirected {
+                        //                         // Function to convert IBuffer to Vec<u8>
+                        // // Function to convert IBuffer to Vec<u8>
+                        // fn buffer_to_vec(buffer: &IBuffer) -> Result<Vec<u8>> {
+                        //      // Create a DataReader from the IBuffer
+                        //      let reader = DataReader::FromBuffer(buffer)?;
+                        //      let len = reader.UnconsumedBufferLength()? as usize;
+                        //      let mut data = vec![0; len];
+                        //      reader.ReadBytes(&mut data)?; // Read the bytes into the Vec
+                        //      Ok(data)
+                        // }
+                        //                         // Function to print ManufacturerData details
+                        // // Function to print ManufacturerData details
+                        // fn print_manufacturer_data(manufacturer_data: &IVector<BluetoothLEManufacturerData>) -> Result<()> {
+                        //     for data in manufacturer_data {
+                        //         let manufacturer_id = data.CompanyId()?;
+                        //         let data_payload = buffer_to_vec(&data.Data()?)?; // Convert IBuffer to Vec<u8>
+
+                        //         println!("Manufacturer ID: {:#X}", manufacturer_id);
+                        //         println!("Data Payload: {:?}", data_payload); // Print payload as raw bytes
+                        //     }
+                        //     Ok(())
+                        // }
+                        // let addr = event_args.Advertisement().unwrap().ManufacturerData().unwrap();
+
+                        // print_manufacturer_data(&addr);
+                        //                         println!("NON DEVICE{:?}",addr);
                         // Device cannot be created from a non-connectable advertisement
                         return None;
                     }
@@ -346,12 +385,6 @@ impl AdapterImpl {
             .filter_map(|x| x))
     }
 
-    /// Finds Bluetooth devices providing any service in `services`.
-    ///
-    /// Returns a stream of [`Device`] structs with matching connected devices returned first. If the stream is not
-    /// dropped before all matching connected devices are consumed then scanning will begin for devices advertising any
-    /// of the `services`. Scanning will continue until the stream is dropped. Inclusion of duplicate devices is a
-    /// platform-specific implementation detail.
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
@@ -419,6 +452,13 @@ impl AdapterImpl {
             let _guard = &guard;
             ConnectionEvent::from(x)
         }))
+    }
+
+    pub async fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        let mut advertisement_impl = AdvertisementImpl::new();
+        advertisement_impl.start_advertising(data).await?;
+
+        Ok(AdvertisingGuard { advertisement: advertisement_impl })
     }
 }
 
