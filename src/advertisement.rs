@@ -2,8 +2,9 @@ use tracing::debug;
 
 use std::convert::Infallible;
 use std::time::Duration;
+use std::io;
 #[cfg(target_os = "linux")]
-use std::io; use crate::bluer::adapter::AdapterImpl;
+use crate::bluer::adapter::AdapterImpl;
 // Use std::io::Error for simplicity
 use crate::{Adapter, AdvertisementData, AdvertisingGuard};
 
@@ -67,7 +68,7 @@ impl Advertisement {
     }
 
     /// Stops the advertisement.
-    pub fn stop_advertising(mut self) -> Result<(),bluer::Error> {
+    pub fn stop_advertising(mut self) -> Result<(),io::Error> {
         self.inner.stop_advertising()
     }
 }

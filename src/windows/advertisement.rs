@@ -99,7 +99,7 @@ impl AdvertisementImpl {
         Ok(())
     }
     
-    pub fn start_advertising(&mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+    pub async fn start_advertising(&mut self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         // Create a new Bluetooth advertisement
         let advertisement = BluetoothLEAdvertisement::new().map_err(|e| format!("Failed to create advertisement: {:?}", e))?;
         

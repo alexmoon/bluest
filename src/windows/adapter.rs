@@ -454,9 +454,9 @@ impl AdapterImpl {
         }))
     }
 
-    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+    pub async fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
         let mut advertisement_impl = AdvertisementImpl::new();
-        advertisement_impl.start_advertising(data)?;
+        advertisement_impl.start_advertising(data).await?;
 
         Ok(AdvertisingGuard { advertisement: advertisement_impl })
     }
