@@ -16,7 +16,8 @@ use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, ConnectionEvent, Device, DeviceId, Error, Result, Uuid
+    AdapterEvent, AdvertisementData, AdvertisingDevice, AdvertisingGuard, ConnectionEvent, Device, DeviceId, Error,
+    Result, Uuid,
 };
 
 /// The system's Bluetooth adapter interface.
@@ -399,9 +400,8 @@ impl AdapterImpl {
             }))
     }
 
-
-    pub fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
-        let mut advertisement_impl = AdvertisementImpl::new();
-        advertisement_impl.start_advertising(data)
+    pub async fn start_advertising(&self, data: AdvertisementData) -> Result<AdvertisingGuard, String> {
+        let advertisement_impl = AdvertisementImpl::new();
+        advertisement_impl.start_advertising(data).await
     }
 }
