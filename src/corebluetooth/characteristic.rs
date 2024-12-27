@@ -73,12 +73,15 @@ impl CharacteristicImpl {
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::CharacteristicValueUpdate { characteristic, error }
+                PeripheralEvent::CharacteristicValueUpdate { characteristic, data, error }
                     if characteristic == self.inner =>
                 {
                     match error {
                         Some(err) => return Err(Error::from_nserror(err)),
-                        None => return self.value().await,
+                        None => {
+                            let data = data.map(|val| val.bytes().to_vec()).unwrap_or_default();
+                            return Ok(data);
+                        },
                     }
                 }
                 PeripheralEvent::Disconnected { error } => {
@@ -241,12 +244,15 @@ impl CharacteristicImpl {
             .filter_map(move |x| {
                 let _guard = &guard;
                 match x {
-                    PeripheralEvent::CharacteristicValueUpdate { characteristic, error }
+                    PeripheralEvent::CharacteristicValueUpdate { characteristic, data, error }
                         if characteristic == self.inner =>
                     {
                         match error {
                             Some(err) => Some(Err(Error::from_nserror(err))),
-                            None => Some(Ok(())),
+                            None => {
+                                let data = data.map(|val| val.bytes().to_vec()).unwrap_or_default();
+                                Some(Ok(data))
+                            },
                         }
                     }
                     PeripheralEvent::Disconnected { error } => {
@@ -263,7 +269,7 @@ impl CharacteristicImpl {
             .then(move |x| {
                 Box::pin(async move {
                     match x {
-                        Ok(_) => self.value().await,
+                        Ok(data) => Ok(data),
                         Err(err) => Err(err),
                     }
                 })

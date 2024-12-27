@@ -2,13 +2,15 @@ use std::os::raw::c_void;
 use std::sync::Once;
 
 use objc::declare::ClassDecl;
+use objc::rc::autoreleasepool;
 use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
-use objc_foundation::{INSArray, NSArray, NSDictionary, NSObject, NSString};
+use objc_foundation::{INSArray, NSArray, NSData, NSDictionary, NSObject, NSString};
 use objc_id::{Id, ShareId, Shared};
 use tracing::{debug, error};
 
 use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
+use crate::corebluetooth::types::option_from_ptr;
 use crate::ConnectionEvent;
 
 #[derive(Clone)]
@@ -88,6 +90,7 @@ pub enum PeripheralEvent {
     },
     CharacteristicValueUpdate {
         characteristic: ShareId<CBCharacteristic>,
+        data: Option<ShareId<NSData>>,
         error: Option<ShareId<NSError>>,
     },
     DescriptorValueUpdate {
@@ -525,11 +528,33 @@ impl PeripheralDelegate {
         unsafe { *this.get_ivar("receiver") }
     }
 
+    extern "C" fn did_update_value_for_characteristic(
+        this: &mut Object,
+        _sel: Sel,
+        _peripheral: *mut Object,
+        characteristic: *mut Object,
+        error: *mut Object,
+    ) {
+        unsafe {
+            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<PeripheralEvent>>();
+            if !ptr.is_null() {
+                let data: Option<ShareId<NSData>> =
+                    autoreleasepool(move || option_from_ptr(msg_send![characteristic, value]));
+                let event = PeripheralEvent::CharacteristicValueUpdate {
+                    characteristic: ShareId::from_ptr(characteristic.cast()),
+                    data: data,
+                    error: (!error.is_null()).then(|| ShareId::from_ptr(error.cast())),
+                };
+                debug!("PeripheralDelegate received {:?}", event);
+                let _res = (*ptr).try_broadcast(event);
+            }
+        }
+    }
+
     delegate_method!(did_discover_services<DiscoveredServices>(peripheral, error: Option));
     delegate_method!(did_discover_included_services<DiscoveredIncludedServices>(peripheral, service: Object, error: Option));
     delegate_method!(did_discover_characteristics<DiscoveredCharacteristics>(peripheral, service: Object, error: Option));
     delegate_method!(did_discover_descriptors<DiscoveredDescriptors>(peripheral, characteristic: Object, error: Option));
-    delegate_method!(did_update_value_for_characteristic<CharacteristicValueUpdate>(peripheral, characteristic: Object, error: Option));
     delegate_method!(did_update_value_for_descriptor<DescriptorValueUpdate>(peripheral, descriptor: Object, error: Option));
     delegate_method!(did_write_value_for_characteristic<CharacteristicValueWrite>(peripheral, characteristic: Object, error: Option));
     delegate_method!(did_write_value_for_descriptor<DescriptorValueWrite>(peripheral, descriptor: Object, error: Option));
