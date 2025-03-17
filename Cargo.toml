@@ -51,8 +51,10 @@ windows = { version = "0.48.0", features = [
     "Devices_Bluetooth_GenericAttributeProfile",
     "Devices_Radios",
     "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation"
 ] }
-winver = "1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.16.1", features = ["bluetoothd"] }

@@ -5,6 +5,7 @@ pub mod device;
 pub mod error;
 pub mod service;
 mod types;
+mod winver;
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -17,9 +17,9 @@ use windows::Devices::Radios::{Radio, RadioState};
 use windows::Foundation::Collections::{IIterable, IVector};
 use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
-use winver::WindowsVersion;
 
 use super::types::StringVec;
+use super::winver::windows_version_above;
 use crate::error::{Error, ErrorKind};
 use crate::util::defer;
 use crate::{
@@ -243,7 +243,7 @@ impl AdapterImpl {
         &'a self,
         services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
-        let ext_api_available = WindowsVersion::detect().is_some_and(|v| v >= WindowsVersion::new(10, 0, 19041));
+        let ext_api_available = windows_version_above(10, 0, 19041);
 
         let (sender, receiver) = futures_channel::mpsc::channel(16);
         let sender = Arc::new(std::sync::Mutex::new(sender));
@@ -333,7 +333,7 @@ impl AdapterImpl {
                     let addr = event_args.BluetoothAddress().ok()?;
                     let kind = ext_api_available
                         .then(|| event_args.BluetoothAddressType().ok())
-                        .unwrap_or(None);
+                        .flatten();
                     let rssi = event_args.RawSignalStrengthInDBm().ok();
                     let adv_data = AdvertisementData::from(event_args);
 
