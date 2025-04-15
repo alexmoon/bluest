@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![cfg_attr(target_os = "android", feature(arbitrary_self_types))]
 
 //! Bluest is a cross-platform [Bluetooth Low Energy] (BLE) library for [Rust]. It currently supports Windows (version
 //! 10 and later), MacOS/iOS, and Linux. Android support is planned.
