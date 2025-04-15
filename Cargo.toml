@@ -58,7 +58,7 @@ bluer = { version = "0.16.1", features = ["bluetoothd"] }
 tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-java-spaghetti = "0.2.0"
+java-spaghetti = { git = "https://github.com/Dirbaio/java-spaghetti", rev = "b6a5d88cbd170143d4f515cec7246506cc258b69" }
 async-channel = "2.2.0"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
