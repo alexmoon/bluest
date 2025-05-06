@@ -148,7 +148,7 @@ impl AdvertisementData {
     pub(super) fn from_nsdictionary(adv_data: &ShareId<NSDictionary<NSString, NSObject>>) -> Self {
         let is_connectable = adv_data
             .object_for(unsafe { extern_nsstring(CBAdvertisementDataIsConnectable) })
-            .map_or(false, |val| unsafe {
+            .is_some_and(|val| unsafe {
                 let n: BOOL = msg_send![val, boolValue];
                 n != NO
             });
