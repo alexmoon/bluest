@@ -542,7 +542,7 @@ impl PeripheralDelegate {
                     autoreleasepool(move || option_from_ptr(msg_send![characteristic, value]));
                 let event = PeripheralEvent::CharacteristicValueUpdate {
                     characteristic: ShareId::from_ptr(characteristic.cast()),
-                    data: data,
+                    data,
                     error: (!error.is_null()).then(|| ShareId::from_ptr(error.cast())),
                 };
                 debug!("PeripheralDelegate received {:?}", event);
