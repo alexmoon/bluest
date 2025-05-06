@@ -1,4 +1,5 @@
 use std::mem;
+
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows::Win32::System::SystemInformation::OSVERSIONINFOW;
 use windows::{s, w};
