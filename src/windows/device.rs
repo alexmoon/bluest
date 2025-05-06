@@ -56,8 +56,12 @@ impl std::fmt::Display for DeviceImpl {
 }
 
 impl Device {
-    pub(super) async fn from_addr(addr: u64, kind: BluetoothAddressType) -> windows::core::Result<Self> {
-        let inner = BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?;
+    pub(super) async fn from_addr(addr: u64, kind: Option<BluetoothAddressType>) -> windows::core::Result<Self> {
+        let inner = if let Some(kind) = kind {
+            BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?
+        } else {
+            BluetoothLEDevice::FromBluetoothAddressAsync(addr)?.await?
+        };
         Ok(Device(DeviceImpl { inner }))
     }
 

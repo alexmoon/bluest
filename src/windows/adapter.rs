@@ -19,6 +19,7 @@ use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::DataReader;
 
 use super::types::StringVec;
+use super::winver::windows_version_above;
 use crate::error::{Error, ErrorKind};
 use crate::util::defer;
 use crate::{
@@ -242,6 +243,8 @@ impl AdapterImpl {
         &'a self,
         services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
+        let ext_api_available = windows_version_above(10, 0, 19041);
+
         let (sender, receiver) = futures_channel::mpsc::channel(16);
         let sender = Arc::new(std::sync::Mutex::new(sender));
 
@@ -278,7 +281,9 @@ impl AdapterImpl {
         let build_watcher = |uuid: Option<Uuid>| {
             let watcher = BluetoothLEAdvertisementWatcher::new()?;
             watcher.SetScanningMode(BluetoothLEScanningMode::Active)?;
-            watcher.SetAllowExtendedAdvertisements(true)?;
+            if ext_api_available {
+                watcher.SetAllowExtendedAdvertisements(true)?;
+            }
             watcher.Received(&received_handler)?;
             watcher.Stopped(&stopped_handler)?;
 
@@ -326,7 +331,9 @@ impl AdapterImpl {
                     }
 
                     let addr = event_args.BluetoothAddress().ok()?;
-                    let kind = event_args.BluetoothAddressType().ok()?;
+                    let kind = ext_api_available
+                        .then(|| event_args.BluetoothAddressType().ok())
+                        .flatten();
                     let rssi = event_args.RawSignalStrengthInDBm().ok();
                     let adv_data = AdvertisementData::from(event_args);
 
