@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.6.8
+
+- (Windows) Support Windows 10 LTSC 2019
+- (Linux) Implement std::fmt::Display for DeviceId
+- (MacOS/iOS) Fix dropped notifications when processing is slow
+
 ## 0.6.7
 
 - Fix a panic on CoreBluetooth when parent object references become `nil`
