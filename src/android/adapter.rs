@@ -1,20 +1,18 @@
 use std::collections::HashMap;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{Arc, Mutex};
-use std::task::{Context, Poll};
+use std::sync::Arc;
 
-use async_channel::{Receiver, Sender};
+use async_channel::Sender;
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
-use java_spaghetti::{Arg, ByteArray, Env, Global, Local, Null, PrimitiveArray, VM};
+use java_spaghetti::{ByteArray, Env, Global, Local, Null, PrimitiveArray, Ref, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-use super::bindings::android::bluetooth::le::{BluetoothLeScanner, ScanResult, ScanSettings, ScanSettings_Builder};
+use super::bindings::android::bluetooth::le::{
+    BluetoothLeScanner, ScanCallback, ScanResult, ScanSettings, ScanSettings_Builder,
+};
 use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothManager};
 use super::bindings::android::os::ParcelUuid;
-use super::bindings::com::github::alexmoon::bluest::android::BluestScanCallback;
 use super::device::DeviceImpl;
 use super::{JavaIterator, OptionExt};
 use crate::android::bindings::java::util::Map_Entry;
@@ -126,8 +124,9 @@ impl AdapterImpl {
         _services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
         self.inner.manager.vm().with_env(|env| {
-            let receiver = SCAN_CALLBACKS.allocate();
-            let callback = BluestScanCallback::new(env, receiver.id)?;
+            let (device_sender, device_receiver) = async_channel::bounded(16);
+            let callback = ScanCallback::new_proxy(env, Arc::new(ScanCallbackProxy { device_sender }))?;
+
             let callback_global = callback.as_global();
             let scanner = self.inner.le_scanner.as_ref(env);
             let settings = ScanSettings_Builder::new(env)?;
@@ -146,7 +145,7 @@ impl AdapterImpl {
                 });
             });
 
-            Ok(Box::pin(receiver).map(move |x| {
+            Ok(Box::pin(device_receiver).map(move |x| {
                 let _guard = &guard;
                 x
             }))
@@ -207,81 +206,6 @@ impl std::fmt::Debug for AdapterImpl {
     }
 }
 
-static SCAN_CALLBACKS: CallbackRouter<AdvertisingDevice> = CallbackRouter::new();
-
-struct CallbackRouter<T: Send + 'static> {
-    map: Mutex<Option<HashMap<i32, Sender<T>>>>,
-    next_id: AtomicI32,
-}
-
-impl<T: Send + 'static> CallbackRouter<T> {
-    const fn new() -> Self {
-        Self {
-            map: Mutex::new(None),
-            next_id: AtomicI32::new(0),
-        }
-    }
-
-    fn allocate(&'static self) -> CallbackReceiver<T> {
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let (sender, receiver) = async_channel::bounded(16);
-        self.map
-            .lock()
-            .unwrap()
-            .get_or_insert_with(Default::default)
-            .insert(id, sender);
-
-        CallbackReceiver {
-            router: self,
-            id,
-            receiver,
-        }
-    }
-
-    fn callback(&'static self, id: i32, val: T) {
-        if let Some(sender) = self.map.lock().unwrap().as_mut().unwrap().get_mut(&id) {
-            if let Err(e) = sender.send_blocking(val) {
-                warn!("failed to send scan callback: {:?}", e)
-            }
-        }
-    }
-}
-
-struct CallbackReceiver<T: Send + 'static> {
-    router: &'static CallbackRouter<T>,
-    id: i32,
-    receiver: Receiver<T>,
-}
-
-impl<T: Send + 'static> Stream for CallbackReceiver<T> {
-    type Item = T;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // safety: this is just a manually-written pin projection.
-        let receiver = unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().receiver) };
-        receiver.poll_next(cx)
-    }
-}
-
-impl<T: Send> Drop for CallbackReceiver<T> {
-    fn drop(&mut self) {
-        self.router.map.lock().unwrap().as_mut().unwrap().remove(&self.id);
-    }
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanResult(
-    env: Env<'_>,
-    _class: *mut (), // self class, ignore
-    id: i32,
-    callback_type: i32,
-    scan_result: Arg<ScanResult>,
-) {
-    if let Err(e) = on_scan_result(env, id, callback_type, scan_result) {
-        warn!("on_scan_result failed: {:?}", e);
-    }
-}
-
 fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
     let uuid = uuid.getUuid()?.non_null()?;
     let lsb = uuid.getLeastSignificantBits()? as u64;
@@ -289,81 +213,118 @@ fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
     Ok(Uuid::from_u64_pair(msb, lsb))
 }
 
-#[no_mangle]
-fn on_scan_result(env: Env<'_>, id: i32, callback_type: i32, scan_result: Arg<ScanResult>) -> Result<()> {
-    let scan_result = unsafe { scan_result.into_ref(env) }.non_null()?;
+struct ScanCallbackProxy {
+    device_sender: Sender<AdvertisingDevice>,
+}
 
-    tracing::info!("got callback! {} {}", id, callback_type);
+impl super::bindings::android::bluetooth::le::ScanCallbackProxy for ScanCallbackProxy {
+    fn onScanFailed<'env>(&self, _env: Env<'env>, error_code: i32) -> () {
+        tracing::error!("got scan fail! {}", error_code);
+        todo!()
+    }
 
-    let scan_record = scan_result.getScanRecord()?.non_null()?;
-    let device = scan_result.getDevice()?.non_null()?;
+    fn onBatchScanResults<'env>(
+        &self,
+        env: Env<'env>,
+        scan_results: Option<Ref<'env, super::bindings::java::util::List>>,
+    ) -> () {
+        let Some(scan_results) = scan_results else {
+            warn!("onBatchScanResults: ignoring null scan_results");
+            return;
+        };
 
-    let address = device.getAddress()?.non_null()?.to_string_lossy();
-    let rssi = scan_result.getRssi()?;
-    let is_connectable = scan_result.isConnectable()?;
-    let local_name = scan_record.getDeviceName()?.map(|s| s.to_string_lossy());
-    let tx_power_level = scan_record.getTxPowerLevel()?;
-
-    // Services
-    let mut services = Vec::new();
-    if let Some(uuids) = scan_record.getServiceUuids()? {
-        for uuid in JavaIterator(uuids.iterator()?.non_null()?) {
-            services.push(convert_uuid(uuid.cast()?)?)
+        if let Err(e) = self.on_scan_result_list(env, &scan_results) {
+            warn!("onBatchScanResults failed: {e:?}");
         }
     }
 
-    // Service data
-    let mut service_data = HashMap::new();
-    let sd = scan_record.getServiceData()?.non_null()?;
-    let sd = sd.entrySet()?.non_null()?;
-    for entry in JavaIterator(sd.iterator()?.non_null()?) {
-        let entry: Local<Map_Entry> = entry.cast()?;
-        let key: Local<ParcelUuid> = entry.getKey()?.non_null()?.cast()?;
-        let val: Local<ByteArray> = entry.getValue()?.non_null()?.cast()?;
-        service_data.insert(convert_uuid(key)?, val.as_vec().into_iter().map(|i| i as u8).collect());
+    fn onScanResult<'env>(
+        &self,
+        env: Env<'env>,
+        _callback_type: i32,
+        scan_result: Option<Ref<'env, ScanResult>>,
+    ) -> () {
+        let Some(scan_result) = scan_result else {
+            warn!("onScanResult: ignoring null scan_result");
+            return;
+        };
+
+        if let Err(e) = self.on_scan_result(env, &scan_result) {
+            warn!("onScanResult failed: {e:?}");
+        }
     }
-
-    // Manufacturer data
-    let mut manufacturer_data = None;
-    let msd = scan_record.getManufacturerSpecificData()?.non_null()?;
-    // TODO there can be multiple manufacturer data entries, but the bluest API only supports one. So grab just the first.
-    if msd.size()? != 0 {
-        let val: Local<'_, ByteArray> = msd.valueAt(0)?.non_null()?.cast()?;
-        manufacturer_data = Some(ManufacturerData {
-            company_id: msd.keyAt(0)? as _,
-            data: val.as_vec().into_iter().map(|i| i as u8).collect(),
-        });
-    }
-
-    let device_id = DeviceId(address);
-
-    let d = AdvertisingDevice {
-        device: Device(DeviceImpl {
-            id: device_id,
-            device: device.as_global(),
-        }),
-        adv_data: AdvertisementData {
-            is_connectable,
-            local_name,
-            manufacturer_data, // TODO, SparseArray is cursed.
-            service_data,
-            services,
-            tx_power_level: Some(tx_power_level as _),
-        },
-        rssi: Some(rssi as _),
-    };
-    SCAN_CALLBACKS.callback(id, d);
-
-    Ok(())
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanFailed(
-    _env: Env<'_>,
-    _class: *mut (), // self class, ignore
-    id: i32,
-    error_code: i32,
-) {
-    tracing::error!("got scan fail! {} {}", id, error_code);
-    todo!()
+impl ScanCallbackProxy {
+    fn on_scan_result_list(&self, env: Env<'_>, scan_results: &Ref<super::bindings::java::util::List>) -> Result<()> {
+        for scan_result in JavaIterator(scan_results.iterator()?.non_null()?) {
+            let scan_result: Local<ScanResult> = scan_result.cast()?;
+            self.on_scan_result(env, &scan_result)?;
+        }
+        Ok(())
+    }
+
+    fn on_scan_result(&self, _env: Env<'_>, scan_result: &Ref<ScanResult>) -> Result<()> {
+        let scan_record = scan_result.getScanRecord()?.non_null()?;
+        let device = scan_result.getDevice()?.non_null()?;
+
+        let address = device.getAddress()?.non_null()?.to_string_lossy();
+        let rssi = scan_result.getRssi()?;
+        let is_connectable = scan_result.isConnectable()?;
+        let local_name = scan_record.getDeviceName()?.map(|s| s.to_string_lossy());
+        let tx_power_level = scan_record.getTxPowerLevel()?;
+
+        // Services
+        let mut services = Vec::new();
+        if let Some(uuids) = scan_record.getServiceUuids()? {
+            for uuid in JavaIterator(uuids.iterator()?.non_null()?) {
+                services.push(convert_uuid(uuid.cast()?)?)
+            }
+        }
+
+        // Service data
+        let mut service_data = HashMap::new();
+        let sd = scan_record.getServiceData()?.non_null()?;
+        let sd = sd.entrySet()?.non_null()?;
+        for entry in JavaIterator(sd.iterator()?.non_null()?) {
+            let entry: Local<Map_Entry> = entry.cast()?;
+            let key: Local<ParcelUuid> = entry.getKey()?.non_null()?.cast()?;
+            let val: Local<ByteArray> = entry.getValue()?.non_null()?.cast()?;
+            service_data.insert(convert_uuid(key)?, val.as_vec().into_iter().map(|i| i as u8).collect());
+        }
+
+        // Manufacturer data
+        let mut manufacturer_data = None;
+        let msd = scan_record.getManufacturerSpecificData()?.non_null()?;
+        // TODO there can be multiple manufacturer data entries, but the bluest API only supports one. So grab just the first.
+        if msd.size()? != 0 {
+            let val: Local<'_, ByteArray> = msd.valueAt(0)?.non_null()?.cast()?;
+            manufacturer_data = Some(ManufacturerData {
+                company_id: msd.keyAt(0)? as _,
+                data: val.as_vec().into_iter().map(|i| i as u8).collect(),
+            });
+        }
+
+        let device_id = DeviceId(address);
+
+        let d = AdvertisingDevice {
+            device: Device(DeviceImpl {
+                id: device_id,
+                device: device.as_global(),
+            }),
+            adv_data: AdvertisementData {
+                is_connectable,
+                local_name,
+                manufacturer_data, // TODO, SparseArray is cursed.
+                service_data,
+                services,
+                tx_power_level: Some(tx_power_level as _),
+            },
+            rssi: Some(rssi as _),
+        };
+
+        self.device_sender.try_send(d).ok();
+
+        Ok(())
+    }
 }
