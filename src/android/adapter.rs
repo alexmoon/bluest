@@ -16,9 +16,11 @@ use super::bindings::android::os::ParcelUuid;
 use super::device::DeviceImpl;
 use super::{JavaIterator, OptionExt};
 use crate::android::bindings::java::util::Map_Entry;
+use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, ManufacturerData, Result,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, ManufacturerData,
+    Result,
 };
 
 struct AdapterInner {
@@ -123,9 +125,16 @@ impl AdapterImpl {
         &'a self,
         _services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
-        self.inner.manager.vm().with_env(|env| {
+        let (start_receiver, stream) = self.inner.manager.vm().with_env(|env| {
+            let (start_sender, start_receiver) = async_channel::bounded(1);
             let (device_sender, device_receiver) = async_channel::bounded(16);
-            let callback = ScanCallback::new_proxy(env, Arc::new(ScanCallbackProxy { device_sender }))?;
+            let callback = ScanCallback::new_proxy(
+                env,
+                Arc::new(ScanCallbackProxy {
+                    device_sender,
+                    start_sender,
+                }),
+            )?;
 
             let callback_global = callback.as_global();
             let scanner = self.inner.le_scanner.as_ref(env);
@@ -145,11 +154,25 @@ impl AdapterImpl {
                 });
             });
 
-            Ok(Box::pin(device_receiver).map(move |x| {
-                let _guard = &guard;
-                x
-            }))
-        })
+            Ok::<_, crate::Error>((
+                start_receiver,
+                Box::pin(device_receiver).map(move |x| {
+                    let _guard = &guard;
+                    x
+                }),
+            ))
+        })?;
+
+        // Wait for scan started or failed.
+        match start_receiver.recv().await {
+            Ok(Ok(())) => Ok(stream),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(Error::new(
+                ErrorKind::Internal,
+                None,
+                format!("receiving failed while waiting for start: {e:?}"),
+            )),
+        }
     }
 
     pub async fn discover_devices<'a>(
@@ -214,13 +237,20 @@ fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
 }
 
 struct ScanCallbackProxy {
+    start_sender: Sender<Result<()>>,
     device_sender: Sender<AdvertisingDevice>,
 }
 
 impl super::bindings::android::bluetooth::le::ScanCallbackProxy for ScanCallbackProxy {
     fn onScanFailed<'env>(&self, _env: Env<'env>, error_code: i32) -> () {
-        tracing::error!("got scan fail! {}", error_code);
-        todo!()
+        let e = Error::new(
+            ErrorKind::Internal,
+            None,
+            format!("Scan failed to start with error code {error_code}"),
+        );
+        if let Err(e) = self.start_sender.try_send(Err(e)) {
+            warn!("onScanFailed failed to send error: {e:?}");
+        }
     }
 
     fn onBatchScanResults<'env>(
@@ -323,6 +353,7 @@ impl ScanCallbackProxy {
             rssi: Some(rssi as _),
         };
 
+        self.start_sender.try_send(Ok(())).ok();
         self.device_sender.try_send(d).ok();
 
         Ok(())
