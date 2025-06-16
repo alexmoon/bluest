@@ -1,16 +1,19 @@
-use objc_foundation::INSString;
-use objc_id::ShareId;
+use objc2::rc::Retained;
+use objc2_core_bluetooth::CBError;
+use objc2_foundation::NSError;
 
-use super::types::CBError;
-pub use super::types::NSError;
 use crate::error::{AttError, ErrorKind};
 
 impl crate::Error {
     pub(super) fn from_recv_error(err: async_broadcast::RecvError) -> Self {
-        crate::Error::new(ErrorKind::Internal, Some(Box::new(err)), "receiving delegate event")
+        crate::Error::new(
+            ErrorKind::Internal,
+            Some(Box::new(err)),
+            "receiving delegate event",
+        )
     }
 
-    pub(super) fn from_nserror(err: ShareId<NSError>) -> Self {
+    pub(super) fn from_nserror(err: Retained<NSError>) -> Self {
         crate::Error::new(
             kind_from_nserror(&err),
             Some(Box::new(NSErrorError(err))),
@@ -18,7 +21,7 @@ impl crate::Error {
         )
     }
 
-    pub(super) fn from_kind_and_nserror(kind: ErrorKind, err: Option<ShareId<NSError>>) -> Self {
+    pub(super) fn from_kind_and_nserror(kind: ErrorKind, err: Option<Retained<NSError>>) -> Self {
         match err {
             Some(err) => crate::Error::new(kind, Some(Box::new(NSErrorError(err))), String::new()),
             None => kind.into(),
@@ -27,25 +30,26 @@ impl crate::Error {
 }
 
 fn kind_from_nserror(value: &NSError) -> ErrorKind {
-    if value.domain().as_str() == "CBErrorDomain" {
+    if value.domain().to_string() == "CBErrorDomain" {
         match CBError(value.code()) {
-            CBError::OPERATION_NOT_SUPPORTED => ErrorKind::NotSupported,
-            CBError::NOT_CONNECTED | CBError::PERIPHERAL_DISCONNECTED => ErrorKind::NotConnected,
-            CBError::CONNECTION_TIMEOUT | CBError::ENCRYPTION_TIMED_OUT => ErrorKind::Timeout,
-            CBError::INVALID_PARAMETERS
-            | CBError::INVALID_HANDLE
-            | CBError::UUID_NOT_ALLOWED
-            | CBError::UNKOWN_DEVICE => ErrorKind::InvalidParameter,
-            CBError::CONNECTION_FAILED
-            | CBError::PEER_REMOVED_PAIRING_INFORMATION
-            | CBError::CONNECTION_LIMIT_REACHED
-            | CBError::TOO_MANY_LE_PAIRED_DEVICES => ErrorKind::ConnectionFailed,
-            CBError::UNKNOWN | CBError::OUT_OF_SPACE | CBError::OPERATION_CANCELLED | CBError::ALREADY_ADVERTISING => {
-                ErrorKind::Other
-            }
+            CBError::OperationNotSupported => ErrorKind::NotSupported,
+            CBError::NotConnected | CBError::PeripheralDisconnected => ErrorKind::NotConnected,
+            CBError::ConnectionTimeout | CBError::EncryptionTimedOut => ErrorKind::Timeout,
+            CBError::InvalidParameters
+            | CBError::InvalidHandle
+            | CBError::UUIDNotAllowed
+            | CBError::UnknownDevice => ErrorKind::InvalidParameter,
+            CBError::ConnectionFailed
+            | CBError::PeerRemovedPairingInformation
+            | CBError::ConnectionLimitReached
+            | CBError::TooManyLEPairedDevices => ErrorKind::ConnectionFailed,
+            CBError::Unknown
+            | CBError::OutOfSpace
+            | CBError::OperationCancelled
+            | CBError::AlreadyAdvertising => ErrorKind::Other,
             _ => ErrorKind::Other,
         }
-    } else if value.domain().as_str() == "CBATTErrorDomain" {
+    } else if value.domain().to_string() == "CBATTErrorDomain" {
         let n = value.code();
         if let Ok(n) = u8::try_from(n) {
             ErrorKind::Protocol(AttError::from(n))
@@ -57,7 +61,7 @@ fn kind_from_nserror(value: &NSError) -> ErrorKind {
     }
 }
 
-struct NSErrorError(ShareId<NSError>);
+struct NSErrorError(Retained<NSError>);
 
 impl std::fmt::Debug for NSErrorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -67,7 +71,7 @@ impl std::fmt::Debug for NSErrorError {
 
 impl std::fmt::Display for NSErrorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.localized_description().as_str())
+        f.write_str(&self.localizedDescription().to_string())
     }
 }
 

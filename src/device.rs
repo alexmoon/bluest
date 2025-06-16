@@ -141,7 +141,7 @@ impl Device {
     #[inline]
     pub async fn service_changed_indications(
         &self,
-    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
+    ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Unpin + '_> {
         self.0.service_changed_indications().await
     }
 

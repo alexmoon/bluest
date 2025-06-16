@@ -1,30 +1,41 @@
 #![allow(clippy::let_unit_value)]
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
+use dispatch2::{DispatchQoS, DispatchQueue, GlobalQueueIdentifier};
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
-use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
-use objc_id::ShareId;
+use futures_lite::{StreamExt, stream};
+use objc2::AnyThread;
+use objc2::rc::Retained;
+use objc2::runtime::ProtocolObject;
+use objc2_core_bluetooth::{
+    CBAdvertisementDataIsConnectable, CBAdvertisementDataLocalNameKey,
+    CBAdvertisementDataManufacturerDataKey, CBAdvertisementDataOverflowServiceUUIDsKey,
+    CBAdvertisementDataServiceDataKey, CBAdvertisementDataServiceUUIDsKey,
+    CBAdvertisementDataTxPowerLevelKey, CBCentralManager, CBManager, CBManagerAuthorization,
+    CBManagerState, CBUUID,
+};
+use objc2_foundation::{NSArray, NSData, NSDictionary, NSNumber, NSString, NSUUID};
 use tracing::{debug, error, info, warn};
 
 use super::delegates::{self, CentralDelegate};
-use super::types::{CBCentralManager, CBManagerAuthorization, CBManagerState, CBUUID, NSUUID};
-use crate::corebluetooth::types::{dispatch_get_global_queue, QOS_CLASS_UTILITY};
+use crate::ManufacturerData;
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error,
+    Result, Uuid,
 };
+use std::collections::HashMap;
 
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Clone)]
 pub struct AdapterImpl {
-    central: ShareId<CBCentralManager>,
-    delegate: ShareId<CentralDelegate>,
+    central: Retained<CBCentralManager>,
+    delegate: Retained<CentralDelegate>,
     scanning: Arc<AtomicBool>,
     #[cfg(not(target_os = "macos"))]
     registered_connection_events: Arc<std::sync::Mutex<std::collections::HashMap<DeviceId, usize>>>,
@@ -53,21 +64,25 @@ impl std::fmt::Debug for AdapterImpl {
 impl AdapterImpl {
     /// Creates an interface to the default Bluetooth adapter for the system
     pub async fn default() -> Option<Self> {
-        match CBCentralManager::authorization() {
-            CBManagerAuthorization::ALLOWED_ALWAYS => info!("Bluetooth authorization is allowed"),
-            CBManagerAuthorization::DENIED => error!("Bluetooth authorization is denied"),
-            CBManagerAuthorization::NOT_DETERMINED => warn!("Bluetooth authorization is undetermined"),
-            CBManagerAuthorization::RESTRICTED => warn!("Bluetooth authorization is restricted"),
+        match unsafe { CBManager::authorization_class() } {
+            CBManagerAuthorization::AllowedAlways => info!("Bluetooth authorization is allowed"),
+            CBManagerAuthorization::Denied => error!("Bluetooth authorization is denied"),
+            CBManagerAuthorization::NotDetermined => {
+                warn!("Bluetooth authorization is undetermined")
+            }
+            CBManagerAuthorization::Restricted => warn!("Bluetooth authorization is restricted"),
             val => error!("Bluetooth authorization returned unknown value {:?}", val),
         }
 
-        let delegate = CentralDelegate::new()?.share();
+        let delegate = CentralDelegate::new();
+        let protocol = ProtocolObject::from_retained(delegate.clone());
         let central = unsafe {
-            let queue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
-            if queue.is_null() {
-                return None;
-            }
-            CBCentralManager::with_delegate(&delegate, queue).share()
+            let queue = DispatchQueue::global_queue(GlobalQueueIdentifier::QualityOfService(
+                DispatchQoS::Utility,
+            ));
+            let this = CBCentralManager::alloc();
+            // let options = NSDictionary::from_slices(&[CBCentralManagerOptionShowPowerAlertKey], &[NSNumber::numberWithBool(config.request_permissions)]);
+            CBCentralManager::initWithDelegate_queue(this, Some(&protocol), Some(&queue))
         };
 
         Some(AdapterImpl {
@@ -80,16 +95,16 @@ impl AdapterImpl {
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Unpin + '_> {
         let receiver = self.delegate.sender().new_receiver();
         Ok(receiver.filter_map(|x| {
             match x {
                 delegates::CentralEvent::StateChanged => {
                     // TODO: Check CBCentralManager::authorization()?
-                    let state = self.central.state();
+                    let state = unsafe { self.central.state() };
                     debug!("Central state is now {:?}", state);
                     match state {
-                        CBManagerState::POWERED_ON => Some(Ok(AdapterEvent::Available)),
+                        CBManagerState::PoweredOn => Some(Ok(AdapterEvent::Available)),
                         _ => Some(Ok(AdapterEvent::Unavailable)),
                     }
                 }
@@ -98,27 +113,47 @@ impl AdapterImpl {
         }))
     }
 
+    /// Check if the adapter is available.
+    ///
+    /// If the state is not known, assume that it's available.
+    pub fn is_available(&self) -> bool {
+        let state = unsafe { self.central.state() };
+        info!("state: {:?}", state);
+        state == CBManagerState::PoweredOn || state == CBManagerState::Unknown
+    }
+
     /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
         let events = self.events();
-        if self.central.state() != CBManagerState::POWERED_ON {
+        if unsafe { self.central.state() } != CBManagerState::PoweredOn {
             events
                 .await?
                 .skip_while(|x| x.is_ok() && !matches!(x, Ok(AdapterEvent::Available)))
                 .next()
                 .await
-                .ok_or_else(|| Error::new(ErrorKind::Internal, None, "adapter event stream closed unexpectedly"))??;
+                .ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::Internal,
+                        None,
+                        "adapter event stream closed unexpectedly",
+                    )
+                })??;
         }
         Ok(())
     }
 
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
-        let identifiers = NSArray::from_vec(vec![NSUUID::from_uuid(id.0)]);
-        let peripherals = self.central.retrieve_peripherals_with_identifiers(&identifiers);
+        let identifiers = NSArray::from_retained_slice(&[NSUUID::from_bytes(*id.0.as_bytes())]);
+        let peripherals = unsafe {
+            self.central
+                .retrievePeripheralsWithIdentifiers(&identifiers)
+        };
+
         peripherals
-            .first_object()
-            .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
+            .iter()
+            .next()
+            .map(|x| Device::new(x))
             .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device"))
     }
 
@@ -137,14 +172,19 @@ impl AdapterImpl {
         assert!(!services.is_empty());
 
         let services = {
-            let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
-            NSArray::from_vec(vec)
+            let vec = services
+                .iter()
+                .copied()
+                .map(|s| unsafe { CBUUID::UUIDWithData(&NSData::with_bytes(&s.as_bytes()[..])) })
+                .collect::<Vec<_>>();
+            NSArray::from_retained_slice(&vec[..])
         };
-        let peripherals = self.central.retrieve_connected_peripherals_with_services(&services);
-        Ok(peripherals
-            .enumerator()
-            .map(|x| Device::new(unsafe { ShareId::from_ptr(x as *const _ as *mut _) }))
-            .collect())
+        unsafe {
+            let peripherals = self
+                .central
+                .retrieveConnectedPeripheralsWithServices(&services);
+            Ok(peripherals.iter().map(|x| Device::new(x)).collect())
+        }
     }
 
     /// Starts scanning for Bluetooth advertising packets.
@@ -158,8 +198,8 @@ impl AdapterImpl {
     pub async fn scan<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
-        if self.central.state() != CBManagerState::POWERED_ON {
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Unpin + 'a> {
+        if unsafe { self.central.state() } != CBManagerState::PoweredOn {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
@@ -168,12 +208,16 @@ impl AdapterImpl {
         }
 
         let services = (!services.is_empty()).then(|| {
-            let vec = services.iter().copied().map(CBUUID::from_uuid).collect::<Vec<_>>();
-            NSArray::from_vec(vec)
+            let vec = services
+                .iter()
+                .copied()
+                .map(|s| unsafe { CBUUID::UUIDWithData(&NSData::with_bytes(&s.as_bytes()[..])) })
+                .collect::<Vec<_>>();
+            NSArray::from_retained_slice(&vec[..])
         });
 
         let guard = defer(|| {
-            self.central.stop_scan();
+            unsafe { self.central.stopScan() };
             self.scanning.store(false, Ordering::Release);
         });
 
@@ -181,7 +225,7 @@ impl AdapterImpl {
             .delegate
             .sender()
             .new_receiver()
-            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
+            .take_while(|_| unsafe { self.central.state() } == CBManagerState::PoweredOn)
             .filter_map(move |x| {
                 let _guard = &guard;
                 match x {
@@ -198,8 +242,10 @@ impl AdapterImpl {
                 }
             });
 
-        self.central
-            .scan_for_peripherals_with_services(services.as_deref(), None);
+        unsafe {
+            self.central
+                .scanForPeripheralsWithServices_options(services.as_deref(), None)
+        };
 
         Ok(events)
     }
@@ -213,7 +259,7 @@ impl AdapterImpl {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = Result<Device>> + Unpin + 'a> {
         let connected = stream::iter(self.connected_devices_with_services(services).await?).map(Ok);
 
         // try_unfold is used to ensure we do not start scanning until the connected devices have been consumed
@@ -235,21 +281,32 @@ impl AdapterImpl {
     /// exist) and the application can then interact with the device. This connection will be maintained until either
     /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
-        if self.central.state() != CBManagerState::POWERED_ON {
+        if unsafe { self.central.state() } != CBManagerState::PoweredOn {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
         let mut events = self.delegate.sender().new_receiver();
         debug!("Connecting to {:?}", device);
-        self.central.connect_peripheral(&device.0.peripheral, None);
+        unsafe {
+            self.central
+                .connectPeripheral_options(&device.0.peripheral, None)
+        };
         while let Some(event) = events.next().await {
-            if self.central.state() != CBManagerState::POWERED_ON {
+            if unsafe { self.central.state() } != CBManagerState::PoweredOn {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
-                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => return Ok(()),
-                delegates::CentralEvent::ConnectFailed { peripheral, error } if peripheral == device.0.peripheral => {
-                    return Err(error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror));
+                delegates::CentralEvent::Connect { peripheral }
+                    if peripheral == device.0.peripheral =>
+                {
+                    return Ok(());
+                }
+                delegates::CentralEvent::ConnectFailed { peripheral, error }
+                    if peripheral == device.0.peripheral =>
+                {
+                    return Err(
+                        error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror)
+                    );
                 }
                 _ => (),
             }
@@ -264,15 +321,18 @@ impl AdapterImpl {
     /// which would require a connection will fail. If no other application has a connection to the same device,
     /// the underlying Bluetooth connection will be closed.
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
-        if self.central.state() != CBManagerState::POWERED_ON {
+        if unsafe { self.central.state() } != CBManagerState::PoweredOn {
             return Err(ErrorKind::AdapterUnavailable.into());
         }
 
         let mut events = self.delegate.sender().new_receiver();
         debug!("Disconnecting from {:?}", device);
-        self.central.cancel_peripheral_connection(&device.0.peripheral);
+        unsafe {
+            self.central
+                .cancelPeripheralConnection(&device.0.peripheral)
+        };
         while let Some(event) = events.next().await {
-            if self.central.state() != CBManagerState::POWERED_ON {
+            if unsafe { self.central.state() } != CBManagerState::PoweredOn {
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
@@ -295,18 +355,21 @@ impl AdapterImpl {
     fn register_connection_events(&self, device: DeviceId) -> impl Drop + '_ {
         use std::collections::HashMap;
 
-        use objc_foundation::{INSDictionary, NSDictionary, NSString};
-        use objc_id::Id;
-
-        use crate::corebluetooth::types::connection_event_matching_option_peripheral_uuids;
+        use objc2::rc::Retained;
+        use objc2_core_bluetooth::CBConnectionEventMatchingOptionServiceUUIDs;
+        use objc2_foundation::{NSDictionary, NSString};
 
         let mut guard = self.registered_connection_events.lock().unwrap();
 
-        fn options(devices: &HashMap<DeviceId, usize>) -> Id<NSDictionary<NSString, NSArray<NSUUID>>> {
-            let ids = devices.keys().map(|x| NSUUID::from_uuid(x.0)).collect();
-            NSDictionary::from_keys_and_objects(
-                &[connection_event_matching_option_peripheral_uuids()],
-                vec![NSArray::from_vec(ids)],
+        fn options(devices: &HashMap<DeviceId, usize>) -> Retained<NSDictionary<NSString>> {
+            let ids: Vec<Retained<NSUUID>> = devices
+                .keys()
+                .map(|x| unsafe { NSUUID::UUIDWithData(&NSData::with_bytes(x.0.as_bytes())) })
+                .collect();
+            let ids = NSArray::from_retained_slice(&ids[..]);
+            NSDictionary::from_retained_objects(
+                &[unsafe { CBConnectionEventMatchingOptionServiceUUIDs }],
+                &[ids.into()],
             )
         }
 
@@ -316,8 +379,11 @@ impl AdapterImpl {
             }
             std::collections::hash_map::Entry::Vacant(e) => {
                 e.insert(1);
-                self.central
-                    .register_for_connection_events_with_options(Some(&*options(&guard)));
+                let opts = options(&guard);
+                unsafe {
+                    self.central
+                        .registerForConnectionEventsWithOptions(Some(&opts))
+                }
             }
         }
 
@@ -328,8 +394,11 @@ impl AdapterImpl {
                     *e.get_mut() -= 1;
                     if *e.get() == 0 {
                         e.remove();
-                        self.central
-                            .register_for_connection_events_with_options(Some(&*options(&guard)))
+                        let opts = options(&guard);
+                        unsafe {
+                            self.central
+                                .registerForConnectionEventsWithOptions(Some(&opts))
+                        }
                     }
                 }
                 std::collections::hash_map::Entry::Vacant(_) => unreachable!(),
@@ -348,22 +417,26 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Unpin + 'a> {
         let events = self.delegate.sender().new_receiver();
         let guard = self.register_connection_events(device.id());
 
         Ok(events
-            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
+            .take_while(|_| unsafe { self.central.state() } == CBManagerState::PoweredOn)
             .filter_map(move |x| {
                 let _guard = &guard;
                 match x {
                     delegates::CentralEvent::Connect { peripheral }
-                        if peripheral.identifier() == device.0.peripheral.identifier() =>
+                        if unsafe {
+                            peripheral.identifier() == device.0.peripheral.identifier()
+                        } =>
                     {
                         Some(ConnectionEvent::Connected)
                     }
                     delegates::CentralEvent::Disconnect { peripheral, .. }
-                        if peripheral.identifier() == device.0.peripheral.identifier() =>
+                        if unsafe {
+                            peripheral.identifier() == device.0.peripheral.identifier()
+                        } =>
                     {
                         Some(ConnectionEvent::Disconnected)
                     }
@@ -383,18 +456,105 @@ impl AdapterImpl {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Unpin + 'a> {
         let events = self.delegate.sender().new_receiver();
         Ok(events
-            .take_while(|_| self.central.state() == CBManagerState::POWERED_ON)
+            .take_while(|_| unsafe { self.central.state() } == CBManagerState::PoweredOn)
             .filter_map(move |x| match x {
-                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::Connect { peripheral }
+                    if peripheral == device.0.peripheral =>
+                {
                     Some(ConnectionEvent::Connected)
                 }
-                delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::Disconnect { peripheral, .. }
+                    if peripheral == device.0.peripheral =>
+                {
                     Some(ConnectionEvent::Disconnected)
                 }
                 _ => None,
             }))
+    }
+}
+
+impl AdvertisementData {
+    fn from_nsdictionary(adv_data: &Retained<NSDictionary<NSString>>) -> Self {
+        let is_connectable = adv_data
+            .objectForKey(unsafe { CBAdvertisementDataIsConnectable })
+            .is_some_and(|val| {
+                val.downcast_ref::<NSNumber>()
+                    .map(|b| b.as_bool())
+                    .unwrap_or(false)
+            });
+
+        let local_name = adv_data
+            .objectForKey(unsafe { CBAdvertisementDataLocalNameKey })
+            .map(|val| val.downcast_ref::<NSString>().map(|s| s.to_string()))
+            .flatten();
+
+        let manufacturer_data = adv_data
+            .objectForKey(unsafe { CBAdvertisementDataManufacturerDataKey })
+            .map(|val| val.downcast_ref::<NSData>().map(|v| v.to_vec()))
+            .flatten()
+            .and_then(|val| {
+                (val.len() >= 2).then(|| ManufacturerData {
+                    company_id: u16::from_le_bytes(val[0..2].try_into().unwrap()),
+                    data: val[2..].to_vec(),
+                })
+            });
+
+        let tx_power_level: Option<i16> = adv_data
+            .objectForKey(unsafe { CBAdvertisementDataTxPowerLevelKey })
+            .map(|val| val.downcast_ref::<NSNumber>().map(|val| val.shortValue()))
+            .flatten();
+
+        let service_data = if let Some(val) =
+            adv_data.objectForKey(unsafe { CBAdvertisementDataServiceDataKey })
+        {
+            unsafe {
+                if let Some(val) = val.downcast_ref::<NSDictionary>() {
+                    let mut res = HashMap::with_capacity(val.count());
+                    for k in val.allKeys() {
+                        if let Some(key) = k.downcast_ref::<CBUUID>() {
+                            if let Some(val) = val
+                                .objectForKey_unchecked(&k)
+                                .map(|val| val.downcast_ref::<NSData>())
+                                .flatten()
+                            {
+                                res.insert(
+                                    Uuid::from_slice(key.data().as_bytes_unchecked()).unwrap(),
+                                    val.to_vec(),
+                                );
+                            }
+                        }
+                    }
+                    res
+                } else {
+                    HashMap::new()
+                }
+            }
+        } else {
+            HashMap::new()
+        };
+
+        let services = adv_data
+            .objectForKey(unsafe { CBAdvertisementDataServiceUUIDsKey })
+            .into_iter()
+            .chain(adv_data.objectForKey(unsafe { CBAdvertisementDataOverflowServiceUUIDsKey }))
+            .flat_map(|x| x.downcast::<NSArray>())
+            .flatten()
+            .map(|obj| obj.downcast::<CBUUID>())
+            .flatten()
+            .map(|uuid| unsafe { uuid.data() })
+            .map(|data| unsafe { Uuid::from_slice(data.as_bytes_unchecked()).unwrap() })
+            .collect();
+
+        AdvertisementData {
+            local_name,
+            manufacturer_data,
+            services,
+            service_data,
+            tx_power_level,
+            is_connectable,
+        }
     }
 }

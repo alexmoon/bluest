@@ -138,15 +138,15 @@ mod android;
 #[cfg(target_os = "linux")]
 mod bluer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-mod corebluetooth;
+pub mod corebluetooth;
 #[cfg(target_os = "windows")]
 mod windows;
 
 use std::collections::HashMap;
 
-#[cfg(target_os = "linux")]
-pub use ::bluer::Uuid;
 pub use adapter::Adapter;
+#[cfg(target_os = "linux")]
+pub use bluer::Uuid;
 pub use btuuid::BluetoothUuidExt;
 pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;

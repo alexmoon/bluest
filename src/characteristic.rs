@@ -77,7 +77,7 @@ impl Characteristic {
     ///
     /// Returns a stream of values for the characteristic sent from the device.
     #[inline]
-    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
+    pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Unpin + '_> {
         self.0.notify().await
     }
 

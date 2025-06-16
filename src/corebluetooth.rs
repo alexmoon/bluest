@@ -1,4 +1,5 @@
 #![allow(unexpected_cfgs)]
+#![allow(missing_docs)]
 
 use crate::Uuid;
 
@@ -7,11 +8,11 @@ pub mod characteristic;
 pub mod descriptor;
 pub mod device;
 pub mod error;
+#[cfg(feature = "l2cap")]
 pub mod l2cap_channel;
 pub mod service;
 
-mod delegates;
-mod types;
+pub(crate) mod delegates;
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

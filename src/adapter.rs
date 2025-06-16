@@ -2,7 +2,9 @@
 
 use futures_core::Stream;
 
-use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
+use crate::{
+    AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid, sys,
+};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -35,7 +37,7 @@ impl Adapter {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     #[inline]
-    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
+    pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Unpin + '_> {
         self.0.events().await
     }
 
@@ -43,6 +45,12 @@ impl Adapter {
     #[inline]
     pub async fn wait_available(&self) -> Result<()> {
         self.0.wait_available().await
+    }
+
+    /// Check if adapter is available
+    #[inline]
+    pub fn is_available(&self) -> bool {
+        self.0.is_available()
     }
 
     /// Attempts to create the device identified by `id`
@@ -79,7 +87,7 @@ impl Adapter {
     pub async fn scan<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = AdvertisingDevice> + Unpin + 'a> {
         self.0.scan(services).await
     }
 
@@ -93,7 +101,7 @@ impl Adapter {
     pub async fn discover_devices<'a>(
         &'a self,
         services: &'a [Uuid],
-    ) -> Result<impl Stream<Item = Result<Device>> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = Result<Device>> + Unpin + 'a> {
         self.0.discover_devices(services).await
     }
 
@@ -162,7 +170,7 @@ impl Adapter {
     pub async fn device_connection_events<'a>(
         &'a self,
         device: &'a Device,
-    ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
+    ) -> Result<impl Stream<Item = ConnectionEvent> + Unpin + 'a> {
         self.0.device_connection_events(device).await
     }
 }

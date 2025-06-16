@@ -65,10 +65,12 @@ java-spaghetti = "0.2.0"
 async-channel = "2.2.0"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
-async-broadcast = "0.5.1"
-objc = "0.2.7"
-objc_id = "0.1.1"
-objc-foundation = "0.1.1"
+async-broadcast = "0.7.2"
+async-channel = "2.3.1"
+objc2 = "0.6.1"
+objc2-foundation = "0.3.1"
+objc2-core-bluetooth = "0.3.1"
+dispatch2 = "0.3.0"
 
 [[example]]
 name = "scan"
