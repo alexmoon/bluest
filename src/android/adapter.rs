@@ -13,9 +13,10 @@ use super::bindings::android::bluetooth::le::{
 };
 use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothManager};
 use super::bindings::android::os::ParcelUuid;
+use super::bindings::java::lang::String as JString;
+use super::bindings::java::util::Map_Entry;
 use super::device::DeviceImpl;
 use super::{JavaIterator, OptionExt};
-use crate::android::bindings::java::util::Map_Entry;
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
@@ -109,8 +110,18 @@ impl AdapterImpl {
         Ok(true)
     }
 
-    pub async fn open_device(&self, _id: &DeviceId) -> Result<Device> {
-        todo!()
+    pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
+        self.inner._adapter.vm().with_env(|env| {
+            let adapter = self.inner._adapter.as_local(env);
+            let device = adapter
+                .getRemoteDevice_String(JString::from_env_str(env, &id.0))
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("getRemoteDevice threw: {e:?}")))?
+                .ok_or_else(|| Error::new(ErrorKind::Internal, None, format!("getRemoteDevice returned null")))?;
+            Ok(Device(DeviceImpl {
+                id: id.clone(),
+                device: device.as_global(),
+            }))
+        })
     }
 
     pub async fn connected_devices(&self) -> Result<Vec<Device>> {
