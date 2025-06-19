@@ -11,12 +11,16 @@ use uuid::Uuid;
 use super::bindings::android::bluetooth::le::{
     BluetoothLeScanner, ScanCallback, ScanResult, ScanSettings, ScanSettings_Builder,
 };
-use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothManager};
+use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothGattCallback, BluetoothManager};
+use super::bindings::android::content::Context;
 use super::bindings::android::os::ParcelUuid;
-use super::bindings::java::lang::String as JString;
+use super::bindings::java::lang::{Class, String as JString};
 use super::bindings::java::util::Map_Entry;
 use super::device::DeviceImpl;
 use super::{JavaIterator, OptionExt};
+use crate::android::bindings::android::bluetooth::{
+    BluetoothGatt, BluetoothGattCharacteristic, BluetoothGattDescriptor,
+};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
@@ -25,8 +29,9 @@ use crate::{
 };
 
 struct AdapterInner {
+    context: Global<Context>,
     manager: Global<BluetoothManager>,
-    _adapter: Global<BluetoothAdapter>,
+    adapter: Global<BluetoothAdapter>,
     le_scanner: Global<BluetoothLeScanner>,
 }
 
@@ -43,8 +48,8 @@ pub struct AdapterImpl {
 pub struct AdapterConfig {
     /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
     vm: *mut java_spaghetti::sys::JavaVM,
-    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
-    manager: java_spaghetti::sys::jobject,
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    context: java_spaghetti::sys::jobject,
 }
 
 impl AdapterConfig {
@@ -53,16 +58,10 @@ impl AdapterConfig {
     /// # Safety
     ///
     /// - `java_vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
-    /// - `bluetooth_manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
     /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
-    pub unsafe fn new(
-        java_vm: *mut java_spaghetti::sys::JavaVM,
-        bluetooth_manager: java_spaghetti::sys::jobject,
-    ) -> Self {
-        Self {
-            vm: java_vm,
-            manager: bluetooth_manager,
-        }
+    pub unsafe fn new(java_vm: *mut java_spaghetti::sys::JavaVM, context: java_spaghetti::sys::jobject) -> Self {
+        Self { vm: java_vm, context }
     }
 }
 
@@ -74,23 +73,29 @@ impl AdapterImpl {
     /// In the config object:
     ///
     /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
-    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
     /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
     pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         unsafe {
             let vm = VM::from_raw(config.vm);
-            let manager: Global<BluetoothManager> = Global::from_raw(vm, config.manager);
+            let context: Global<Context> = Global::from_raw(vm, config.context);
 
             vm.with_env(|env| {
-                let local_manager = manager.as_ref(env);
-                let adapter = local_manager.getAdapter()?.non_null()?;
+                let context = context.as_local(env);
+                let class: Local<Class> =
+                    unsafe { Local::from_raw(env, env.require_class(c"android/bluetooth/BluetoothManager")) };
+                let manager: Local<BluetoothManager> =
+                    context.getSystemService_Class(class).unwrap().unwrap().cast().unwrap();
+
+                let adapter = manager.getAdapter()?.non_null()?;
                 let le_scanner = adapter.getBluetoothLeScanner()?.non_null()?;
 
                 Ok(Self {
                     inner: Arc::new(AdapterInner {
-                        _adapter: adapter.as_global(),
+                        context: context.as_global(),
+                        adapter: adapter.as_global(),
                         le_scanner: le_scanner.as_global(),
-                        manager: manager.clone(),
+                        manager: manager.as_global(),
                     }),
                 })
             })
@@ -111,12 +116,12 @@ impl AdapterImpl {
     }
 
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
-        self.inner._adapter.vm().with_env(|env| {
-            let adapter = self.inner._adapter.as_local(env);
+        self.inner.adapter.vm().with_env(|env| {
+            let adapter = self.inner.adapter.as_local(env);
             let device = adapter
                 .getRemoteDevice_String(JString::from_env_str(env, &id.0))
                 .map_err(|e| Error::new(ErrorKind::Internal, None, format!("getRemoteDevice threw: {e:?}")))?
-                .ok_or_else(|| Error::new(ErrorKind::Internal, None, format!("getRemoteDevice returned null")))?;
+                .non_null()?;
             Ok(Device(DeviceImpl {
                 id: id.clone(),
                 device: device.as_global(),
@@ -204,9 +209,18 @@ impl AdapterImpl {
         Ok(connected.chain(advertising))
     }
 
-    pub async fn connect_device(&self, _device: &Device) -> Result<()> {
-        // Windows manages the device connection automatically
-        Ok(())
+    pub async fn connect_device(&self, device: &Device) -> Result<()> {
+        self.inner.adapter.vm().with_env(|env| {
+            let device = device.0.device.as_local(env);
+
+            let callback = BluetoothGattCallback::new_proxy(env, Arc::new(BluetoothGattCallbackProxy)).unwrap();
+            device
+                .connectGatt_Context_boolean_BluetoothGattCallback(&self.inner.context, false, callback)
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("connectGatt threw: {e:?}")))?
+                .non_null()?;
+
+            Ok(())
+        })
     }
 
     pub async fn disconnect_device(&self, _device: &Device) -> Result<()> {
@@ -369,4 +383,105 @@ impl ScanCallbackProxy {
 
         Ok(())
     }
+}
+
+struct BluetoothGattCallbackProxy;
+impl super::bindings::android::bluetooth::BluetoothGattCallbackProxy for BluetoothGattCallbackProxy {
+    fn onPhyUpdate<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+        _arg3: i32,
+    ) {
+    }
+    fn onPhyRead<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+        _arg3: i32,
+    ) {
+    }
+    fn onConnectionStateChange<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+    ) {
+    }
+    fn onServicesDiscovered<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32) {}
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_byte_array_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: Option<Ref<'env, ByteArray>>,
+        _arg3: i32,
+    ) {
+    }
+    fn onCharacteristicWrite<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+    ) {
+    }
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic_byte_array<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: Option<Ref<'env, ByteArray>>,
+    ) {
+    }
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int_byte_array<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+        _arg3: Option<Ref<'env, ByteArray>>,
+    ) {
+    }
+    fn onDescriptorWrite<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onReliableWriteCompleted<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32) {}
+    fn onReadRemoteRssi<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32, _arg2: i32) {
+    }
+    fn onMtuChanged<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32, _arg2: i32) {}
+    fn onServiceChanged<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>) {}
 }
