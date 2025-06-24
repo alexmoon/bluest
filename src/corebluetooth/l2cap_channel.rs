@@ -3,11 +3,11 @@ use core::ptr::NonNull;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::Result;
 use crate::error::{Error, ErrorKind};
+use crate::Result;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{AnyThread, DefinedClass, define_class, msg_send, sel};
+use objc2::{define_class, msg_send, sel, AnyThread, DefinedClass};
 use objc2_core_bluetooth::CBL2CAPChannel;
 use objc2_foundation::{
     NSDefaultRunLoopMode, NSInputStream, NSNotification, NSNotificationCenter, NSObject,
@@ -16,17 +16,23 @@ use objc2_foundation::{
 };
 use tracing::debug;
 
+use super::dispatch::Dispatched;
+
 /// Utility struct to close the channel on drop.
 pub(super) struct L2capCloser {
-    channel: Retained<CBL2CAPChannel>,
+    channel: Dispatched<CBL2CAPChannel>,
 }
 
 impl L2capCloser {
     fn close(&self) {
-        unsafe {
-            self.channel.inputStream().map(|c| c.close());
-            self.channel.outputStream().map(|c| c.close());
-        }
+        self.channel.dispatch(|channel| unsafe {
+            if let Some(c) = channel.inputStream() {
+                c.close()
+            }
+            if let Some(c) = channel.outputStream() {
+                c.close()
+            }
+        })
     }
 }
 
@@ -45,25 +51,25 @@ pub struct L2capChannelReader {
 
 impl L2capChannelReader {
     /// Creates a new L2capChannelReader.
-    pub fn new(channel: Retained<CBL2CAPChannel>) -> Self {
+    pub(crate) fn new(channel: Dispatched<CBL2CAPChannel>) -> Self {
         let (sender, receiver) = async_channel::bounded(16);
         let closer = Arc::new(L2capCloser {
             channel: channel.clone(),
         });
 
-        unsafe {
+        let delegate = channel.dispatch(|channel| unsafe {
             let input_stream = channel.inputStream().unwrap();
             let delegate = InputStreamDelegate::new(sender);
             input_stream.setDelegate(Some(&ProtocolObject::from_retained(delegate.clone())));
-            input_stream
-                .scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), &NSDefaultRunLoopMode);
+            input_stream.scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
             input_stream.open();
+            delegate
+        });
 
-            Self {
-                stream: receiver,
-                _delegate: delegate,
-                closer,
-            }
+        Self {
+            stream: receiver,
+            _delegate: delegate,
+            closer,
         }
     }
 
@@ -140,18 +146,18 @@ pub struct L2capChannelWriter {
 
 impl L2capChannelWriter {
     /// Creates a new L2capChannelWriter.
-    pub fn new(channel: Retained<CBL2CAPChannel>) -> Self {
+    pub(crate) fn new(channel: Dispatched<CBL2CAPChannel>) -> Self {
         let (sender, receiver) = async_channel::bounded(16);
         let closer = Arc::new(L2capCloser {
             channel: channel.clone(),
         });
 
-        unsafe {
+        let delegate = channel.dispatch(|channel| unsafe {
             let output_stream = channel.outputStream().unwrap();
-            let delegate = OutputStreamDelegate::new(receiver, output_stream.clone());
+            let delegate = OutputStreamDelegate::new(receiver, Dispatched::retain(&output_stream));
             output_stream.setDelegate(Some(&ProtocolObject::from_retained(delegate.clone())));
             output_stream
-                .scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), &NSDefaultRunLoopMode);
+                .scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
             output_stream.open();
 
             let center = NSNotificationCenter::defaultCenter();
@@ -162,12 +168,13 @@ impl L2capChannelWriter {
                 Some(&name),
                 None,
             );
+            delegate
+        });
 
-            Self {
-                stream: sender,
-                _delegate: delegate,
-                closer,
-            }
+        Self {
+            stream: sender,
+            _delegate: delegate,
+            closer,
         }
     }
 
@@ -241,28 +248,24 @@ define_class!(
         fn handle_event(&self, stream: &NSStream, event_code: NSStreamEvent) {
             let mut buf = [0u8; 1024];
             let input_stream = stream.downcast_ref::<NSInputStream>().unwrap();
-            match event_code {
-                NSStreamEvent::HasBytesAvailable => {
-                    let res = unsafe {
-                        input_stream
-                            .read_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len())
-                    };
-                    if res < 0 {
-                        debug!("Read Loop Error: Stream read failed");
-                        return;
-                    }
-                    let size = res.try_into().unwrap();
-                    let mut packet = Vec::new();
-                    packet.extend_from_slice(&buf[..size]);
-                    if self.ivars().sender.try_send(packet).is_err() {
-                        debug!("Read Loop Error: Sender is closed");
-                        unsafe {
-                            input_stream.setDelegate(None);
-                            input_stream.close();
-                        }
+            if let NSStreamEvent::HasBytesAvailable = event_code {
+                let res = unsafe {
+                    input_stream.read_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len())
+                };
+                if res < 0 {
+                    debug!("Read Loop Error: Stream read failed");
+                    return;
+                }
+                let size = res.try_into().unwrap();
+                let mut packet = Vec::new();
+                packet.extend_from_slice(&buf[..size]);
+                if self.ivars().sender.try_send(packet).is_err() {
+                    debug!("Read Loop Error: Sender is closed");
+                    unsafe {
+                        input_stream.setDelegate(None);
+                        input_stream.close();
                     }
                 }
-                _ => {}
             }
         }
     }
@@ -279,7 +282,7 @@ impl InputStreamDelegate {
 #[derive(Debug)]
 struct OutputStreamDelegateIvars {
     receiver: Receiver<Vec<u8>>,
-    stream: Retained<NSOutputStream>,
+    stream: Dispatched<NSOutputStream>,
 }
 
 define_class!(
@@ -294,43 +297,40 @@ define_class!(
         #[unsafe(method(stream:handleEvent:))]
         fn handle_event(&self, stream: &NSStream, event_code: NSStreamEvent) {
             let output_stream = stream.downcast_ref::<NSOutputStream>().unwrap();
-            match event_code {
-                NSStreamEvent::HasSpaceAvailable => {
-                    if let Ok(mut packet) = self.ivars().receiver.try_recv() {
-                        let res = unsafe {
-                            output_stream.write_maxLength(
-                                NonNull::new_unchecked(packet.as_mut_ptr()),
-                                packet.len(),
-                            )
-                        };
-                        if res < 0 {
-                            debug!("Write Loop Error: Stream write failed");
-                            unsafe {
-                                output_stream.setDelegate(None);
-                                output_stream.close();
-                                let center = NSNotificationCenter::defaultCenter();
-                                center.removeObserver(self);
-                            }
+            if let NSStreamEvent::HasSpaceAvailable = event_code {
+                if let Ok(mut packet) = self.ivars().receiver.try_recv() {
+                    let res = unsafe {
+                        output_stream.write_maxLength(
+                            NonNull::new_unchecked(packet.as_mut_ptr()),
+                            packet.len(),
+                        )
+                    };
+                    if res < 0 {
+                        debug!("Write Loop Error: Stream write failed");
+                        unsafe {
+                            output_stream.setDelegate(None);
+                            output_stream.close();
+                            let center = NSNotificationCenter::defaultCenter();
+                            center.removeObserver(self);
                         }
                     }
                 }
-                _ => {}
             }
         }
 
         #[unsafe(method(onNotified:))]
         fn on_notified(&self, _n: &NSNotification) {
             if let Ok(mut packet) = self.ivars().receiver.try_recv() {
+                let stream = unsafe { self.ivars().stream.get() };
                 let res = unsafe {
-                    self.ivars()
-                        .stream
+                    stream
                         .write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len())
                 };
                 if res < 0 {
                     debug!("Write Loop Error: Stream write failed");
                     unsafe {
-                        self.ivars().stream.setDelegate(None);
-                        self.ivars().stream.close();
+                        stream.setDelegate(None);
+                        stream.close();
                         let center = NSNotificationCenter::defaultCenter();
                         center.removeObserver(self);
                     }
@@ -341,7 +341,7 @@ define_class!(
 );
 
 impl OutputStreamDelegate {
-    pub fn new(receiver: Receiver<Vec<u8>>, stream: Retained<NSOutputStream>) -> Retained<Self> {
+    pub fn new(receiver: Receiver<Vec<u8>>, stream: Dispatched<NSOutputStream>) -> Retained<Self> {
         let ivars = OutputStreamDelegateIvars { receiver, stream };
         let this = OutputStreamDelegate::alloc().set_ivars(ivars);
         unsafe { msg_send![super(this), init] }
