@@ -58,20 +58,18 @@ impl std::fmt::Display for DeviceImpl {
 }
 
 impl Device {
-    pub(super) fn new(peripheral: Dispatched<CBPeripheral>) -> Self {
-        let delegate = peripheral.dispatch(|peripheral| {
-            let delegate = unsafe { peripheral.delegate() }.unwrap_or_else(|| {
-                // Create a new delegate and attach it to the peripheral
-                let delegate = ProtocolObject::from_retained(PeripheralDelegate::new());
-                unsafe { peripheral.setDelegate(Some(&delegate)) }
-                delegate
-            });
-
-            delegate.downcast().unwrap()
+    pub(super) fn new(peripheral: Retained<CBPeripheral>) -> Self {
+        let delegate = unsafe { peripheral.delegate() }.unwrap_or_else(|| {
+            // Create a new delegate and attach it to the peripheral
+            let delegate = ProtocolObject::from_retained(PeripheralDelegate::new());
+            unsafe { peripheral.setDelegate(Some(&delegate)) }
+            delegate
         });
 
+        let delegate = delegate.downcast().unwrap();
+
         Device(DeviceImpl {
-            peripheral,
+            peripheral: unsafe { Dispatched::new(peripheral) },
             delegate,
         })
     }

@@ -7,7 +7,7 @@ use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::AnyThread;
+use objc2::{AnyThread, Message};
 use objc2_core_bluetooth::{
     CBCentralManager, CBManager, CBManagerAuthorization, CBManagerState, CBUUID,
 };
@@ -146,7 +146,7 @@ impl AdapterImpl {
             peripherals
                 .iter()
                 .next()
-                .map(|x| Device::new(Dispatched::new(x)))
+                .map(Device::new)
                 .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device"))
         })
     }
@@ -178,10 +178,7 @@ impl AdapterImpl {
             };
             unsafe {
                 let peripherals = central.retrieveConnectedPeripheralsWithServices(&services);
-                Ok(peripherals
-                    .iter()
-                    .map(|x| Device::new(Dispatched::new(x)))
-                    .collect())
+                Ok(peripherals.iter().map(Device::new).collect())
             }
         })
     }
@@ -237,10 +234,12 @@ impl AdapterImpl {
                         peripheral,
                         adv_data,
                         rssi,
-                    } => Some(AdvertisingDevice {
-                        device: Device::new(peripheral),
-                        adv_data,
-                        rssi: Some(rssi),
+                    } => peripheral.dispatch(|peripheral| {
+                        Some(AdvertisingDevice {
+                            device: Device::new(peripheral.retain()),
+                            adv_data,
+                            rssi: Some(rssi),
+                        })
                     }),
                     _ => None,
                 }
