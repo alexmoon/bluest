@@ -302,8 +302,8 @@ impl AdapterImpl {
 
         let mut guard = self.registered_connection_events.lock().unwrap();
 
-        fn options(devices: &HashMap<DeviceId, usize>) -> Id<NSDictionary<NSString, NSArray<CBUUID>>> {
-            let ids = devices.keys().map(|x| CBUUID::from_uuid(x.0)).collect();
+        fn options(devices: &HashMap<DeviceId, usize>) -> Id<NSDictionary<NSString, NSArray<NSUUID>>> {
+            let ids = devices.keys().map(|x| NSUUID::from_uuid(x.0)).collect();
             NSDictionary::from_keys_and_objects(
                 &[connection_event_matching_option_peripheral_uuids()],
                 vec![NSArray::from_vec(ids)],

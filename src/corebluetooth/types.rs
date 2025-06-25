@@ -407,7 +407,7 @@ impl CBCentralManager {
 
     pub fn register_for_connection_events_with_options(
         &self,
-        options: Option<&NSDictionary<NSString, NSArray<CBUUID>>>,
+        options: Option<&NSDictionary<NSString, NSArray<NSUUID>>>,
     ) {
         unsafe { msg_send![self, registerForConnectionEventsWithOptions: id_or_nil(options)] }
     }
