@@ -1,10 +1,10 @@
 #![allow(clippy::let_unit_value)]
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, Message};
@@ -289,19 +289,28 @@ impl AdapterImpl {
             central.connectPeripheral_options(device.0.peripheral.get(), None)
         });
 
+        let drop = OnDrop::new(|| {
+            self.central.dispatch(|central| unsafe {
+                central.cancelPeripheralConnection(device.0.peripheral.get());
+            })
+        });
+
         while let Some(event) = events.next().await {
             if self.state() != CBManagerState::PoweredOn {
+                drop.defuse();
                 return Err(ErrorKind::AdapterUnavailable.into());
             }
             match event {
                 delegates::CentralEvent::Connect { peripheral }
                     if peripheral == device.0.peripheral =>
                 {
+                    drop.defuse();
                     return Ok(());
                 }
                 delegates::CentralEvent::ConnectFailed { peripheral, error }
                     if peripheral == device.0.peripheral =>
                 {
+                    drop.defuse();
                     return Err(
                         error.map_or(ErrorKind::ConnectionFailed.into(), Error::from_nserror)
                     );
@@ -471,5 +480,27 @@ impl AdapterImpl {
                 }
                 _ => None,
             }))
+    }
+}
+
+pub struct OnDrop<F: FnOnce()> {
+    f: core::mem::MaybeUninit<F>,
+}
+
+impl<F: FnOnce()> OnDrop<F> {
+    pub fn new(f: F) -> Self {
+        Self {
+            f: core::mem::MaybeUninit::new(f),
+        }
+    }
+
+    pub fn defuse(self) {
+        core::mem::forget(self)
+    }
+}
+
+impl<F: FnOnce()> Drop for OnDrop<F> {
+    fn drop(&mut self) {
+        unsafe { self.f.as_ptr().read()() }
     }
 }
