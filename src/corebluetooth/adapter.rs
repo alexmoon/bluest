@@ -368,7 +368,7 @@ impl AdapterImpl {
         fn options(devices: &HashMap<DeviceId, usize>) -> Retained<NSDictionary<NSString>> {
             let ids: Vec<Retained<NSUUID>> = devices
                 .keys()
-                .map(|x| unsafe { NSUUID::UUIDWithData(&NSData::with_bytes(x.0.as_bytes())) })
+                .map(|x| NSUUID::from_bytes(*x.0.as_bytes()))
                 .collect();
             let ids = NSArray::from_retained_slice(&ids[..]);
             NSDictionary::from_retained_objects(
