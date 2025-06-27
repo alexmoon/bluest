@@ -35,13 +35,7 @@ impl Eq for DeviceImpl {}
 
 impl std::hash::Hash for DeviceImpl {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.peripheral
-            .dispatch(|peripheral| {
-                let mut state = std::hash::DefaultHasher::new();
-                peripheral.hash(&mut state);
-                state.finish()
-            })
-            .hash(state)
+        self.peripheral.hash(state)
     }
 }
 

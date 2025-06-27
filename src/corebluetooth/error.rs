@@ -65,7 +65,7 @@ impl std::fmt::Debug for NSErrorError {
 
 impl std::fmt::Display for NSErrorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.localizedDescription().to_string())
+        std::fmt::Display::fmt(&self.localizedDescription(), f)
     }
 }
 

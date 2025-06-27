@@ -90,7 +90,7 @@ impl AdapterImpl {
             match x {
                 delegates::CentralEvent::StateChanged => {
                     // TODO: Check CBCentralManager::authorization()?
-                    let state = self.central.dispatch(|central| unsafe { central.state() });
+                    let state = self.state();
                     debug!("Central state is now {:?}", state);
                     match state {
                         CBManagerState::PoweredOn => Some(Ok(AdapterEvent::Available)),

@@ -55,7 +55,7 @@ impl ServiceImpl {
         let mut receiver = self.delegate.sender().new_receiver();
         self.inner.dispatch(|service| {
             let uuids = uuid.map(|uuid| unsafe {
-                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(&uuid.as_bytes()[..]))])
+                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(uuid.as_bluetooth_bytes()))])
             });
 
             let peripheral = unsafe {
@@ -130,7 +130,7 @@ impl ServiceImpl {
         let mut receiver = self.delegate.sender().new_receiver();
         self.inner.dispatch(|service| {
             let uuids = uuid.map(|uuid| unsafe {
-                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(&uuid.as_bytes()[..]))])
+                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(uuid.as_bluetooth_bytes()))])
             });
 
             let peripheral = unsafe {
