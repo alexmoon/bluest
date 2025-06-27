@@ -412,6 +412,11 @@ impl AdapterImpl {
                     {
                         Some(ConnectionEvent::Disconnected)
                     }
+                    delegates::CentralEvent::ConnectionEvent { peripheral, event }
+                        if peripheral.dispatch(|peripheral| unsafe { peripheral.identifier() } == id) =>
+                    {
+                        Some(event)
+                    }
                     _ => None,
                 }
             }))

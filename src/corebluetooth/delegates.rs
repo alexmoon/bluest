@@ -5,10 +5,10 @@ use objc2_core_bluetooth::{
     CBPeripheral, CBPeripheralDelegate, CBService,
 };
 use objc2_foundation::{NSArray, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use super::dispatch::Dispatched;
-use crate::AdvertisementData;
+use crate::{AdvertisementData, ConnectionEvent};
 
 #[derive(Clone)]
 pub enum CentralEvent {
@@ -25,7 +25,7 @@ pub enum CentralEvent {
     },
     ConnectionEvent {
         peripheral: Dispatched<CBPeripheral>,
-        event: CBConnectionEvent,
+        event: ConnectionEvent,
     },
     Discovered {
         peripheral: Dispatched<CBPeripheral>,
@@ -212,13 +212,26 @@ define_class!(
             event: CBConnectionEvent,
             peripheral: &CBPeripheral,
         ) {
-            let sender = &self.ivars().sender;
-            let event = CentralEvent::ConnectionEvent {
-                peripheral: unsafe { Dispatched::retain(peripheral) },
-                event,
-            };
             debug!("CentralDelegate received {:?}", event);
-            let _res = sender.try_broadcast(event);
+
+            let sender = &self.ivars().sender;
+            let event = if event == CBConnectionEvent::PeerConnected {
+                Some(ConnectionEvent::Connected)
+            } else if event == CBConnectionEvent::PeerDisconnected {
+                Some(ConnectionEvent::Disconnected)
+            } else {
+                None
+            };
+
+            if let Some(event) = event {
+                let event = CentralEvent::ConnectionEvent {
+                    peripheral: unsafe { Dispatched::retain(peripheral) },
+                    event,
+                };
+                let _res = sender.try_broadcast(event);
+            } else {
+                warn!("Unrecognized connection event received");
+            }
         }
 
         #[unsafe(method(centralManager:didFailToConnectPeripheral:error:))]
