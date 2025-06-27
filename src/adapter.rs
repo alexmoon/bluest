@@ -2,9 +2,7 @@
 
 use futures_core::Stream;
 
-use crate::{
-    AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid, sys,
-};
+use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -45,12 +43,6 @@ impl Adapter {
     #[inline]
     pub async fn wait_available(&self) -> Result<()> {
         self.0.wait_available().await
-    }
-
-    /// Check if adapter is available
-    #[inline]
-    pub fn is_available(&self) -> bool {
-        self.0.is_available()
     }
 
     /// Attempts to create the device identified by `id`

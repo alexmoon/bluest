@@ -6,11 +6,7 @@ use crate::error::{AttError, ErrorKind};
 
 impl crate::Error {
     pub(super) fn from_recv_error(err: async_broadcast::RecvError) -> Self {
-        crate::Error::new(
-            ErrorKind::Internal,
-            Some(Box::new(err)),
-            "receiving delegate event",
-        )
+        crate::Error::new(ErrorKind::Internal, Some(Box::new(err)), "receiving delegate event")
     }
 
     pub(super) fn from_nserror(err: Retained<NSError>) -> Self {
@@ -35,18 +31,16 @@ fn kind_from_nserror(value: &NSError) -> ErrorKind {
             CBError::OperationNotSupported => ErrorKind::NotSupported,
             CBError::NotConnected | CBError::PeripheralDisconnected => ErrorKind::NotConnected,
             CBError::ConnectionTimeout | CBError::EncryptionTimedOut => ErrorKind::Timeout,
-            CBError::InvalidParameters
-            | CBError::InvalidHandle
-            | CBError::UUIDNotAllowed
-            | CBError::UnknownDevice => ErrorKind::InvalidParameter,
+            CBError::InvalidParameters | CBError::InvalidHandle | CBError::UUIDNotAllowed | CBError::UnknownDevice => {
+                ErrorKind::InvalidParameter
+            }
             CBError::ConnectionFailed
             | CBError::PeerRemovedPairingInformation
             | CBError::ConnectionLimitReached
             | CBError::TooManyLEPairedDevices => ErrorKind::ConnectionFailed,
-            CBError::Unknown
-            | CBError::OutOfSpace
-            | CBError::OperationCancelled
-            | CBError::AlreadyAdvertising => ErrorKind::Other,
+            CBError::Unknown | CBError::OutOfSpace | CBError::OperationCancelled | CBError::AlreadyAdvertising => {
+                ErrorKind::Other
+            }
             _ => ErrorKind::Other,
         }
     } else if value.domain().to_string() == "CBATTErrorDomain" {

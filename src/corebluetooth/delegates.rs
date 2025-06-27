@@ -1,17 +1,14 @@
 use objc2::rc::Retained;
 use objc2::{define_class, msg_send, AnyThread, DefinedClass, Message};
 use objc2_core_bluetooth::{
-    CBCentralManager, CBCentralManagerDelegate, CBCharacteristic, CBConnectionEvent, CBDescriptor,
-    CBL2CAPChannel, CBPeripheral, CBPeripheralDelegate, CBService,
+    CBCentralManager, CBCentralManagerDelegate, CBCharacteristic, CBConnectionEvent, CBDescriptor, CBL2CAPChannel,
+    CBPeripheral, CBPeripheralDelegate, CBService,
 };
-use objc2_foundation::{
-    NSArray, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString,
-};
+use objc2_foundation::{NSArray, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString};
 use tracing::debug;
 
-use crate::AdvertisementData;
-
 use super::dispatch::Dispatched;
+use crate::AdvertisementData;
 
 #[derive(Clone)]
 pub enum CentralEvent {
@@ -41,10 +38,7 @@ pub enum CentralEvent {
 impl std::fmt::Debug for CentralEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Connect { peripheral } => f
-                .debug_struct("Connect")
-                .field("peripheral", peripheral)
-                .finish(),
+            Self::Connect { peripheral } => f.debug_struct("Connect").field("peripheral", peripheral).finish(),
             Self::Disconnect { peripheral, error } => f
                 .debug_struct("Disconnect")
                 .field("peripheral", peripheral)
@@ -60,9 +54,7 @@ impl std::fmt::Debug for CentralEvent {
                 .field("peripheral", peripheral)
                 .field("event", event)
                 .finish(),
-            Self::Discovered {
-                peripheral, rssi, ..
-            } => f
+            Self::Discovered { peripheral, rssi, .. } => f
                 .debug_struct("Discovered")
                 .field("peripheral", peripheral)
                 .field("rssi", rssi)
@@ -147,10 +139,7 @@ define_class!(
     unsafe impl CBCentralManagerDelegate for CentralDelegate {
         #[unsafe(method(centralManagerDidUpdateState:))]
         fn did_update_state(&self, _central: &CBCentralManager) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(CentralEvent::StateChanged);
+            let _ = self.ivars().sender.try_broadcast(CentralEvent::StateChanged);
         }
 
         #[unsafe(method(centralManager:didConnectPeripheral:))]
@@ -184,11 +173,9 @@ define_class!(
                     .delegate()
                     .and_then(|d| d.downcast::<PeripheralDelegate>().ok())
                 {
-                    let _res = delegate
-                        .sender()
-                        .try_broadcast(PeripheralEvent::Disconnected {
-                            error: error.map(|e| e.retain()),
-                        });
+                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Disconnected {
+                        error: error.map(|e| e.retain()),
+                    });
                 }
                 let event = CentralEvent::Disconnect {
                     peripheral: Dispatched::retain(peripheral),
@@ -235,19 +222,11 @@ define_class!(
         }
 
         #[unsafe(method(centralManager:didFailToConnectPeripheral:error:))]
-        fn did_fail_to_connect(
-            &self,
-            _central: &CBCentralManager,
-            peripheral: &CBPeripheral,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(CentralEvent::ConnectFailed {
-                    peripheral: unsafe { Dispatched::retain(peripheral) },
-                    error: error.map(|e| e.retain()),
-                });
+        fn did_fail_to_connect(&self, _central: &CBCentralManager, peripheral: &CBPeripheral, error: Option<&NSError>) {
+            let _ = self.ivars().sender.try_broadcast(CentralEvent::ConnectFailed {
+                peripheral: unsafe { Dispatched::retain(peripheral) },
+                error: error.map(|e| e.retain()),
+            });
         }
     }
 );
@@ -311,12 +290,9 @@ define_class!(
 
         #[unsafe(method(peripheral:didDiscoverServices:))]
         fn did_discover_services(&self, _peripheral: &CBPeripheral, error: Option<&NSError>) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DiscoveredServices {
-                    error: error.map(|e| e.retain()),
-                });
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::DiscoveredServices {
+                error: error.map(|e| e.retain()),
+            });
         }
 
         #[unsafe(method(peripheral:didDiscoverIncludedServicesForService:error:))]
@@ -326,29 +302,22 @@ define_class!(
             service: &CBService,
             error: Option<&NSError>,
         ) {
-            let _ =
-                self.ivars()
-                    .sender
-                    .try_broadcast(PeripheralEvent::DiscoveredIncludedServices {
-                        service: unsafe { Dispatched::retain(service) },
-                        error: error.map(|e| e.retain()),
-                    });
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DiscoveredIncludedServices {
+                    service: unsafe { Dispatched::retain(service) },
+                    error: error.map(|e| e.retain()),
+                });
         }
 
         #[unsafe(method(peripheralDidUpdateName:))]
         fn did_update_name(&self, _peripheral: &CBPeripheral) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::NameUpdate);
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::NameUpdate);
         }
 
         #[unsafe(method(peripheral:didModifyServices:))]
-        fn did_modify_services(
-            &self,
-            _peripheral: &CBPeripheral,
-            invalidated_services: &NSArray<CBService>,
-        ) {
+        fn did_modify_services(&self, _peripheral: &CBPeripheral, invalidated_services: &NSArray<CBService>) {
             let invalidated_services = invalidated_services
                 .iter()
                 .map(|x| unsafe { Dispatched::new(x) })
@@ -357,28 +326,18 @@ define_class!(
             let _ = self
                 .ivars()
                 .sender
-                .try_broadcast(PeripheralEvent::ServicesChanged {
-                    invalidated_services,
-                });
+                .try_broadcast(PeripheralEvent::ServicesChanged { invalidated_services });
         }
 
         #[unsafe(method(peripheralDidUpdateRSSI:error:))]
         fn did_update_rssi(&self, _peripheral: &CBPeripheral, _error: Option<&NSError>) {}
 
         #[unsafe(method(peripheral:didReadRSSI:error:))]
-        fn did_read_rssi(
-            &self,
-            _peripheral: &CBPeripheral,
-            rssi: &NSNumber,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::ReadRssi {
-                    rssi: rssi.shortValue(),
-                    error: error.map(|e| e.retain()),
-                });
+        fn did_read_rssi(&self, _peripheral: &CBPeripheral, rssi: &NSNumber, error: Option<&NSError>) {
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadRssi {
+                rssi: rssi.shortValue(),
+                error: error.map(|e| e.retain()),
+            });
         }
 
         #[unsafe(method(peripheral:didDiscoverCharacteristicsForService:error:))]
@@ -479,10 +438,7 @@ define_class!(
 
         #[unsafe(method(peripheralIsReadyToSendWriteWithoutResponse:))]
         fn is_ready_to_write_without_response(&self, _peripheral: &CBPeripheral) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::ReadyToWrite);
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadyToWrite);
         }
 
         #[unsafe(method(peripheral:didOpenL2CAPChannel:error:))]
@@ -493,13 +449,10 @@ define_class!(
             error: Option<&NSError>,
         ) {
             if let Some(channel) = channel {
-                let _ = self
-                    .ivars()
-                    .sender
-                    .try_broadcast(PeripheralEvent::L2CAPChannelOpened {
-                        channel: unsafe { Dispatched::retain(channel) },
-                        error: error.map(|e| e.retain()),
-                    });
+                let _ = self.ivars().sender.try_broadcast(PeripheralEvent::L2CAPChannelOpened {
+                    channel: unsafe { Dispatched::retain(channel) },
+                    error: error.map(|e| e.retain()),
+                });
             }
         }
     }

@@ -1,22 +1,21 @@
-use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
 use core::ptr::NonNull;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::error::{Error, ErrorKind};
-use crate::Result;
+use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{define_class, msg_send, sel, AnyThread, DefinedClass};
 use objc2_core_bluetooth::CBL2CAPChannel;
 use objc2_foundation::{
-    NSDefaultRunLoopMode, NSInputStream, NSNotification, NSNotificationCenter, NSObject,
-    NSObjectProtocol, NSOutputStream, NSRunLoop, NSStream, NSStreamDelegate, NSStreamEvent,
-    NSString,
+    NSDefaultRunLoopMode, NSInputStream, NSNotification, NSNotificationCenter, NSObject, NSObjectProtocol,
+    NSOutputStream, NSRunLoop, NSStream, NSStreamDelegate, NSStreamEvent, NSString,
 };
 use tracing::debug;
 
 use super::dispatch::Dispatched;
+use crate::error::{Error, ErrorKind};
+use crate::Result;
 
 /// Utility struct to close the channel on drop.
 pub(super) struct L2capCloser {
@@ -76,13 +75,11 @@ impl L2capChannelReader {
     /// Reads data from the L2CAP channel into the provided buffer.
     #[inline]
     pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self.stream.recv().await.map_err(|_| {
-            Error::new(
-                ErrorKind::ConnectionFailed,
-                None,
-                "channel is closed".to_string(),
-            )
-        })?;
+        let packet = self
+            .stream
+            .recv()
+            .await
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
 
         if packet.len() > buf.len() {
             return Err(Error::new(
@@ -100,16 +97,8 @@ impl L2capChannelReader {
     #[inline]
     pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let packet = self.stream.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => Error::new(
-                ErrorKind::NotReady,
-                None,
-                "no received packet in queue".to_string(),
-            ),
-            TryRecvError::Closed => Error::new(
-                ErrorKind::ConnectionFailed,
-                None,
-                "channel is closed".to_string(),
-            ),
+            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue".to_string()),
+            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
         })?;
 
         if packet.len() > buf.len() {
@@ -156,18 +145,12 @@ impl L2capChannelWriter {
             let output_stream = channel.outputStream().unwrap();
             let delegate = OutputStreamDelegate::new(receiver, Dispatched::retain(&output_stream));
             output_stream.setDelegate(Some(&ProtocolObject::from_retained(delegate.clone())));
-            output_stream
-                .scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
+            output_stream.scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
             output_stream.open();
 
             let center = NSNotificationCenter::defaultCenter();
             let name = NSString::from_str("ChannelWriteNotification");
-            center.addObserver_selector_name_object(
-                &delegate,
-                sel!(onNotified:),
-                Some(&name),
-                None,
-            );
+            center.addObserver_selector_name_object(&delegate, sel!(onNotified:), Some(&name), None);
             delegate
         });
 
@@ -180,13 +163,10 @@ impl L2capChannelWriter {
 
     /// Writes data to the L2CAP channel.
     pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream.send(packet.to_vec()).await.map_err(|_| {
-            Error::new(
-                ErrorKind::ConnectionFailed,
-                None,
-                "channel is closed".to_string(),
-            )
-        })?;
+        self.stream
+            .send(packet.to_vec())
+            .await
+            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
         self.notify();
         Ok(())
     }
@@ -194,16 +174,8 @@ impl L2capChannelWriter {
     /// Attempts to write data to the L2CAP channel without blocking.
     pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
         self.stream.try_send(packet.to_vec()).map_err(|e| match e {
-            TrySendError::Closed(_) => Error::new(
-                ErrorKind::ConnectionFailed,
-                None,
-                "channel is closed".to_string(),
-            ),
-            TrySendError::Full(_) => Error::new(
-                ErrorKind::NotReady,
-                None,
-                "No buffer space for write".to_string(),
-            ),
+            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
+            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write".to_string()),
         })?;
         self.notify();
         Ok(())
@@ -249,9 +221,7 @@ define_class!(
             let mut buf = [0u8; 1024];
             let input_stream = stream.downcast_ref::<NSInputStream>().unwrap();
             if let NSStreamEvent::HasBytesAvailable = event_code {
-                let res = unsafe {
-                    input_stream.read_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len())
-                };
+                let res = unsafe { input_stream.read_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len()) };
                 if res < 0 {
                     debug!("Read Loop Error: Stream read failed");
                     return;
@@ -300,10 +270,7 @@ define_class!(
             if let NSStreamEvent::HasSpaceAvailable = event_code {
                 if let Ok(mut packet) = self.ivars().receiver.try_recv() {
                     let res = unsafe {
-                        output_stream.write_maxLength(
-                            NonNull::new_unchecked(packet.as_mut_ptr()),
-                            packet.len(),
-                        )
+                        output_stream.write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len())
                     };
                     if res < 0 {
                         debug!("Write Loop Error: Stream write failed");
@@ -322,10 +289,7 @@ define_class!(
         fn on_notified(&self, _n: &NSNotification) {
             if let Ok(mut packet) = self.ivars().receiver.try_recv() {
                 let stream = unsafe { self.ivars().stream.get() };
-                let res = unsafe {
-                    stream
-                        .write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len())
-                };
+                let res = unsafe { stream.write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len()) };
                 if res < 0 {
                     debug!("Write Loop Error: Stream write failed");
                     unsafe {

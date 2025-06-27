@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use objc2_core_bluetooth::{
-    CBAdvertisementDataIsConnectable, CBAdvertisementDataLocalNameKey,
-    CBAdvertisementDataManufacturerDataKey, CBAdvertisementDataOverflowServiceUUIDsKey,
-    CBAdvertisementDataServiceDataKey, CBAdvertisementDataServiceUUIDsKey,
+    CBAdvertisementDataIsConnectable, CBAdvertisementDataLocalNameKey, CBAdvertisementDataManufacturerDataKey,
+    CBAdvertisementDataOverflowServiceUUIDsKey, CBAdvertisementDataServiceDataKey, CBAdvertisementDataServiceUUIDsKey,
     CBAdvertisementDataTxPowerLevelKey, CBUUID,
 };
 use objc2_foundation::{NSArray, NSData, NSDictionary, NSNumber, NSString};
@@ -15,11 +14,7 @@ impl AdvertisementData {
     pub(crate) fn from_nsdictionary(adv_data: &NSDictionary<NSString>) -> Self {
         let is_connectable = adv_data
             .objectForKey(unsafe { CBAdvertisementDataIsConnectable })
-            .is_some_and(|val| {
-                val.downcast_ref::<NSNumber>()
-                    .map(|b| b.as_bool())
-                    .unwrap_or(false)
-            });
+            .is_some_and(|val| val.downcast_ref::<NSNumber>().map(|b| b.as_bool()).unwrap_or(false));
 
         let local_name = adv_data
             .objectForKey(unsafe { CBAdvertisementDataLocalNameKey })
@@ -39,9 +34,7 @@ impl AdvertisementData {
             .objectForKey(unsafe { CBAdvertisementDataTxPowerLevelKey })
             .and_then(|val| val.downcast_ref::<NSNumber>().map(|val| val.shortValue()));
 
-        let service_data = if let Some(val) =
-            adv_data.objectForKey(unsafe { CBAdvertisementDataServiceDataKey })
-        {
+        let service_data = if let Some(val) = adv_data.objectForKey(unsafe { CBAdvertisementDataServiceDataKey }) {
             unsafe {
                 if let Some(val) = val.downcast_ref::<NSDictionary>() {
                     let mut res = HashMap::with_capacity(val.count());

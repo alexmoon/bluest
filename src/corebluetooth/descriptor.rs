@@ -1,12 +1,13 @@
+use objc2::msg_send;
+use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{msg_send, rc::Retained};
+use objc2_core_bluetooth::{CBDescriptor, CBPeripheralState};
 use objc2_foundation::{NSData, NSNumber, NSString, NSUInteger};
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 use super::dispatch::Dispatched;
 use crate::error::ErrorKind;
 use crate::{BluetoothUuidExt, Descriptor, Error, Result, Uuid};
-use objc2_core_bluetooth::{CBDescriptor, CBPeripheralState};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,10 +40,7 @@ fn value_to_slice(val: &AnyObject) -> Vec<u8> {
 }
 
 impl Descriptor {
-    pub(super) fn new(
-        descriptor: Retained<CBDescriptor>,
-        delegate: Retained<PeripheralDelegate>,
-    ) -> Self {
+    pub(super) fn new(descriptor: Retained<CBDescriptor>, delegate: Retained<PeripheralDelegate>) -> Self {
         Descriptor(DescriptorImpl {
             inner: unsafe { Dispatched::new(descriptor) },
             delegate,
@@ -53,9 +51,8 @@ impl Descriptor {
 impl DescriptorImpl {
     /// The [`Uuid`] identifying the type of this GATT descriptor
     pub fn uuid(&self) -> Uuid {
-        self.inner.dispatch(|descriptor| unsafe {
-            Uuid::from_bluetooth_bytes(descriptor.UUID().data().as_bytes_unchecked())
-        })
+        self.inner
+            .dispatch(|descriptor| unsafe { Uuid::from_bluetooth_bytes(descriptor.UUID().data().as_bytes_unchecked()) })
     }
 
     /// The [`Uuid`] identifying the type of this GATT descriptor
@@ -71,13 +68,7 @@ impl DescriptorImpl {
             descriptor
                 .value()
                 .map(|val| value_to_slice(&val))
-                .ok_or_else(|| {
-                    Error::new(
-                        ErrorKind::NotReady,
-                        None,
-                        "the descriptor value has not been read",
-                    )
-                })
+                .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "the descriptor value has not been read"))
         })
     }
 
@@ -85,13 +76,13 @@ impl DescriptorImpl {
     pub async fn read(&self) -> Result<Vec<u8>> {
         let mut receiver = self.delegate.sender().new_receiver();
         let service = self.inner.dispatch(|descriptor| {
-            let service = unsafe { descriptor.characteristic().and_then(|x| x.service()) }
-                .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
-            let peripheral = unsafe { service.peripheral() }.ok_or(Error::new(
+            let service = unsafe { descriptor.characteristic().and_then(|x| x.service()) }.ok_or(Error::new(
                 ErrorKind::NotFound,
                 None,
-                "peripheral not found",
+                "service not found",
             ))?;
+            let peripheral =
+                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
 
             if unsafe { peripheral.state() } != CBPeripheralState::Connected {
                 return Err(Error::from(ErrorKind::NotConnected));
@@ -104,20 +95,17 @@ impl DescriptorImpl {
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::DescriptorValueUpdate { descriptor, error }
-                    if descriptor == self.inner =>
+                PeripheralEvent::DescriptorValueUpdate { descriptor, error } if descriptor == self.inner => match error
                 {
-                    match error {
-                        Some(err) => return Err(Error::from_nserror(err)),
-                        None => return self.value().await,
-                    }
-                }
+                    Some(err) => return Err(Error::from_nserror(err)),
+                    None => return self.value().await,
+                },
                 PeripheralEvent::Disconnected { error } => {
                     return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
-                PeripheralEvent::ServicesChanged {
-                    invalidated_services,
-                } if invalidated_services.contains(&service) => {
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
                     return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),
@@ -129,13 +117,13 @@ impl DescriptorImpl {
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         let mut receiver = self.delegate.sender().new_receiver();
         let service = self.inner.dispatch(|descriptor| {
-            let service = unsafe { descriptor.characteristic().and_then(|x| x.service()) }
-                .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
-            let peripheral = unsafe { service.peripheral() }.ok_or(Error::new(
+            let service = unsafe { descriptor.characteristic().and_then(|x| x.service()) }.ok_or(Error::new(
                 ErrorKind::NotFound,
                 None,
-                "peripheral not found",
+                "service not found",
             ))?;
+            let peripheral =
+                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
 
             if unsafe { peripheral.state() } != CBPeripheralState::Connected {
                 return Err(Error::from(ErrorKind::NotConnected));
@@ -148,9 +136,7 @@ impl DescriptorImpl {
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::DescriptorValueWrite { descriptor, error }
-                    if descriptor == self.inner =>
-                {
+                PeripheralEvent::DescriptorValueWrite { descriptor, error } if descriptor == self.inner => {
                     match error {
                         Some(err) => return Err(Error::from_nserror(err)),
                         None => return Ok(()),
@@ -159,9 +145,9 @@ impl DescriptorImpl {
                 PeripheralEvent::Disconnected { error } => {
                     return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
                 }
-                PeripheralEvent::ServicesChanged {
-                    invalidated_services,
-                } if invalidated_services.contains(&service) => {
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
                     return Err(ErrorKind::ServiceChanged.into());
                 }
                 _ => (),

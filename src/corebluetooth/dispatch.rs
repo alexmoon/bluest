@@ -11,9 +11,8 @@ use objc2::Message;
 pub(crate) fn queue() -> &'static DispatchQueue {
     static CELL: OnceLock<DispatchRetained<DispatchQueue>> = OnceLock::new();
     CELL.get_or_init(|| {
-        let utility = DispatchQueue::global_queue(
-            dispatch2::GlobalQueueIdentifier::QualityOfService(DispatchQoS::Utility),
-        );
+        let utility =
+            DispatchQueue::global_queue(dispatch2::GlobalQueueIdentifier::QualityOfService(DispatchQoS::Utility));
         DispatchQueue::new_with_target("Bluest", DispatchQueueAttr::SERIAL, Some(&utility))
     })
 }
