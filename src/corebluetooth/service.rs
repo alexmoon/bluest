@@ -1,22 +1,23 @@
-use objc_foundation::{INSArray, INSFastEnumeration, NSArray};
-use objc_id::ShareId;
+use objc2::rc::Retained;
+use objc2_core_bluetooth::{CBPeripheralState, CBService, CBUUID};
+use objc2_foundation::{NSArray, NSData};
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
-use super::types::{CBPeripheralState, CBService, CBUUID};
+use super::dispatch::Dispatched;
 use crate::error::ErrorKind;
-use crate::{Characteristic, Error, Result, Service, Uuid};
+use crate::{BluetoothUuidExt, Characteristic, Error, Result, Service, Uuid};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceImpl {
-    pub(super) inner: ShareId<CBService>,
-    delegate: ShareId<PeripheralDelegate>,
+    pub(super) inner: Dispatched<CBService>,
+    delegate: Retained<PeripheralDelegate>,
 }
 
 impl Service {
-    pub(super) fn new(service: &CBService, delegate: ShareId<PeripheralDelegate>) -> Self {
+    pub(super) fn new(service: Retained<CBService>, delegate: Retained<PeripheralDelegate>) -> Self {
         Service(ServiceImpl {
-            inner: unsafe { ShareId::from_ptr(service as *const _ as *mut _) },
+            inner: unsafe { Dispatched::new(service) },
             delegate,
         })
     }
@@ -25,7 +26,8 @@ impl Service {
 impl ServiceImpl {
     /// The [`Uuid`] identifying the type of this GATT service
     pub fn uuid(&self) -> Uuid {
-        self.inner.uuid().to_uuid()
+        self.inner
+            .dispatch(|service| unsafe { Uuid::from_bluetooth_bytes(service.UUID().data().as_bytes_unchecked()) })
     }
 
     /// The [`Uuid`] identifying the type of this GATT service
@@ -35,7 +37,7 @@ impl ServiceImpl {
 
     /// Whether this is a primary service of the device.
     pub async fn is_primary(&self) -> Result<bool> {
-        Ok(self.inner.is_primary())
+        self.inner.dispatch(|service| unsafe { Ok(service.isPrimary()) })
     }
 
     /// Discover all characteristics associated with this service.
@@ -45,27 +47,30 @@ impl ServiceImpl {
 
     /// Discover the characteristic(s) with the given [`Uuid`].
     pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
-        let uuids = {
-            let vec = vec![CBUUID::from_uuid(uuid)];
-            NSArray::from_vec(vec)
-        };
-
-        let characteristics = self.discover_characteristics_inner(Some(&uuids)).await?;
+        let characteristics = self.discover_characteristics_inner(Some(uuid)).await?;
         Ok(characteristics.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
-    async fn discover_characteristics_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Characteristic>> {
-        let peripheral =
-            self.inner
-                .peripheral()
-                .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
-
-        if peripheral.state() != CBPeripheralState::CONNECTED {
-            return Err(ErrorKind::NotConnected.into());
-        }
-
+    async fn discover_characteristics_inner(&self, uuid: Option<Uuid>) -> Result<Vec<Characteristic>> {
         let mut receiver = self.delegate.sender().new_receiver();
-        peripheral.discover_characteristics(&self.inner, uuids);
+        self.inner.dispatch(|service| {
+            let uuids = uuid.map(|uuid| unsafe {
+                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(uuid.as_bluetooth_bytes()))])
+            });
+
+            let peripheral = unsafe {
+                service
+                    .peripheral()
+                    .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?
+            };
+
+            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
+                return Err(Error::from(ErrorKind::NotConnected));
+            }
+
+            unsafe { peripheral.discoverCharacteristics_forService(uuids.as_deref(), service) };
+            Ok(())
+        })?;
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
@@ -99,14 +104,15 @@ impl ServiceImpl {
     }
 
     fn characteristics_inner(&self) -> Result<Vec<Characteristic>> {
-        self.inner
-            .characteristics()
-            .map(|s| {
-                s.enumerator()
-                    .map(|x| Characteristic::new(x, self.delegate.clone()))
-                    .collect()
-            })
-            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no characteristics have been discovered"))
+        self.inner.dispatch(|service| {
+            unsafe { service.characteristics() }
+                .map(|s| {
+                    s.iter()
+                        .map(|x| Characteristic::new(x, self.delegate.clone()))
+                        .collect()
+                })
+                .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no characteristics have been discovered"))
+        })
     }
 
     /// Discover the included services of this service.
@@ -116,27 +122,30 @@ impl ServiceImpl {
 
     /// Discover the included service(s) with the given [`Uuid`].
     pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
-        let uuids = {
-            let vec = vec![CBUUID::from_uuid(uuid)];
-            NSArray::from_vec(vec)
-        };
-
-        let services = self.discover_included_services_inner(Some(&uuids)).await?;
+        let services = self.discover_included_services_inner(Some(uuid)).await?;
         Ok(services.into_iter().filter(|x| x.uuid() == uuid).collect())
     }
 
-    async fn discover_included_services_inner(&self, uuids: Option<&NSArray<CBUUID>>) -> Result<Vec<Service>> {
-        let peripheral =
-            self.inner
-                .peripheral()
-                .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
-
-        if peripheral.state() != CBPeripheralState::CONNECTED {
-            return Err(ErrorKind::NotConnected.into());
-        }
-
+    async fn discover_included_services_inner(&self, uuid: Option<Uuid>) -> Result<Vec<Service>> {
         let mut receiver = self.delegate.sender().new_receiver();
-        peripheral.discover_included_services(&self.inner, uuids);
+        self.inner.dispatch(|service| {
+            let uuids = uuid.map(|uuid| unsafe {
+                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(uuid.as_bluetooth_bytes()))])
+            });
+
+            let peripheral = unsafe {
+                service
+                    .peripheral()
+                    .ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?
+            };
+
+            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
+                return Err(Error::from(ErrorKind::NotConnected));
+            }
+
+            unsafe { peripheral.discoverIncludedServices_forService(uuids.as_deref(), service) };
+            Ok(())
+        })?;
 
         loop {
             match receiver.recv().await.map_err(Error::from_recv_error)? {
@@ -172,9 +181,10 @@ impl ServiceImpl {
     }
 
     fn included_services_inner(&self) -> Result<Vec<Service>> {
-        self.inner
-            .included_services()
-            .map(|s| s.enumerator().map(|x| Service::new(x, self.delegate.clone())).collect())
-            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no included services have been discovered"))
+        self.inner.dispatch(|service| {
+            unsafe { service.includedServices() }
+                .map(|s| s.iter().map(|x| Service::new(x, self.delegate.clone())).collect())
+                .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no included services have been discovered"))
+        })
     }
 }

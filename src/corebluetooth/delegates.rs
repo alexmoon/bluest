@@ -1,38 +1,35 @@
-use std::os::raw::c_void;
-use std::sync::Once;
+use objc2::rc::Retained;
+use objc2::{define_class, msg_send, AnyThread, DefinedClass, Message};
+use objc2_core_bluetooth::{
+    CBCentralManager, CBCentralManagerDelegate, CBCharacteristic, CBConnectionEvent, CBDescriptor, CBL2CAPChannel,
+    CBPeripheral, CBPeripheralDelegate, CBService,
+};
+use objc2_foundation::{NSArray, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString};
+use tracing::debug;
 
-use objc::declare::ClassDecl;
-use objc::rc::autoreleasepool;
-use objc::runtime::{Class, Object, Protocol, Sel};
-use objc::{class, msg_send, sel, sel_impl};
-use objc_foundation::{INSArray, NSArray, NSData, NSDictionary, NSObject, NSString};
-use objc_id::{Id, ShareId, Shared};
-use tracing::{debug, error};
-
-use super::types::{id, CBCharacteristic, CBDescriptor, CBL2CAPChannel, CBPeripheral, CBService, NSError, NSInteger};
-use crate::corebluetooth::types::option_from_ptr;
-use crate::ConnectionEvent;
+use super::dispatch::Dispatched;
+use crate::AdvertisementData;
 
 #[derive(Clone)]
 pub enum CentralEvent {
     Connect {
-        peripheral: ShareId<CBPeripheral>,
+        peripheral: Dispatched<CBPeripheral>,
     },
     Disconnect {
-        peripheral: ShareId<CBPeripheral>,
-        error: Option<ShareId<NSError>>,
+        peripheral: Dispatched<CBPeripheral>,
+        error: Option<Retained<NSError>>,
     },
     ConnectFailed {
-        peripheral: ShareId<CBPeripheral>,
-        error: Option<ShareId<NSError>>,
+        peripheral: Dispatched<CBPeripheral>,
+        error: Option<Retained<NSError>>,
     },
     ConnectionEvent {
-        peripheral: ShareId<CBPeripheral>,
+        peripheral: Dispatched<CBPeripheral>,
         event: CBConnectionEvent,
     },
     Discovered {
-        peripheral: ShareId<CBPeripheral>,
-        adv_data: ShareId<NSDictionary<NSString, NSObject>>,
+        peripheral: Dispatched<CBPeripheral>,
+        adv_data: AdvertisementData,
         rssi: i16,
     },
     StateChanged,
@@ -71,600 +68,410 @@ impl std::fmt::Debug for CentralEvent {
 pub enum PeripheralEvent {
     Connected,
     Disconnected {
-        error: Option<ShareId<NSError>>,
+        error: Option<Retained<NSError>>,
     },
     DiscoveredServices {
-        error: Option<ShareId<NSError>>,
+        error: Option<Retained<NSError>>,
     },
     DiscoveredIncludedServices {
-        service: ShareId<CBService>,
-        error: Option<ShareId<NSError>>,
+        service: Dispatched<CBService>,
+        error: Option<Retained<NSError>>,
     },
     DiscoveredCharacteristics {
-        service: ShareId<CBService>,
-        error: Option<ShareId<NSError>>,
+        service: Dispatched<CBService>,
+        error: Option<Retained<NSError>>,
     },
     DiscoveredDescriptors {
-        characteristic: ShareId<CBCharacteristic>,
-        error: Option<ShareId<NSError>>,
+        characteristic: Dispatched<CBCharacteristic>,
+        error: Option<Retained<NSError>>,
     },
     CharacteristicValueUpdate {
-        characteristic: ShareId<CBCharacteristic>,
-        data: Option<ShareId<NSData>>,
-        error: Option<ShareId<NSError>>,
+        characteristic: Dispatched<CBCharacteristic>,
+        data: Vec<u8>,
+        error: Option<Retained<NSError>>,
     },
     DescriptorValueUpdate {
-        descriptor: ShareId<CBDescriptor>,
-        error: Option<ShareId<NSError>>,
+        descriptor: Dispatched<CBDescriptor>,
+        error: Option<Retained<NSError>>,
     },
     CharacteristicValueWrite {
-        characteristic: ShareId<CBCharacteristic>,
-        error: Option<ShareId<NSError>>,
+        characteristic: Dispatched<CBCharacteristic>,
+        error: Option<Retained<NSError>>,
     },
     DescriptorValueWrite {
-        descriptor: ShareId<CBDescriptor>,
-        error: Option<ShareId<NSError>>,
+        descriptor: Dispatched<CBDescriptor>,
+        error: Option<Retained<NSError>>,
     },
     ReadyToWrite,
     NotificationStateUpdate {
-        characteristic: ShareId<CBCharacteristic>,
-        error: Option<ShareId<NSError>>,
+        characteristic: Dispatched<CBCharacteristic>,
+        error: Option<Retained<NSError>>,
     },
     ReadRssi {
         rssi: i16,
-        error: Option<ShareId<NSError>>,
+        error: Option<Retained<NSError>>,
     },
     NameUpdate,
     ServicesChanged {
-        invalidated_services: Vec<ShareId<CBService>>,
+        invalidated_services: Vec<Dispatched<CBService>>,
     },
     #[allow(unused)]
     L2CAPChannelOpened {
-        channel: ShareId<CBL2CAPChannel>,
-        error: Option<ShareId<NSError>>,
+        channel: Dispatched<CBL2CAPChannel>,
+        error: Option<Retained<NSError>>,
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CBConnectionEvent {
-    Disconnected,
-    Connected,
+#[derive(Debug)]
+pub(crate) struct CentralDelegateIvars {
+    pub sender: async_broadcast::Sender<CentralEvent>,
+    _receiver: async_broadcast::InactiveReceiver<CentralEvent>,
 }
 
-impl From<CBConnectionEvent> for ConnectionEvent {
-    fn from(value: CBConnectionEvent) -> Self {
-        match value {
-            CBConnectionEvent::Disconnected => ConnectionEvent::Disconnected,
-            CBConnectionEvent::Connected => ConnectionEvent::Connected,
-        }
-    }
-}
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[ivars = CentralDelegateIvars]
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    pub(crate) struct CentralDelegate;
 
-impl TryFrom<NSInteger> for CBConnectionEvent {
-    type Error = NSInteger;
+    unsafe impl NSObjectProtocol for CentralDelegate {}
 
-    fn try_from(value: NSInteger) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(CBConnectionEvent::Disconnected),
-            1 => Ok(CBConnectionEvent::Connected),
-            _ => Err(value),
+    unsafe impl CBCentralManagerDelegate for CentralDelegate {
+        #[unsafe(method(centralManagerDidUpdateState:))]
+        fn did_update_state(&self, _central: &CBCentralManager) {
+            let _ = self.ivars().sender.try_broadcast(CentralEvent::StateChanged);
         }
-    }
-}
 
-macro_rules! delegate_method {
-    (@value $param:ident: Object) => {
-        ShareId::from_ptr($param.cast())
-    };
-    (@value $param:ident: Option) => {
-        (!$param.is_null()).then(|| ShareId::from_ptr($param.cast()))
-    };
-    (@value $param:ident: i16) => {
-        {
-            let n: i16 = msg_send![$param, shortValue];
-            n
-        }
-    };
-    (@value $param:ident: Vec) => {
-        ShareId::from_ptr($param.cast::<NSArray<_, Shared>>()).to_shared_vec()
-    };
-    ($name:ident < $event:ident > ( central $(, $param:ident: $ty:ident)*)) => {
-        extern "C" fn $name(this: &mut Object, _sel: Sel, _central: id, $($param: id),*) {
+        #[unsafe(method(centralManager:didConnectPeripheral:))]
+        fn did_connect_peripheral(&self, _central: &CBCentralManager, peripheral: &CBPeripheral) {
+            let sender = &self.ivars().sender;
             unsafe {
-                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
-                if !ptr.is_null() {
-                    let event = CentralEvent::$event {
-                        $($param: delegate_method!(@value $param: $ty)),*
-                    };
-                    debug!("CentralDelegate received {:?}", event);
-                    let _res = (*ptr).try_broadcast(event);
+                if let Some(delegate) = peripheral
+                    .delegate()
+                    .and_then(|d| d.downcast::<PeripheralDelegate>().ok())
+                {
+                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Connected);
                 }
+                let event = CentralEvent::Connect {
+                    peripheral: Dispatched::retain(peripheral),
+                };
+                debug!("CentralDelegate received {:?}", event);
+                let _ = sender.try_broadcast(event);
             }
         }
-    };
 
-    ($name:ident < $event:ident > ( peripheral $(, $param:ident: $ty:ident)*)) => {
-        extern "C" fn $name(this: &mut Object, _sel: Sel, _peripheral: id, $($param: id),*) {
+        #[unsafe(method(centralManager:didDisconnectPeripheral:error:))]
+        fn did_disconnect_peripheral_error(
+            &self,
+            _central: &CBCentralManager,
+            peripheral: &CBPeripheral,
+            error: Option<&NSError>,
+        ) {
             unsafe {
-                let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<PeripheralEvent>>();
-                if !ptr.is_null() {
-                    let event = PeripheralEvent::$event {
-                        $($param: delegate_method!(@value $param: $ty)),*
-                    };
-                    debug!("PeripheralDelegate received {:?}", event);
-                    let _res = (*ptr).try_broadcast(event);
+                let sender = &self.ivars().sender;
+                if let Some(delegate) = peripheral
+                    .delegate()
+                    .and_then(|d| d.downcast::<PeripheralDelegate>().ok())
+                {
+                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Disconnected {
+                        error: error.map(|e| e.retain()),
+                    });
                 }
+                let event = CentralEvent::Disconnect {
+                    peripheral: Dispatched::retain(peripheral),
+                    error: error.map(|e| e.retain()),
+                };
+                debug!("CentralDelegate received {:?}", event);
+                let _res = sender.try_broadcast(event);
             }
         }
-    };
-}
 
-pub struct CentralDelegate {
-    _private: (),
-}
-unsafe impl objc::Message for CentralDelegate {}
+        #[unsafe(method(centralManager:didDiscoverPeripheral:advertisementData:RSSI:))]
+        fn did_discover_peripheral(
+            &self,
+            _central: &CBCentralManager,
+            peripheral: &CBPeripheral,
+            adv_data: &NSDictionary<NSString>,
+            rssi: &NSNumber,
+        ) {
+            let sender = &self.ivars().sender;
+            let rssi: i16 = rssi.shortValue();
+            let event = CentralEvent::Discovered {
+                peripheral: unsafe { Dispatched::retain(peripheral) },
+                adv_data: AdvertisementData::from_nsdictionary(adv_data),
+                rssi,
+            };
+            debug!("CentralDelegate received {:?}", event);
+            let _res = sender.try_broadcast(event);
+        }
 
-impl objc_foundation::INSObject for CentralDelegate {
-    fn class() -> &'static ::objc::runtime::Class {
-        CentralDelegate::class()
-    }
-}
-impl PartialEq for CentralDelegate {
-    fn eq(&self, other: &Self) -> bool {
-        use objc_foundation::INSObject;
-        self.is_equal(other)
-    }
-}
-impl Eq for CentralDelegate {}
+        #[unsafe(method(centralManager:connectionEventDidOccur:forPeripheral:))]
+        fn on_connection_event(
+            &self,
+            _central: &CBCentralManager,
+            event: CBConnectionEvent,
+            peripheral: &CBPeripheral,
+        ) {
+            let sender = &self.ivars().sender;
+            let event = CentralEvent::ConnectionEvent {
+                peripheral: unsafe { Dispatched::retain(peripheral) },
+                event,
+            };
+            debug!("CentralDelegate received {:?}", event);
+            let _res = sender.try_broadcast(event);
+        }
 
-impl std::hash::Hash for CentralDelegate {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: std::hash::Hasher,
-    {
-        use objc_foundation::INSObject;
-        self.hash_code().hash(state);
+        #[unsafe(method(centralManager:didFailToConnectPeripheral:error:))]
+        fn did_fail_to_connect(&self, _central: &CBCentralManager, peripheral: &CBPeripheral, error: Option<&NSError>) {
+            let _ = self.ivars().sender.try_broadcast(CentralEvent::ConnectFailed {
+                peripheral: unsafe { Dispatched::retain(peripheral) },
+                error: error.map(|e| e.retain()),
+            });
+        }
     }
-}
-impl ::std::fmt::Debug for CentralDelegate {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        use objc_foundation::{INSObject, INSString};
-        ::std::fmt::Debug::fmt(self.description().as_str(), f)
-    }
-}
-
-pub struct PeripheralDelegate {
-    _private: (),
-}
-unsafe impl objc::Message for PeripheralDelegate {}
-
-impl objc_foundation::INSObject for PeripheralDelegate {
-    fn class() -> &'static ::objc::runtime::Class {
-        PeripheralDelegate::class()
-    }
-}
-impl PartialEq for PeripheralDelegate {
-    fn eq(&self, other: &Self) -> bool {
-        use objc_foundation::INSObject;
-        self.is_equal(other)
-    }
-}
-impl Eq for PeripheralDelegate {}
-
-impl std::hash::Hash for PeripheralDelegate {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: std::hash::Hasher,
-    {
-        use objc_foundation::INSObject;
-        self.hash_code().hash(state);
-    }
-}
-impl ::std::fmt::Debug for PeripheralDelegate {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        use objc_foundation::{INSObject, INSString};
-        ::std::fmt::Debug::fmt(self.description().as_str(), f)
-    }
-}
+);
 
 impl CentralDelegate {
-    pub fn new() -> Option<Id<CentralDelegate>> {
+    pub fn new() -> Retained<Self> {
         let (mut sender, receiver) = async_broadcast::broadcast::<CentralEvent>(16);
         sender.set_overflow(true);
         let receiver = receiver.deactivate();
 
-        unsafe {
-            let obj: *mut Self = msg_send![Self::class(), alloc];
-            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>() receiver: Box::into_raw(Box::new(receiver)).cast::<c_void>()];
-            (!obj.is_null()).then(|| Id::from_retained_ptr(obj))
-        }
-    }
-
-    pub fn sender(&self) -> &async_broadcast::Sender<CentralEvent> {
-        unsafe {
-            let sender: *const c_void = msg_send![self, sender];
-            assert!(!sender.is_null());
-            &*(sender.cast::<async_broadcast::Sender<CentralEvent>>())
-        }
-    }
-
-    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void, receiver: *mut c_void) -> id {
-        let this: &mut Object = unsafe { msg_send![super(this, class!(NSObject)), init] };
-        unsafe { this.set_ivar("sender", sender) };
-        unsafe { this.set_ivar("receiver", receiver) };
-        this
-    }
-
-    extern "C" fn dealloc(this: &mut Object, _sel: Sel) {
-        unsafe {
-            let sender: *mut c_void = *this.get_ivar("sender");
-            let receiver: *mut c_void = *this.get_ivar("receiver");
-            this.set_ivar("sender", std::ptr::null_mut::<c_void>());
-            this.set_ivar("receiver", std::ptr::null_mut::<c_void>());
-            if !sender.is_null() {
-                drop(Box::from_raw(sender.cast::<async_broadcast::Sender<CentralEvent>>()));
-            }
-            if !receiver.is_null() {
-                drop(Box::from_raw(
-                    receiver.cast::<async_broadcast::InactiveReceiver<CentralEvent>>(),
-                ));
-            }
-            let _: () = msg_send![super(this, class!(NSObject)), dealloc];
+        let ivars = CentralDelegateIvars {
+            sender,
+            _receiver: receiver,
         };
+        let this = CentralDelegate::alloc().set_ivars(ivars);
+        unsafe { msg_send![super(this), init] }
     }
 
-    extern "C" fn sender_getter(this: &mut Object, _sel: Sel) -> *const c_void {
-        unsafe { *this.get_ivar("sender") }
-    }
-
-    extern "C" fn receiver_getter(this: &mut Object, _sel: Sel) -> *const c_void {
-        unsafe { *this.get_ivar("receiver") }
-    }
-
-    delegate_method!(did_fail_to_connect<ConnectFailed>(central, peripheral: Object, error: Option));
-    delegate_method!(did_update_state<StateChanged>(central));
-
-    extern "C" fn did_connect(this: &mut Object, _sel: Sel, _central: id, peripheral: id) {
-        unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
-            if !ptr.is_null() {
-                let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
-                if let Some(delegate) = peripheral.delegate() {
-                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Connected);
-                }
-                let event = CentralEvent::Connect { peripheral };
-                debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).try_broadcast(event);
-            }
-        }
-    }
-
-    extern "C" fn did_disconnect(this: &mut Object, _sel: Sel, _central: id, peripheral: id, error: id) {
-        unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
-            if !ptr.is_null() {
-                let peripheral: Id<CBPeripheral, _> = ShareId::from_ptr(peripheral.cast());
-                let error: Option<Id<NSError, _>> = (!error.is_null()).then(|| ShareId::from_ptr(error.cast()));
-                if let Some(delegate) = peripheral.delegate() {
-                    let _res = delegate
-                        .sender()
-                        .try_broadcast(PeripheralEvent::Disconnected { error: error.clone() });
-                }
-                let event = CentralEvent::Disconnect { peripheral, error };
-                debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).try_broadcast(event);
-            }
-        }
-    }
-
-    extern "C" fn did_discover_peripheral(
-        this: &mut Object,
-        _sel: Sel,
-        _central: id,
-        peripheral: id,
-        adv_data: id,
-        rssi: id,
-    ) {
-        unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
-            if !ptr.is_null() {
-                let rssi: i16 = msg_send![rssi, charValue];
-                let event = CentralEvent::Discovered {
-                    peripheral: ShareId::from_ptr(peripheral.cast()),
-                    adv_data: ShareId::from_ptr(adv_data.cast()),
-                    rssi,
-                };
-                debug!("CentralDelegate received {:?}", event);
-                let _res = (*ptr).try_broadcast(event);
-            }
-        }
-    }
-
-    extern "C" fn on_connection_event(
-        this: &mut Object,
-        _sel: Sel,
-        _central: id,
-        connection_event: NSInteger,
-        peripheral: id,
-    ) {
-        unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<CentralEvent>>();
-            if !ptr.is_null() {
-                match connection_event.try_into() {
-                    Ok(event) => {
-                        let event = CentralEvent::ConnectionEvent {
-                            peripheral: ShareId::from_ptr(peripheral.cast()),
-                            event,
-                        };
-                        debug!("CentralDelegate received {:?}", event);
-                        let _res = (*ptr).try_broadcast(event);
-                    }
-                    Err(err) => {
-                        error!("Invalid value for CBConnectionEvent: {}", err);
-                    }
-                }
-            }
-        }
-    }
-
-    fn class() -> &'static Class {
-        static DELEGATE_CLASS_INIT: Once = Once::new();
-        DELEGATE_CLASS_INIT.call_once(|| {
-            let mut cls = ClassDecl::new("BluestCentralDelegate", class!(NSObject)).unwrap();
-            cls.add_ivar::<*mut c_void>("sender");
-            cls.add_ivar::<*mut c_void>("receiver");
-            cls.add_protocol(Protocol::get("CBCentralManagerDelegate").unwrap());
-
-            unsafe {
-                // Initialization
-                cls.add_method(
-                    sel!(initWithSender:receiver:),
-                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void, *mut c_void) -> id,
-                );
-
-                // Cleanup
-                cls.add_method(sel!(dealloc), Self::dealloc as extern "C" fn(&mut Object, Sel));
-
-                // Sender property
-                cls.add_method(
-                    sel!(sender),
-                    Self::sender_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
-                );
-
-                // Receiver property
-                cls.add_method(
-                    sel!(receiver),
-                    Self::receiver_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
-                );
-
-                // CBCentralManagerDelegate
-                // Monitoring Connections with Peripherals
-                cls.add_method(
-                    sel!(centralManager:didConnectPeripheral:),
-                    Self::did_connect as extern "C" fn(&mut Object, Sel, id, id),
-                );
-                cls.add_method(
-                    sel!(centralManager:didDisconnectPeripheral:error:),
-                    Self::did_disconnect as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(centralManager:didFailToConnectPeripheral:error:),
-                    Self::did_fail_to_connect as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(centralManager:connectionEventDidOccur:forPeripheral:),
-                    Self::on_connection_event as extern "C" fn(&mut Object, Sel, id, NSInteger, id),
-                );
-                // Discovering and Retrieving Peripherals
-                cls.add_method(
-                    sel!(centralManager:didDiscoverPeripheral:advertisementData:RSSI:),
-                    Self::did_discover_peripheral as extern "C" fn(&mut Object, Sel, id, id, id, id),
-                );
-                // Monitoring the Central Manager's State
-                cls.add_method(
-                    sel!(centralManagerDidUpdateState:),
-                    Self::did_update_state as extern "C" fn(&mut Object, Sel, id),
-                );
-            }
-
-            cls.register();
-        });
-
-        class!(BluestCentralDelegate)
+    pub fn sender(&self) -> async_broadcast::Sender<CentralEvent> {
+        self.ivars().sender.clone()
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct PeripheralDelegateIvars {
+    pub sender: async_broadcast::Sender<PeripheralEvent>,
+    _receiver: async_broadcast::InactiveReceiver<PeripheralEvent>,
+}
+
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[ivars = PeripheralDelegateIvars]
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    pub(crate) struct PeripheralDelegate;
+
+    unsafe impl NSObjectProtocol for PeripheralDelegate {}
+
+    unsafe impl CBPeripheralDelegate for PeripheralDelegate {
+        #[unsafe(method(peripheral:didUpdateValueForCharacteristic:error:))]
+        fn did_update_value_for_characteristic_error(
+            &self,
+            _peripheral: &CBPeripheral,
+            characteristic: &CBCharacteristic,
+            error: Option<&NSError>,
+        ) {
+            unsafe {
+                let sender = &self.ivars().sender;
+                let data = characteristic
+                    .value()
+                    .map(|x| x.as_bytes_unchecked().to_vec())
+                    .unwrap_or_default();
+                let event = PeripheralEvent::CharacteristicValueUpdate {
+                    characteristic: Dispatched::retain(characteristic),
+                    data,
+                    error: error.map(|e| e.retain()),
+                };
+                debug!("PeripheralDelegate received {:?}", event);
+                let _res = sender.try_broadcast(event);
+            }
+        }
+
+        #[unsafe(method(peripheral:didDiscoverServices:))]
+        fn did_discover_services(&self, _peripheral: &CBPeripheral, error: Option<&NSError>) {
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::DiscoveredServices {
+                error: error.map(|e| e.retain()),
+            });
+        }
+
+        #[unsafe(method(peripheral:didDiscoverIncludedServicesForService:error:))]
+        fn did_discover_included_services(
+            &self,
+            _peripheral: &CBPeripheral,
+            service: &CBService,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DiscoveredIncludedServices {
+                    service: unsafe { Dispatched::retain(service) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheralDidUpdateName:))]
+        fn did_update_name(&self, _peripheral: &CBPeripheral) {
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::NameUpdate);
+        }
+
+        #[unsafe(method(peripheral:didModifyServices:))]
+        fn did_modify_services(&self, _peripheral: &CBPeripheral, invalidated_services: &NSArray<CBService>) {
+            let invalidated_services = invalidated_services
+                .iter()
+                .map(|x| unsafe { Dispatched::new(x) })
+                .collect();
+
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::ServicesChanged { invalidated_services });
+        }
+
+        #[unsafe(method(peripheralDidUpdateRSSI:error:))]
+        fn did_update_rssi(&self, _peripheral: &CBPeripheral, _error: Option<&NSError>) {}
+
+        #[unsafe(method(peripheral:didReadRSSI:error:))]
+        fn did_read_rssi(&self, _peripheral: &CBPeripheral, rssi: &NSNumber, error: Option<&NSError>) {
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadRssi {
+                rssi: rssi.shortValue(),
+                error: error.map(|e| e.retain()),
+            });
+        }
+
+        #[unsafe(method(peripheral:didDiscoverCharacteristicsForService:error:))]
+        fn did_discover_characteristics_for_service(
+            &self,
+            _peripheral: &CBPeripheral,
+            service: &CBService,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DiscoveredCharacteristics {
+                    service: unsafe { Dispatched::retain(service) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheral:didWriteValueForCharacteristic:error:))]
+        fn did_write_value_for_characteristic(
+            &self,
+            _peripheral: &CBPeripheral,
+            characteristic: &CBCharacteristic,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::CharacteristicValueWrite {
+                    characteristic: unsafe { Dispatched::retain(characteristic) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheral:didUpdateNotificationStateForCharacteristic:error:))]
+        fn did_update_notification_state_for_characteristic(
+            &self,
+            _peripheral: &CBPeripheral,
+            characteristic: &CBCharacteristic,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::NotificationStateUpdate {
+                    characteristic: unsafe { Dispatched::retain(characteristic) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheral:didDiscoverDescriptorsForCharacteristic:error:))]
+        fn did_discover_descriptors_for_characteristic(
+            &self,
+            _peripheral: &CBPeripheral,
+            characteristic: &CBCharacteristic,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DiscoveredDescriptors {
+                    characteristic: unsafe { Dispatched::retain(characteristic) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheral:didUpdateValueForDescriptor:error:))]
+        fn did_update_value_for_descriptor(
+            &self,
+            _peripheral: &CBPeripheral,
+            descriptor: &CBDescriptor,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DescriptorValueUpdate {
+                    descriptor: unsafe { Dispatched::retain(descriptor) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheral:didWriteValueForDescriptor:error:))]
+        fn did_write_value_for_descriptor(
+            &self,
+            _peripheral: &CBPeripheral,
+            descriptor: &CBDescriptor,
+            error: Option<&NSError>,
+        ) {
+            let _ = self
+                .ivars()
+                .sender
+                .try_broadcast(PeripheralEvent::DescriptorValueWrite {
+                    descriptor: unsafe { Dispatched::retain(descriptor) },
+                    error: error.map(|e| e.retain()),
+                });
+        }
+
+        #[unsafe(method(peripheralIsReadyToSendWriteWithoutResponse:))]
+        fn is_ready_to_write_without_response(&self, _peripheral: &CBPeripheral) {
+            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadyToWrite);
+        }
+
+        #[unsafe(method(peripheral:didOpenL2CAPChannel:error:))]
+        fn did_open_l2cap_channel(
+            &self,
+            _peripheral: &CBPeripheral,
+            channel: Option<&CBL2CAPChannel>,
+            error: Option<&NSError>,
+        ) {
+            if let Some(channel) = channel {
+                let _ = self.ivars().sender.try_broadcast(PeripheralEvent::L2CAPChannelOpened {
+                    channel: unsafe { Dispatched::retain(channel) },
+                    error: error.map(|e| e.retain()),
+                });
+            }
+        }
+    }
+);
+
 impl PeripheralDelegate {
-    pub fn new() -> Id<PeripheralDelegate> {
+    pub fn new() -> Retained<Self> {
         let (mut sender, receiver) = async_broadcast::broadcast::<PeripheralEvent>(16);
         sender.set_overflow(true);
         let receiver = receiver.deactivate();
-
-        unsafe {
-            let obj: *mut Self = msg_send![Self::class(), alloc];
-            let obj: *mut Self = msg_send![obj, initWithSender: Box::into_raw(Box::new(sender)).cast::<c_void>() receiver: Box::into_raw(Box::new(receiver)).cast::<c_void>()];
-            Id::from_retained_ptr(obj)
-        }
-    }
-
-    pub fn sender(&self) -> &async_broadcast::Sender<PeripheralEvent> {
-        unsafe {
-            let sender: *const c_void = msg_send![self, sender];
-            assert!(!sender.is_null());
-            &*(sender.cast::<async_broadcast::Sender<PeripheralEvent>>())
-        }
-    }
-
-    extern "C" fn init(this: &mut Object, _sel: Sel, sender: *mut c_void, receiver: *mut c_void) -> id {
-        let this: &mut Object = unsafe { msg_send![super(this, class!(NSObject)), init] };
-        unsafe { this.set_ivar("sender", sender) };
-        unsafe { this.set_ivar("receiver", receiver) };
-        this
-    }
-
-    extern "C" fn dealloc(this: &mut Object, _sel: Sel) {
-        unsafe {
-            let sender: *mut c_void = *this.get_ivar("sender");
-            let receiver: *mut c_void = *this.get_ivar("receiver");
-            this.set_ivar("sender", std::ptr::null_mut::<c_void>());
-            this.set_ivar("receiver", std::ptr::null_mut::<c_void>());
-            if !sender.is_null() {
-                drop(Box::from_raw(sender.cast::<async_broadcast::Sender<PeripheralEvent>>()));
-            }
-            if !receiver.is_null() {
-                drop(Box::from_raw(
-                    receiver.cast::<async_broadcast::InactiveReceiver<PeripheralEvent>>(),
-                ));
-            }
-            let _: () = msg_send![super(this, class!(NSObject)), dealloc];
+        let ivars = PeripheralDelegateIvars {
+            sender,
+            _receiver: receiver,
         };
+        let this = PeripheralDelegate::alloc().set_ivars(ivars);
+        unsafe { msg_send![super(this), init] }
     }
 
-    extern "C" fn sender_getter(this: &mut Object, _sel: Sel) -> *const c_void {
-        unsafe { *this.get_ivar("sender") }
-    }
-
-    extern "C" fn receiver_getter(this: &mut Object, _sel: Sel) -> *const c_void {
-        unsafe { *this.get_ivar("receiver") }
-    }
-
-    extern "C" fn did_update_value_for_characteristic(
-        this: &mut Object,
-        _sel: Sel,
-        _peripheral: *mut Object,
-        characteristic: *mut Object,
-        error: *mut Object,
-    ) {
-        unsafe {
-            let ptr = (*this.get_ivar::<*mut c_void>("sender")).cast::<async_broadcast::Sender<PeripheralEvent>>();
-            if !ptr.is_null() {
-                let data: Option<ShareId<NSData>> =
-                    autoreleasepool(move || option_from_ptr(msg_send![characteristic, value]));
-                let event = PeripheralEvent::CharacteristicValueUpdate {
-                    characteristic: ShareId::from_ptr(characteristic.cast()),
-                    data,
-                    error: (!error.is_null()).then(|| ShareId::from_ptr(error.cast())),
-                };
-                debug!("PeripheralDelegate received {:?}", event);
-                let _res = (*ptr).try_broadcast(event);
-            }
-        }
-    }
-
-    delegate_method!(did_discover_services<DiscoveredServices>(peripheral, error: Option));
-    delegate_method!(did_discover_included_services<DiscoveredIncludedServices>(peripheral, service: Object, error: Option));
-    delegate_method!(did_discover_characteristics<DiscoveredCharacteristics>(peripheral, service: Object, error: Option));
-    delegate_method!(did_discover_descriptors<DiscoveredDescriptors>(peripheral, characteristic: Object, error: Option));
-    delegate_method!(did_update_value_for_descriptor<DescriptorValueUpdate>(peripheral, descriptor: Object, error: Option));
-    delegate_method!(did_write_value_for_characteristic<CharacteristicValueWrite>(peripheral, characteristic: Object, error: Option));
-    delegate_method!(did_write_value_for_descriptor<DescriptorValueWrite>(peripheral, descriptor: Object, error: Option));
-    delegate_method!(is_ready_to_write_without_response<ReadyToWrite>(peripheral));
-    delegate_method!(did_update_notification_state<NotificationStateUpdate>(peripheral, characteristic: Object, error: Option));
-    delegate_method!(did_read_rssi<ReadRssi>(peripheral, rssi: i16, error: Option));
-    delegate_method!(did_update_name<NameUpdate>(peripheral));
-    delegate_method!(did_modify_services<ServicesChanged>(peripheral, invalidated_services: Vec));
-    delegate_method!(did_open_l2cap_channel<L2CAPChannelOpened>(peripheral, channel: Object, error: Option));
-
-    fn class() -> &'static Class {
-        static DELEGATE_CLASS_INIT: Once = Once::new();
-        DELEGATE_CLASS_INIT.call_once(|| {
-            let mut cls = ClassDecl::new("BluestPeripheralDelegate", class!(NSObject)).unwrap();
-            cls.add_ivar::<*mut c_void>("sender");
-            cls.add_ivar::<*mut c_void>("receiver");
-            cls.add_protocol(Protocol::get("CBPeripheralDelegate").unwrap());
-
-            unsafe {
-                // Initialization
-                cls.add_method(
-                    sel!(initWithSender:receiver:),
-                    Self::init as extern "C" fn(&mut Object, Sel, *mut c_void, *mut c_void) -> id,
-                );
-
-                // Cleanup
-                cls.add_method(sel!(dealloc), Self::dealloc as extern "C" fn(&mut Object, Sel));
-
-                // Sender property
-                cls.add_method(
-                    sel!(sender),
-                    Self::sender_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
-                );
-
-                // Receiver property
-                cls.add_method(
-                    sel!(receiver),
-                    Self::receiver_getter as extern "C" fn(&mut Object, Sel) -> *const c_void,
-                );
-
-                // CBPeripheralDelegate
-                // Discovering Services
-                cls.add_method(
-                    sel!(peripheral:didDiscoverServices:),
-                    Self::did_discover_services as extern "C" fn(&mut Object, Sel, id, id),
-                );
-                cls.add_method(
-                    sel!(peripheral:didDiscoverIncludedServicesForService:error:),
-                    Self::did_discover_included_services as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                // Discovering Characteristics and their Descriptors
-                cls.add_method(
-                    sel!(peripheral:didDiscoverCharacteristicsForService:error:),
-                    Self::did_discover_characteristics as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(peripheral:didDiscoverDescriptorsForCharacteristic:error:),
-                    Self::did_discover_descriptors as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                // Retrieving Characteristic and Descriptor Values
-                cls.add_method(
-                    sel!(peripheral:didUpdateValueForCharacteristic:error:),
-                    Self::did_update_value_for_characteristic as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(peripheral:didUpdateValueForDescriptor:error:),
-                    Self::did_update_value_for_descriptor as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                // Writing Characteristic and Descriptor Values
-                cls.add_method(
-                    sel!(peripheral:didWriteValueForCharacteristic:error:),
-                    Self::did_write_value_for_characteristic as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(peripheral:didWriteValueForDescriptor:error:),
-                    Self::did_write_value_for_descriptor as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                cls.add_method(
-                    sel!(peripheralIsReadyToSendWriteWithoutResponse:),
-                    Self::is_ready_to_write_without_response as extern "C" fn(&mut Object, Sel, id),
-                );
-                // Managing Notifications for a Characteristic's Value
-                cls.add_method(
-                    sel!(peripheral:didUpdateNotificationStateForCharacteristic:error:),
-                    Self::did_update_notification_state as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                // Retrieving a Perpipheral's RSSI Data
-                cls.add_method(
-                    sel!(peripheral:didReadRSSI:error:),
-                    Self::did_read_rssi as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-                // Monitoring Changes to a Peripheral's Name or Services
-                cls.add_method(
-                    sel!(peripheralDidUpdateName:),
-                    Self::did_update_name as extern "C" fn(&mut Object, Sel, id),
-                );
-                cls.add_method(
-                    sel!(peripheral:didModifyServices:),
-                    Self::did_modify_services as extern "C" fn(&mut Object, Sel, id, id),
-                );
-                // Monitoring L2CAP Channels
-                cls.add_method(
-                    sel!(peripheral:didOpenL2CAPChannel:error:),
-                    Self::did_open_l2cap_channel as extern "C" fn(&mut Object, Sel, id, id, id),
-                );
-            }
-
-            cls.register();
-        });
-
-        class!(BluestPeripheralDelegate)
+    pub fn sender(&self) -> async_broadcast::Sender<PeripheralEvent> {
+        self.ivars().sender.clone()
     }
 }
