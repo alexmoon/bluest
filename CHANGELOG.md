@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.6.9
+
+- (MacOS/iOS) Update to `objc2` crates
+- (MacOS/iOS) Add preliminary L2CAP support
+- (iOS) Fix missing `device_connection_event` notifications
+
 ## 0.6.8
 
 - (Windows) Support Windows 10 LTSC 2019
