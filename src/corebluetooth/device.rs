@@ -1,7 +1,5 @@
 #![allow(clippy::let_unit_value)]
 
-use std::hash::Hasher;
-
 use futures_core::Stream;
 use futures_lite::StreamExt;
 use objc2::rc::Retained;
