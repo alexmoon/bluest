@@ -291,7 +291,11 @@ impl CharacteristicImpl {
         let guard = defer(move || {
             self.inner.dispatch(|characteristic| {
                 if let Some(peripheral) = unsafe { characteristic.service().and_then(|x| x.peripheral()) } {
-                    unsafe { peripheral.setNotifyValue_forCharacteristic(false, characteristic) };
+                    unsafe {
+                        if peripheral.state() == CBPeripheralState::Connected {
+                            peripheral.setNotifyValue_forCharacteristic(false, characteristic)
+                        }
+                    };
                 }
             });
         });
