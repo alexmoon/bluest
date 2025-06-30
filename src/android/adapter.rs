@@ -62,6 +62,11 @@ impl AdapterImpl {
         Ok(())
     }
 
+    /// Check if the adapter is available
+    pub async fn is_available(&self) -> Result<bool> {
+        Ok(true)
+    }
+
     pub async fn open_device(&self, _id: &DeviceId) -> Result<Device> {
         todo!()
     }
