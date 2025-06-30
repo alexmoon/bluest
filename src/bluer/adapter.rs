@@ -67,6 +67,11 @@ impl AdapterImpl {
         Ok(())
     }
 
+    /// Check if the adapter is available
+    pub async fn is_available(&self) -> Result<bool> {
+        Ok(self.inner.is_powered().await?)
+    }
+
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         Device::new(self.session.clone(), &self.inner, id.0)

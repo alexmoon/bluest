@@ -120,6 +120,12 @@ impl AdapterImpl {
         Ok(())
     }
 
+    /// Check if the adapter is available
+    pub async fn is_available(&self) -> Result<bool> {
+        let state = self.state();
+        Ok(state == CBManagerState::PoweredOn)
+    }
+
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         self.central.dispatch(|central| unsafe {

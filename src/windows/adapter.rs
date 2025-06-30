@@ -109,6 +109,13 @@ impl AdapterImpl {
         Ok(())
     }
 
+    /// Check if the adapter is available
+    pub async fn is_available(&self) -> Result<bool> {
+        let radio = self.inner.GetRadioAsync()?.await?;
+        let state = radio.State()?;
+        Ok(state == RadioState::On)
+    }
+
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
         Device::from_id(&id.0.as_os_str().into()).await.map_err(Into::into)

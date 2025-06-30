@@ -39,6 +39,12 @@ impl Adapter {
         self.0.events().await
     }
 
+    /// Check if the adapter is available
+    #[inline]
+    pub async fn is_available(&self) -> Result<bool> {
+        self.0.is_available().await
+    }
+
     /// Asynchronously blocks until the adapter is available
     #[inline]
     pub async fn wait_available(&self) -> Result<()> {
