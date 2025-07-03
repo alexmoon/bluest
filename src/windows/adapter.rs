@@ -29,8 +29,8 @@ use crate::{
 
 #[derive(Default)]
 pub struct AdapterConfig {
-    /// Name of adapter to use.
-    pub adapter_name: Option<String>,
+    /// Device ID to use.
+    pub device_id: Option<String>,
 }
 
 /// The system's Bluetooth adapter interface.
@@ -62,16 +62,11 @@ impl std::fmt::Debug for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Result<Self> {
-        Self::with_config(AdapterConfig::default()).await
-    }
-
-    /// Creates an interface to the default Bluetooth adapter for the system
+    /// Creates an interface to a Bluetooth adapter using the provided config.
     pub async fn with_config(config: AdapterConfig) -> Result<Self> {
-        let adapter = if let Some(adapter_name) = config.adapter_name {
-            let adapter_name = HSTRING::from(&adapter_name);
-            BluetoothAdapter::FromIdAsync(&adapter_name)?.await?
+        let adapter = if let Some(device_id) = config.device_id {
+            let device_id = HSTRING::from(&device_id);
+            BluetoothAdapter::FromIdAsync(&device_id)?.await?
         } else {
             BluetoothAdapter::GetDefaultAsync()?.await?
         };

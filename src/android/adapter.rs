@@ -66,7 +66,7 @@ impl AdapterConfig {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system.
+    /// Creates an interface to a Bluetooth adapter.
     ///
     /// # Safety
     ///
