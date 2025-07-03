@@ -112,7 +112,12 @@ impl AdapterImpl {
 
     /// Check if the adapter is available
     pub async fn is_available(&self) -> Result<bool> {
-        Ok(true)
+        self.inner.adapter.vm().with_env(|env| {
+            let adapter = self.inner.adapter.as_local(env);
+            adapter
+                .isEnabled()
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("isEnabled threw: {e:?}")))
+        })
     }
 
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
