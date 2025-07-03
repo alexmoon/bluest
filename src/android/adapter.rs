@@ -34,24 +34,66 @@ pub struct AdapterImpl {
     inner: Arc<AdapterInner>,
 }
 
+/// Creates an interface to the default Bluetooth adapter for the system.
+///
+/// # Safety
+///
+/// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
+pub struct AdapterConfig {
+    /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
+    vm: *mut java_spaghetti::sys::JavaVM,
+    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    manager: java_spaghetti::sys::jobject,
+}
+
+impl AdapterConfig {
+    /// Creates a config for the default Bluetooth adapter for the system.
+    ///
+    /// # Safety
+    ///
+    /// - `java_vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
+    /// - `bluetooth_manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
+    pub unsafe fn new(
+        java_vm: *mut java_spaghetti::sys::JavaVM,
+        bluetooth_manager: java_spaghetti::sys::jobject,
+    ) -> Self {
+        Self {
+            vm: java_vm,
+            manager: bluetooth_manager,
+        }
+    }
+}
+
 impl AdapterImpl {
-    pub unsafe fn new(vm: *mut java_spaghetti::sys::JavaVM, manager: java_spaghetti::sys::jobject) -> Result<Self> {
-        let vm = VM::from_raw(vm);
-        let manager: Global<BluetoothManager> = Global::from_raw(vm, manager);
+    /// Creates an interface to a Bluetooth adapter.
+    ///
+    /// # Safety
+    ///
+    /// In the config object:
+    ///
+    /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
+    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
+    pub async fn with_config(config: AdapterConfig) -> Result<Self> {
+        unsafe {
+            let vm = VM::from_raw(config.vm);
+            let manager: Global<BluetoothManager> = Global::from_raw(vm, config.manager);
 
-        vm.with_env(|env| {
-            let local_manager = manager.as_ref(env);
-            let adapter = local_manager.getAdapter()?.non_null()?;
-            let le_scanner = adapter.getBluetoothLeScanner()?.non_null()?;
+            vm.with_env(|env| {
+                let local_manager = manager.as_ref(env);
+                let adapter = local_manager.getAdapter()?.non_null()?;
+                let le_scanner = adapter.getBluetoothLeScanner()?.non_null()?;
 
-            Ok(Self {
-                inner: Arc::new(AdapterInner {
-                    _adapter: adapter.as_global(),
-                    le_scanner: le_scanner.as_global(),
-                    manager: manager.clone(),
-                }),
+                Ok(Self {
+                    inner: Arc::new(AdapterInner {
+                        _adapter: adapter.as_global(),
+                        le_scanner: le_scanner.as_global(),
+                        manager: manager.clone(),
+                    }),
+                })
             })
-        })
+        }
     }
 
     pub(crate) async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {

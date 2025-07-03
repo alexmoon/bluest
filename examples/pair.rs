@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .init();
 
-    let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
+    let adapter = Adapter::default().await?;
     adapter.wait_available().await?;
 
     let discovered_device = {
