@@ -14,16 +14,9 @@ pub struct Adapter(sys::adapter::AdapterImpl);
 pub type AdapterConfig = sys::adapter::AdapterConfig;
 
 impl Adapter {
-    /// Creates an interface to the default Bluetooth adapter for the system using
-    /// the provided config.
+    /// Creates an interface to a Bluetooth adapter using the provided config.
     pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         sys::adapter::AdapterImpl::with_config(config).await.map(Adapter)
-    }
-
-    /// Creates an interface to the default Bluetooth adapter for the system.
-    #[cfg(not(target_os = "android"))]
-    pub async fn default() -> Result<Self> {
-        sys::adapter::AdapterImpl::default().await.map(Adapter)
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.

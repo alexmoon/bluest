@@ -63,12 +63,7 @@ impl std::fmt::Debug for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Result<Self> {
-        Self::with_config(AdapterConfig::default()).await
-    }
-
-    /// Creates an interface to the default Bluetooth adapter for the system
+    /// Creates an interface to a Bluetooth adapter using the provided config.
     pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         match unsafe { CBManager::authorization_class() } {
             CBManagerAuthorization::AllowedAlways => info!("Bluetooth authorization is allowed"),
