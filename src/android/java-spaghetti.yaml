@@ -1,0 +1,42 @@
+input:
+  - $ANDROID_HOME/platforms/android-35/android.jar
+
+output: bindings.rs
+proxy_package: com/github/alexmoon/bluest/proxy
+proxy_output: ./java
+
+rules:
+  - match: android/**
+    doc_pattern:
+      class_url_pattern: "https://developer.android.com/reference/{CLASS}.html"
+      method_url_pattern: "https://developer.android.com/reference/{CLASS}.html#{METHOD}({ARGUMENTS})"
+      constructor_url_pattern: "https://developer.android.com/reference/{CLASS}.html#{CLASS.INNER}({ARGUMENTS})"
+      field_url_pattern: "https://developer.android.com/reference/{CLASS}.html#{FIELD}"
+      argument_seperator: ",%20"
+
+  - match:
+      - android/bluetooth/**
+      - android/content/ContextWrapper
+      - android/content/Context
+      - android/util/SparseArray
+      - android/os/Parcelable
+      - android/os/ParcelUuid
+      - java/lang/Object
+      - java/lang/Throwable
+      - java/lang/StackTraceElement
+      - java/lang/String
+      - java/lang/Class
+      - java/util/Iterator
+      - java/util/UUID
+      - java/util/List
+      - java/util/Map
+      - java/util/Set
+      - java/util/Map$Entry
+      - java/io/InputStream
+      - java/io/OutputStream
+    include: true
+
+  - match:
+      - android/bluetooth/le/ScanCallback
+      - android/bluetooth/BluetoothGattCallback
+    proxy: true
