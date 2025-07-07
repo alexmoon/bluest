@@ -28,7 +28,7 @@ serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 [dependencies]
 async-trait = "0.1.57"
 futures-core = "0.3.28"
-futures-lite = { version = "1.13.0", default-features = false }
+futures-lite = { version = "1.13.0", default-features = false, features = ["std"] }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
 
@@ -67,11 +67,11 @@ piper = {version = "0.2.4", optional = true}
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.7.2"
-piper = {version = "0.2.4", optional = true}
-objc2 = "0.6.1"
-objc2-foundation = "0.3.1"
-objc2-core-bluetooth = "0.3.1"
+async-io = "2.4.1"
 dispatch2 = "0.3.0"
+btuuid = { version = "0.1.0", features = ["uuid"] }
+corebluetooth = "0.1.0"
+dispatch-executor = "0.1.0"
 
 [[example]]
 name = "scan"
