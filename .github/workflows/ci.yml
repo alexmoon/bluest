@@ -53,6 +53,7 @@ jobs:
           cargo clippy --all-targets --target=aarch64-apple-ios -- -D warnings
 
       - name: Clippy (Android)
+        if: ${{ runner.os == 'Linux'}}
         run: |
           rustup target add aarch64-linux-android
           # not using --all-targets because examples don't build for Android due to `Adapter::default()`

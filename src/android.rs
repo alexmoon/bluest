@@ -26,13 +26,13 @@ impl std::fmt::Display for DeviceId {
 
 impl From<Local<'_, Throwable>> for crate::Error {
     fn from(e: Local<'_, Throwable>) -> Self {
-        Self::new(ErrorKind::Internal, None, format!("{:?}", e))
+        Self::new(ErrorKind::Internal, None, format!("{e:?}"))
     }
 }
 
 impl From<CastError> for crate::Error {
     fn from(e: CastError) -> Self {
-        Self::new(ErrorKind::Internal, None, format!("{:?}", e))
+        Self::new(ErrorKind::Internal, None, format!("{e:?}"))
     }
 }
 
