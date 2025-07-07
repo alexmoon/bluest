@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             discovered_device.device.name().as_deref().unwrap_or("(unknown)"),
             discovered_device
                 .rssi
-                .map(|x| format!(" ({}dBm)", x))
+                .map(|rssi| format!(" ({rssi}dBm)"))
                 .unwrap_or_default(),
             discovered_device.adv_data.services
         );

@@ -99,7 +99,7 @@ impl std::fmt::Display for ErrorKind {
             ErrorKind::NotFound => f.write_str("not found"),
             ErrorKind::InvalidParameter => f.write_str("invalid paramter"),
             ErrorKind::Timeout => f.write_str("timed out"),
-            ErrorKind::Protocol(err) => write!(f, "protocol error: {}", err),
+            ErrorKind::Protocol(err) => write!(f, "protocol error: {err}"),
             ErrorKind::Internal => f.write_str("an internal error has occured"),
             ErrorKind::ServiceChanged => f.write_str("the service changed and is no longer valid"),
             ErrorKind::Other => f.write_str("error"),
