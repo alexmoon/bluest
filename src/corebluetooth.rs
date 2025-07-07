@@ -13,7 +13,6 @@ pub mod service;
 
 mod ad;
 pub(crate) mod delegates;
-pub(crate) mod dispatch;
 
 /// A platform-specific device identifier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
