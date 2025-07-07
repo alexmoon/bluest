@@ -1,26 +1,23 @@
 #![allow(clippy::let_unit_value)]
 
+use btuuid::BluetoothUuid;
+use corebluetooth::CBPeripheralState;
+use dispatch_executor::Handle;
 use futures_core::Stream;
 use futures_lite::StreamExt;
-use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2_core_bluetooth::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
-use objc2_foundation::{NSArray, NSData};
 
-use super::delegates::{PeripheralDelegate, PeripheralEvent};
-use super::dispatch::Dispatched;
+use super::delegates::{subscribe_peripheral, PeripheralEvent};
 #[cfg(feature = "l2cap")]
 use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
-use crate::{BluetoothUuidExt, Device, DeviceId, Error, Result, Service, Uuid};
+use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
 #[derive(Clone)]
 pub struct DeviceImpl {
-    pub(super) peripheral: Dispatched<CBPeripheral>,
-    delegate: Retained<PeripheralDelegate>,
+    pub(super) peripheral: Handle<corebluetooth::Peripheral>,
 }
 
 impl PartialEq for DeviceImpl {
@@ -50,30 +47,15 @@ impl std::fmt::Display for DeviceImpl {
 }
 
 impl Device {
-    pub(super) fn new(peripheral: Retained<CBPeripheral>) -> Self {
-        let delegate = unsafe { peripheral.delegate() }.unwrap_or_else(|| {
-            // Create a new delegate and attach it to the peripheral
-            let delegate = ProtocolObject::from_retained(PeripheralDelegate::new());
-            unsafe { peripheral.setDelegate(Some(&delegate)) }
-            delegate
-        });
-
-        let delegate = delegate.downcast().unwrap();
-
-        Device(DeviceImpl {
-            peripheral: unsafe { Dispatched::new(peripheral) },
-            delegate,
-        })
+    pub(super) fn new(peripheral: Handle<corebluetooth::Peripheral>) -> Self {
+        Device(DeviceImpl { peripheral })
     }
 }
 
 impl DeviceImpl {
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
-        let uuid = self
-            .peripheral
-            .dispatch(|peripheral| unsafe { Uuid::from_bluetooth_bytes(&peripheral.identifier().as_bytes()[..]) });
-        super::DeviceId(uuid)
+        super::DeviceId(self.peripheral.lock(|peripheral, _| peripheral.identifier()))
     }
 
     /// The local name for this device, if available
@@ -81,10 +63,8 @@ impl DeviceImpl {
     /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
     pub fn name(&self) -> Result<String> {
         self.peripheral
-            .dispatch(|peripheral| match unsafe { peripheral.name() } {
-                Some(name) => Ok(name.to_string()),
-                None => Err(ErrorKind::NotFound.into()),
-            })
+            .lock(|peripheral, _| peripheral.name())
+            .ok_or(ErrorKind::NotFound.into())
     }
 
     /// The local name for this device, if available
@@ -96,7 +76,7 @@ impl DeviceImpl {
 
     /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
-        self.peripheral.dispatch(|peripheral| unsafe { peripheral.state() }) == CBPeripheralState::Connected
+        self.peripheral.lock(|peripheral, _| peripheral.state()) == CBPeripheralState::Connected
     }
 
     /// The pairing status for this device
@@ -141,28 +121,25 @@ impl DeviceImpl {
     }
 
     async fn discover_services_inner(&self, uuid: Option<Uuid>) -> Result<Vec<Service>> {
-        let mut receiver = self.delegate.sender().new_receiver();
+        let mut receiver = self.peripheral.lock(|peripheral, _| {
+            if peripheral.state() != CBPeripheralState::Connected {
+                return Err(Error::from(ErrorKind::NotConnected));
+            }
 
-        if !self.is_connected().await {
-            return Err(ErrorKind::NotConnected.into());
-        }
+            peripheral.discover_services(uuid.map(BluetoothUuid::from).as_ref().map(std::slice::from_ref));
 
-        self.peripheral.dispatch(|peripheral| {
-            let uuids = uuid.map(|uuid| unsafe {
-                NSArray::from_retained_slice(&[CBUUID::UUIDWithData(&NSData::with_bytes(uuid.as_bluetooth_bytes()))])
-            });
-
-            unsafe { peripheral.discoverServices(uuids.as_deref()) };
-        });
+            let receiver = subscribe_peripheral(peripheral.delegate());
+            Ok(receiver)
+        })?;
 
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::DiscoveredServices { error: None } => break,
-                PeripheralEvent::DiscoveredServices { error: Some(err) } => {
-                    return Err(Error::from_nserror(err));
+            match receiver.recv().await? {
+                PeripheralEvent::DiscoveredServices { result } => {
+                    result?;
+                    break;
                 }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(error.into());
                 }
                 _ => (),
             }
@@ -182,9 +159,10 @@ impl DeviceImpl {
     }
 
     fn services_inner(&self) -> Result<Vec<Service>> {
-        self.peripheral.dispatch(|peripheral| {
-            unsafe { peripheral.services() }
-                .map(|s| s.iter().map(|x| Service::new(x, self.delegate.clone())).collect())
+        self.peripheral.lock(|peripheral, executor| {
+            peripheral
+                .services()
+                .map(|s| s.into_iter().map(|x| Service::new(executor.handle(x))).collect())
                 .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no services have been discovered"))
         })
     }
@@ -193,33 +171,34 @@ impl DeviceImpl {
     pub async fn service_changed_indications(
         &self,
     ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
-        let receiver = self.delegate.sender().new_receiver();
+        let receiver = self.peripheral.lock(|peripheral, _| {
+            if peripheral.state() != CBPeripheralState::Connected {
+                return Err(Error::from(ErrorKind::NotConnected));
+            }
 
-        if !self.is_connected().await {
-            return Err(ErrorKind::NotConnected.into());
-        }
+            Ok(subscribe_peripheral(peripheral.delegate()))
+        })?;
 
         Ok(receiver.filter_map(|ev| match ev {
             PeripheralEvent::ServicesChanged { invalidated_services } => {
                 Some(Ok(ServicesChanged(ServicesChangedImpl(invalidated_services))))
             }
-            PeripheralEvent::Disconnected { error } => {
-                Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
-            }
+            PeripheralEvent::Disconnected { error } => Some(Err(error.into())),
             _ => None,
         }))
     }
 
     /// Get the current signal strength from the device in dBm.
     pub async fn rssi(&self) -> Result<i16> {
-        let mut receiver = self.delegate.sender().new_receiver();
-        self.peripheral.dispatch(|peripheral| unsafe { peripheral.readRSSI() });
+        let mut receiver = self.peripheral.lock(|peripheral, _| {
+            peripheral.read_rssi();
+            subscribe_peripheral(peripheral.delegate())
+        });
 
         loop {
             match receiver.recv().await {
-                Ok(PeripheralEvent::ReadRssi { rssi, error: None }) => return Ok(rssi),
-                Ok(PeripheralEvent::ReadRssi { error: Some(err), .. }) => return Err(Error::from_nserror(err)),
-                Err(err) => return Err(Error::from_recv_error(err)),
+                Ok(PeripheralEvent::ReadRssi { rssi }) => return rssi.map_err(Into::into),
+                Err(err) => return Err(Error::from(err)),
                 _ => (),
             }
         }
@@ -234,28 +213,26 @@ impl DeviceImpl {
     ) -> Result<(L2capChannelReader, L2capChannelWriter)> {
         use tracing::{debug, info};
 
-        let mut receiver = self.delegate.sender().new_receiver();
+        let mut receiver = self.peripheral.lock(|peripheral, _| {
+            if peripheral.state() != CBPeripheralState::Connected {
+                return Err(Error::from(ErrorKind::NotConnected));
+            }
 
-        if !self.is_connected().await {
-            return Err(ErrorKind::NotConnected.into());
-        }
+            info!("starting open_l2cap_channel on {}", psm);
+            peripheral.open_l2cap_channel(psm);
 
-        info!("starting open_l2cap_channel on {}", psm);
-        self.peripheral
-            .dispatch(|peripheral| unsafe { peripheral.openL2CAPChannel(psm) });
+            Ok(subscribe_peripheral(peripheral.delegate()))
+        })?;
 
         let l2capchannel;
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::L2CAPChannelOpened { channel, error: None } => {
-                    l2capchannel = channel;
+            match receiver.recv().await? {
+                PeripheralEvent::L2CAPChannelOpened { result } => {
+                    l2capchannel = result?;
                     break;
                 }
-                PeripheralEvent::L2CAPChannelOpened { channel: _, error } => {
-                    return Err(Error::from_nserror(error.unwrap()));
-                }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(Error::from(error));
                 }
                 o => {
                     info!("Other event: {:?}", o);
@@ -264,15 +241,15 @@ impl DeviceImpl {
         }
         debug!("open_l2cap_channel success {:?}", self.peripheral);
 
-        let reader = L2capChannelReader::new(l2capchannel.clone());
-        let writer = L2capChannelWriter::new(l2capchannel);
+        let reader = l2capchannel.0;
+        let writer = l2capchannel.1;
 
         Ok((reader, writer))
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ServicesChangedImpl(Vec<Dispatched<CBService>>);
+pub struct ServicesChangedImpl(Vec<Handle<corebluetooth::Service>>);
 
 impl ServicesChangedImpl {
     pub fn was_invalidated(&self, service: &Service) -> bool {
