@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![cfg_attr(target_os = "android", feature(arbitrary_self_types))]
 
 //! Bluest is a cross-platform [Bluetooth Low Energy] (BLE) library for [Rust]. It currently supports Windows (version
 //! 10 and later), MacOS/iOS, and Linux. Android support is planned.
@@ -17,7 +18,7 @@
 //!# use futures_lite::StreamExt;
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
+//!let adapter = Adapter::default().await?;
 //!adapter.wait_available().await?;
 //!
 //!println!("starting scan");
@@ -146,7 +147,7 @@ use std::collections::HashMap;
 
 #[cfg(target_os = "linux")]
 pub use ::bluer::Uuid;
-pub use adapter::Adapter;
+pub use adapter::{Adapter, AdapterConfig};
 pub use btuuid::BluetoothUuidExt;
 pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
