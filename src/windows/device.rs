@@ -8,7 +8,7 @@ use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::{
     BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
 };
-use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEventArgs};
+use windows::Devices::Enumeration::{DeviceInformation, DevicePairingKinds, DevicePairingRequestedEventArgs};
 use windows::Foundation::TypedEventHandler;
 
 use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
@@ -104,8 +104,11 @@ impl DeviceImpl {
 
     /// The pairing status for this device
     pub async fn is_paired(&self) -> Result<bool> {
-        self.inner
-            .DeviceInformation()?
+        // Windows does not update the DeviceInformation property on BluetoothLEDevice when the pairing state
+        // changes, so we need to get a fresh copy.
+        let id = self.id();
+        DeviceInformation::CreateFromIdAsync(&id.0.as_os_str().into())?
+            .await?
             .Pairing()?
             .IsPaired()
             .map_err(Into::into)
