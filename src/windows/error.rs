@@ -15,7 +15,7 @@ struct CommunicationError(GattCommunicationStatus);
 
 impl std::fmt::Debug for CommunicationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "CommunicationError({})", self)
+        write!(f, "CommunicationError({self})")
     }
 }
 
@@ -69,7 +69,7 @@ struct PairingError(DevicePairingResultStatus);
 
 impl std::fmt::Debug for PairingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PairingError({})", self)
+        write!(f, "PairingError({self})")
     }
 }
 
@@ -145,7 +145,7 @@ struct UnpairingError(DeviceUnpairingResultStatus);
 
 impl std::fmt::Debug for UnpairingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UnpairingError({})", self)
+        write!(f, "UnpairingError({self})")
     }
 }
 
