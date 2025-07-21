@@ -27,6 +27,12 @@ use crate::{
     ManufacturerData, Result, Uuid,
 };
 
+#[derive(Default)]
+pub struct AdapterConfig {
+    /// Device ID to use.
+    pub device_id: Option<String>,
+}
+
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be created with the [`Adapter::default()`] method.
@@ -56,10 +62,15 @@ impl std::fmt::Debug for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Option<Self> {
-        let adapter = BluetoothAdapter::GetDefaultAsync().ok()?.await.ok()?;
-        Some(AdapterImpl { inner: adapter })
+    /// Creates an interface to a Bluetooth adapter using the provided config.
+    pub async fn with_config(config: AdapterConfig) -> Result<Self> {
+        let adapter = if let Some(device_id) = config.device_id {
+            let device_id = HSTRING::from(&device_id);
+            BluetoothAdapter::FromIdAsync(&device_id)?.await?
+        } else {
+            BluetoothAdapter::GetDefaultAsync()?.await?
+        };
+        Ok(AdapterImpl { inner: adapter })
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
