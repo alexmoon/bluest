@@ -1,16 +1,19 @@
 #![cfg(feature = "l2cap")]
 
+use std::io::{Read, Write};
+use std::pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::{fmt, slice, thread};
 
-use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
+use futures_lite::io::{AsyncRead, AsyncWrite, BlockOn};
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
 use super::OptionExt;
-use crate::error::ErrorKind;
-use crate::{Error, Result};
+use crate::l2cap_channel::PIPE_CAPACITY;
+use crate::Result;
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,
@@ -35,8 +38,8 @@ pub fn open_l2cap_channel(
             channel: channel.as_global(),
         });
 
-        let (read_sender, read_receiver) = async_channel::bounded::<Vec<u8>>(16);
-        let (write_sender, write_receiver) = async_channel::bounded::<Vec<u8>>(16);
+        let (read_receiver, read_sender) = piper::pipe(PIPE_CAPACITY);
+        let (write_receiver, write_sender) = piper::pipe(PIPE_CAPACITY);
         let input_stream = channel.getInputStream()?.non_null()?.as_global();
         let output_stream = channel.getOutputStream()?.non_null()?.as_global();
 
@@ -48,6 +51,7 @@ pub fn open_l2cap_channel(
         // async channel gets closed because the user dropped the reader or writer structs.
         thread::spawn(move || {
             debug!("l2cap read thread running!");
+            let mut read_sender = BlockOn::new(read_sender);
 
             input_stream.vm().with_env(|env| {
                 let stream = input_stream.as_local(env);
@@ -67,7 +71,7 @@ pub fn open_l2cap_channel(
                             let n = n as usize;
                             let mut buf = vec![0u8; n];
                             arr.get_region(0, u8toi8_mut(&mut buf));
-                            if let Err(e) = read_sender.send_blocking(buf) {
+                            if let Err(e) = read_sender.write_all(&buf) {
                                 warn!("failed to enqueue received l2cap packet: {:?}", e);
                                 break;
                             }
@@ -82,17 +86,23 @@ pub fn open_l2cap_channel(
         thread::spawn(move || {
             debug!("l2cap write thread running!");
 
+            let mut write_receiver = BlockOn::new(write_receiver);
             output_stream.vm().with_env(|env| {
                 let stream = output_stream.as_local(env);
+                let mut buf = vec![0; PIPE_CAPACITY];
 
                 loop {
-                    match write_receiver.recv_blocking() {
+                    match write_receiver.read(&mut buf) {
                         Err(e) => {
                             warn!("failed to dequeue l2cap packet to send: {:?}", e);
                             break;
                         }
+                        Ok(0) => {
+                            trace!("Stream ended");
+                            break;
+                        }
                         Ok(packet) => {
-                            let b = ByteArray::new_from(env, u8toi8(&packet));
+                            let b = ByteArray::new_from(env, u8toi8(&buf[..packet]));
                             if let Err(e) = stream.write_byte_array(b) {
                                 warn!("failed to write to l2cap channel: {:?}", e);
                                 break;
@@ -142,47 +152,21 @@ impl Drop for L2capCloser {
 }
 
 pub struct L2capChannelReader {
-    stream: Receiver<Vec<u8>>,
+    stream: piper::Reader,
     closer: Arc<L2capCloser>,
 }
 
 impl L2capChannelReader {
-    #[inline]
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self
-            .stream
-            .recv()
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"))?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(ErrorKind::InvalidParameter, None, "Buffer is too small"));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-
-        Ok(packet.len())
-    }
-
-    #[inline]
-    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self.stream.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue"),
-            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"),
-        })?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(ErrorKind::InvalidParameter, None, "Buffer is too small"));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-
-        Ok(packet.len())
-    }
-
     pub async fn close(&mut self) -> Result<()> {
         self.closer.close();
         Ok(())
+    }
+}
+
+impl AsyncRead for L2capChannelReader {
+    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_read(cx, buf)
     }
 }
 
@@ -193,28 +177,33 @@ impl fmt::Debug for L2capChannelReader {
 }
 
 pub struct L2capChannelWriter {
-    stream: Sender<Vec<u8>>,
+    stream: piper::Writer,
     closer: Arc<L2capCloser>,
 }
 
 impl L2capChannelWriter {
-    pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream
-            .send(packet.to_vec())
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"))
-    }
-
-    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream.try_send(packet.to_vec()).map_err(|e| match e {
-            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed"),
-            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write"),
-        })
-    }
-
     pub async fn close(&mut self) -> Result<()> {
         self.closer.close();
         Ok(())
+    }
+}
+
+impl AsyncWrite for L2capChannelWriter {
+    fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        let stream = pin::pin!(&mut self.stream);
+        let ret = stream.poll_write(cx, buf);
+        ret
+    }
+
+    fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_flush(cx)
+    }
+
+    fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        self.closer.close();
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_close(cx)
     }
 }
 

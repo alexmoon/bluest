@@ -1,6 +1,14 @@
 #![cfg(feature = "l2cap")]
+use std::{
+    pin,
+    task::{Context, Poll},
+};
+
+use futures_lite::io::{AsyncRead, AsyncWrite};
 
 use crate::{sys, Result};
+
+pub(crate) const PIPE_CAPACITY: usize = 0x100000; // 1Mb
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
 #[derive(Debug)]
@@ -22,20 +30,6 @@ pub struct L2capChannelWriter {
 }
 
 impl L2capChannel {
-    /// Read a packet from the L2CAP channel.
-    ///
-    /// The packet is written to the start of `buf`, and the packet length is returned.
-    #[inline]
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.reader.read(buf).await
-    }
-
-    /// Write a packet to the L2CAP channel.
-    #[inline]
-    pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.writer.write(packet).await
-    }
-
     /// Close the L2CAP channel.
     ///
     /// This closes the entire channel, in both directions (reading and writing).
@@ -55,25 +49,31 @@ impl L2capChannel {
     }
 }
 
+impl AsyncRead for L2capChannel {
+    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
+        let reader = pin::pin!(&mut self.reader);
+        reader.poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for L2capChannel {
+    fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_write(cx, buf)
+    }
+
+    fn poll_flush(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_flush(cx)
+    }
+
+    fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_close(cx)
+    }
+}
+
 impl L2capChannelReader {
-    /// Read a packet from the L2CAP channel.
-    ///
-    /// The packet is written to the start of `buf`, and the packet length is returned.
-    #[inline]
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.reader.read(buf).await
-    }
-
-    /// Try reading a packet from the L2CAP channel.
-    ///
-    /// The packet is written to the start of `buf`, and the packet length is returned.
-    ///
-    /// If no packet is immediately available for reading, this returns an error with kind `NotReady`.
-    #[inline]
-    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.reader.try_read(buf)
-    }
-
     /// Close the L2CAP channel.
     ///
     /// This closes the entire channel, not just the read half.
@@ -86,23 +86,14 @@ impl L2capChannelReader {
     }
 }
 
+impl AsyncRead for L2capChannelReader {
+    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
+        let reader = pin::pin!(&mut self.reader);
+        reader.poll_read(cx, buf)
+    }
+}
+
 impl L2capChannelWriter {
-    /// Write a packet to the L2CAP channel.
-    ///
-    /// If the buffer is full, this will wait until there's buffer space for the packet.
-    #[inline]
-    pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.writer.write(packet).await
-    }
-
-    /// Try writing a packet to the L2CAP channel.
-    ///
-    /// If there's no buffer space, this returns an error with kind `NotReady`.
-    #[inline]
-    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
-        self.writer.try_write(packet)
-    }
-
     /// Close the L2CAP channel.
     ///
     /// This closes the entire channel, not just the write half.
@@ -112,5 +103,22 @@ impl L2capChannelWriter {
     #[inline]
     pub async fn close(&mut self) -> Result<()> {
         self.writer.close().await
+    }
+}
+
+impl AsyncWrite for L2capChannelWriter {
+    fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_write(cx, buf)
+    }
+
+    fn poll_flush(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_flush(cx)
+    }
+
+    fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        let writer = pin::pin!(&mut self.writer);
+        writer.poll_close(cx)
     }
 }
