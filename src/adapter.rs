@@ -19,7 +19,7 @@ impl Adapter {
         sys::adapter::AdapterImpl::with_config(config).await.map(Adapter)
     }
 
-    /// Creates an interface to a Bluetooth adapter using the provided config.
+    /// Creates an interface to a Bluetooth adapter using the default config.
     pub async fn default() -> Result<Self> {
         sys::adapter::AdapterImpl::with_config(AdapterConfig::default())
             .await
