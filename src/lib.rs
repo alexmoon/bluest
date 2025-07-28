@@ -17,7 +17,7 @@
 //!# use futures_lite::StreamExt;
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!let adapter = Adapter::default().await.ok_or("Bluetooth adapter not found")?;
+//!let adapter = Adapter::default().await?;
 //!adapter.wait_available().await?;
 //!
 //!println!("starting scan");
@@ -146,7 +146,7 @@ use std::collections::HashMap;
 
 #[cfg(target_os = "linux")]
 pub use ::bluer::Uuid;
-pub use adapter::Adapter;
+pub use adapter::{Adapter, AdapterConfig};
 pub use btuuid::BluetoothUuidExt;
 pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;

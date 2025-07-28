@@ -7,6 +7,12 @@ use futures_lite::StreamExt;
 use crate::error::ErrorKind;
 use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
 
+#[derive(Default)]
+pub struct AdapterConfig {
+    /// Name of adapter to use.
+    pub name: Option<String>,
+}
+
 /// The system's Bluetooth adapter interface.
 ///
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
@@ -31,14 +37,16 @@ impl std::hash::Hash for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Option<Self> {
-        let session = Arc::new(bluer::Session::new().await.ok()?);
-        session
-            .default_adapter()
-            .await
-            .ok()
-            .map(|inner| AdapterImpl { inner, session })
+    /// Creates an interface to a Bluetooth adapter using the provided config.
+    pub async fn with_config(config: AdapterConfig) -> Result<Self> {
+        let session = Arc::new(bluer::Session::new().await?);
+        let adapter = if let Some(name) = config.name {
+            session.adapter(&name)
+        } else {
+            session.default_adapter().await
+        };
+        let adapter = adapter.map(|inner| AdapterImpl { inner, session })?;
+        Ok(adapter)
     }
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.

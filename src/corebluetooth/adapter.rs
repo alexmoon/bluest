@@ -1,5 +1,6 @@
 #![allow(clippy::let_unit_value)]
 
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -8,8 +9,11 @@ use futures_lite::{stream, StreamExt};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, Message};
-use objc2_core_bluetooth::{CBCentralManager, CBManager, CBManagerAuthorization, CBManagerState, CBUUID};
-use objc2_foundation::{NSArray, NSData, NSUUID};
+use objc2_core_bluetooth::{
+    CBCentralManager, CBCentralManagerOptionShowPowerAlertKey, CBManager, CBManagerAuthorization, CBManagerState,
+    CBUUID,
+};
+use objc2_foundation::{NSArray, NSData, NSDictionary, NSNumber, NSString, NSUUID};
 use tracing::{debug, error, info, warn};
 
 use super::delegates::{self, CentralDelegate};
@@ -19,6 +23,12 @@ use crate::util::defer;
 use crate::{
     AdapterEvent, AdvertisingDevice, BluetoothUuidExt, ConnectionEvent, Device, DeviceId, Error, Result, Uuid,
 };
+
+#[derive(Default)]
+pub struct AdapterConfig {
+    /// Enable/disable the power alert dialog when using the adapter.
+    pub show_power_alert: bool,
+}
 
 /// The system's Bluetooth adapter interface.
 ///
@@ -53,8 +63,8 @@ impl std::fmt::Debug for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Option<Self> {
+    /// Creates an interface to a Bluetooth adapter using the provided config.
+    pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         match unsafe { CBManager::authorization_class() } {
             CBManagerAuthorization::AllowedAlways => info!("Bluetooth authorization is allowed"),
             CBManagerAuthorization::Denied => error!("Bluetooth authorization is denied"),
@@ -69,12 +79,21 @@ impl AdapterImpl {
         let protocol = ProtocolObject::from_retained(delegate.clone());
         let central = unsafe {
             let this = CBCentralManager::alloc();
-            // let options = NSDictionary::from_slices(&[CBCentralManagerOptionShowPowerAlertKey], &[NSNumber::numberWithBool(config.request_permissions)]);
-            CBCentralManager::initWithDelegate_queue(this, Some(&protocol), Some(dispatch::queue()))
+
+            let options: Retained<NSDictionary<NSString>> = NSDictionary::from_retained_objects(
+                &[CBCentralManagerOptionShowPowerAlertKey],
+                &[NSNumber::numberWithBool(config.show_power_alert).into()],
+            );
+            CBCentralManager::initWithDelegate_queue_options(
+                this,
+                Some(&protocol),
+                Some(dispatch::queue()),
+                Some(options.deref()),
+            )
         };
         let central = unsafe { Dispatched::new(central) };
 
-        Some(AdapterImpl {
+        Ok(AdapterImpl {
             central,
             delegate,
             scanning: Default::default(),
