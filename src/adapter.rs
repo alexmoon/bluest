@@ -19,6 +19,13 @@ impl Adapter {
         sys::adapter::AdapterImpl::with_config(config).await.map(Adapter)
     }
 
+    /// Creates an interface to a Bluetooth adapter using the provided config.
+    pub async fn default() -> Result<Self> {
+        sys::adapter::AdapterImpl::with_config(AdapterConfig::default())
+            .await
+            .map(Adapter)
+    }
+
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     #[inline]
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
