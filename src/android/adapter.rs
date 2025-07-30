@@ -1,31 +1,37 @@
 use std::collections::HashMap;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{Arc, Mutex};
-use std::task::{Context, Poll};
+use std::sync::Arc;
 
-use async_channel::{Receiver, Sender};
+use async_channel::Sender;
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
-use java_spaghetti::{Arg, ByteArray, Env, Global, Local, Null, PrimitiveArray, VM};
+use java_spaghetti::{ByteArray, Env, Global, Local, Null, PrimitiveArray, Ref, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-use super::bindings::android::bluetooth::le::{BluetoothLeScanner, ScanResult, ScanSettings, ScanSettings_Builder};
-use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothManager};
+use super::bindings::android::bluetooth::le::{
+    BluetoothLeScanner, ScanCallback, ScanResult, ScanSettings, ScanSettings_Builder,
+};
+use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothGattCallback, BluetoothManager};
+use super::bindings::android::content::Context;
 use super::bindings::android::os::ParcelUuid;
-use super::bindings::com::github::alexmoon::bluest::android::BluestScanCallback;
+use super::bindings::java::lang::{Class, String as JString};
+use super::bindings::java::util::Map_Entry;
 use super::device::DeviceImpl;
 use super::{JavaIterator, OptionExt};
-use crate::android::bindings::java::util::Map_Entry;
+use crate::android::bindings::android::bluetooth::{
+    BluetoothGatt, BluetoothGattCharacteristic, BluetoothGattDescriptor,
+};
+use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{
-    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, ManufacturerData, Result,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, ManufacturerData,
+    Result,
 };
 
 struct AdapterInner {
+    context: Global<Context>,
     manager: Global<BluetoothManager>,
-    _adapter: Global<BluetoothAdapter>,
+    adapter: Global<BluetoothAdapter>,
     le_scanner: Global<BluetoothLeScanner>,
 }
 
@@ -42,8 +48,8 @@ pub struct AdapterImpl {
 pub struct AdapterConfig {
     /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
     vm: *mut java_spaghetti::sys::JavaVM,
-    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
-    manager: java_spaghetti::sys::jobject,
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    context: java_spaghetti::sys::jobject,
 }
 
 impl AdapterConfig {
@@ -52,16 +58,10 @@ impl AdapterConfig {
     /// # Safety
     ///
     /// - `java_vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
-    /// - `bluetooth_manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
     /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
-    pub unsafe fn new(
-        java_vm: *mut java_spaghetti::sys::JavaVM,
-        bluetooth_manager: java_spaghetti::sys::jobject,
-    ) -> Self {
-        Self {
-            vm: java_vm,
-            manager: bluetooth_manager,
-        }
+    pub unsafe fn new(java_vm: *mut java_spaghetti::sys::JavaVM, context: java_spaghetti::sys::jobject) -> Self {
+        Self { vm: java_vm, context }
     }
 }
 
@@ -73,23 +73,29 @@ impl AdapterImpl {
     /// In the config object:
     ///
     /// - `vm` must be a valid JNI `JavaVM` pointer to a VM that will stay alive for the entire duration the `Adapter` or any structs obtained from it are live.
-    /// - `manager` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
+    /// - `context` must be a valid global reference to an `android.bluetooth.BluetoothManager` instance, from the `java_vm` VM.
     /// - The `Adapter` takes ownership of the global reference and will delete it with the `DeleteGlobalRef` JNI call when dropped. You must not do that yourself.
     pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         unsafe {
             let vm = VM::from_raw(config.vm);
-            let manager: Global<BluetoothManager> = Global::from_raw(vm, config.manager);
+            let context: Global<Context> = Global::from_raw(vm, config.context);
 
             vm.with_env(|env| {
-                let local_manager = manager.as_ref(env);
-                let adapter = local_manager.getAdapter()?.non_null()?;
+                let context = context.as_local(env);
+                let class: Local<Class> =
+                    unsafe { Local::from_raw(env, env.require_class(c"android/bluetooth/BluetoothManager")) };
+                let manager: Local<BluetoothManager> =
+                    context.getSystemService_Class(class).unwrap().unwrap().cast().unwrap();
+
+                let adapter = manager.getAdapter()?.non_null()?;
                 let le_scanner = adapter.getBluetoothLeScanner()?.non_null()?;
 
                 Ok(Self {
                     inner: Arc::new(AdapterInner {
-                        _adapter: adapter.as_global(),
+                        context: context.as_global(),
+                        adapter: adapter.as_global(),
                         le_scanner: le_scanner.as_global(),
-                        manager: manager.clone(),
+                        manager: manager.as_global(),
                     }),
                 })
             })
@@ -106,11 +112,26 @@ impl AdapterImpl {
 
     /// Check if the adapter is available
     pub async fn is_available(&self) -> Result<bool> {
-        Ok(true)
+        self.inner.adapter.vm().with_env(|env| {
+            let adapter = self.inner.adapter.as_local(env);
+            adapter
+                .isEnabled()
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("isEnabled threw: {e:?}")))
+        })
     }
 
-    pub async fn open_device(&self, _id: &DeviceId) -> Result<Device> {
-        todo!()
+    pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
+        self.inner.adapter.vm().with_env(|env| {
+            let adapter = self.inner.adapter.as_local(env);
+            let device = adapter
+                .getRemoteDevice_String(JString::from_env_str(env, &id.0))
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("getRemoteDevice threw: {e:?}")))?
+                .non_null()?;
+            Ok(Device(DeviceImpl {
+                id: id.clone(),
+                device: device.as_global(),
+            }))
+        })
     }
 
     pub async fn connected_devices(&self) -> Result<Vec<Device>> {
@@ -125,9 +146,17 @@ impl AdapterImpl {
         &'a self,
         _services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
-        self.inner.manager.vm().with_env(|env| {
-            let receiver = SCAN_CALLBACKS.allocate();
-            let callback = BluestScanCallback::new(env, receiver.id)?;
+        let (start_receiver, stream) = self.inner.manager.vm().with_env(|env| {
+            let (start_sender, start_receiver) = async_channel::bounded(1);
+            let (device_sender, device_receiver) = async_channel::bounded(16);
+            let callback = ScanCallback::new_proxy(
+                env,
+                Arc::new(ScanCallbackProxy {
+                    device_sender,
+                    start_sender,
+                }),
+            )?;
+
             let callback_global = callback.as_global();
             let scanner = self.inner.le_scanner.as_ref(env);
             let settings = ScanSettings_Builder::new(env)?;
@@ -146,11 +175,25 @@ impl AdapterImpl {
                 });
             });
 
-            Ok(Box::pin(receiver).map(move |x| {
-                let _guard = &guard;
-                x
-            }))
-        })
+            Ok::<_, crate::Error>((
+                start_receiver,
+                Box::pin(device_receiver).map(move |x| {
+                    let _guard = &guard;
+                    x
+                }),
+            ))
+        })?;
+
+        // Wait for scan started or failed.
+        match start_receiver.recv().await {
+            Ok(Ok(())) => Ok(stream),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(Error::new(
+                ErrorKind::Internal,
+                None,
+                format!("receiving failed while waiting for start: {e:?}"),
+            )),
+        }
     }
 
     pub async fn discover_devices<'a>(
@@ -171,9 +214,18 @@ impl AdapterImpl {
         Ok(connected.chain(advertising))
     }
 
-    pub async fn connect_device(&self, _device: &Device) -> Result<()> {
-        // Windows manages the device connection automatically
-        Ok(())
+    pub async fn connect_device(&self, device: &Device) -> Result<()> {
+        self.inner.adapter.vm().with_env(|env| {
+            let device = device.0.device.as_local(env);
+
+            let callback = BluetoothGattCallback::new_proxy(env, Arc::new(BluetoothGattCallbackProxy)).unwrap();
+            device
+                .connectGatt_Context_boolean_BluetoothGattCallback(&self.inner.context, false, callback)
+                .map_err(|e| Error::new(ErrorKind::Internal, None, format!("connectGatt threw: {e:?}")))?
+                .non_null()?;
+
+            Ok(())
+        })
     }
 
     pub async fn disconnect_device(&self, _device: &Device) -> Result<()> {
@@ -207,81 +259,6 @@ impl std::fmt::Debug for AdapterImpl {
     }
 }
 
-static SCAN_CALLBACKS: CallbackRouter<AdvertisingDevice> = CallbackRouter::new();
-
-struct CallbackRouter<T: Send + 'static> {
-    map: Mutex<Option<HashMap<i32, Sender<T>>>>,
-    next_id: AtomicI32,
-}
-
-impl<T: Send + 'static> CallbackRouter<T> {
-    const fn new() -> Self {
-        Self {
-            map: Mutex::new(None),
-            next_id: AtomicI32::new(0),
-        }
-    }
-
-    fn allocate(&'static self) -> CallbackReceiver<T> {
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let (sender, receiver) = async_channel::bounded(16);
-        self.map
-            .lock()
-            .unwrap()
-            .get_or_insert_with(Default::default)
-            .insert(id, sender);
-
-        CallbackReceiver {
-            router: self,
-            id,
-            receiver,
-        }
-    }
-
-    fn callback(&'static self, id: i32, val: T) {
-        if let Some(sender) = self.map.lock().unwrap().as_mut().unwrap().get_mut(&id) {
-            if let Err(e) = sender.send_blocking(val) {
-                warn!("failed to send scan callback: {:?}", e)
-            }
-        }
-    }
-}
-
-struct CallbackReceiver<T: Send + 'static> {
-    router: &'static CallbackRouter<T>,
-    id: i32,
-    receiver: Receiver<T>,
-}
-
-impl<T: Send + 'static> Stream for CallbackReceiver<T> {
-    type Item = T;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // safety: this is just a manually-written pin projection.
-        let receiver = unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().receiver) };
-        receiver.poll_next(cx)
-    }
-}
-
-impl<T: Send> Drop for CallbackReceiver<T> {
-    fn drop(&mut self) {
-        self.router.map.lock().unwrap().as_mut().unwrap().remove(&self.id);
-    }
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanResult(
-    env: Env<'_>,
-    _class: *mut (), // self class, ignore
-    id: i32,
-    callback_type: i32,
-    scan_result: Arg<ScanResult>,
-) {
-    if let Err(e) = on_scan_result(env, id, callback_type, scan_result) {
-        warn!("on_scan_result failed: {:?}", e);
-    }
-}
-
 fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
     let uuid = uuid.getUuid()?.non_null()?;
     let lsb = uuid.getLeastSignificantBits()? as u64;
@@ -289,81 +266,227 @@ fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
     Ok(Uuid::from_u64_pair(msb, lsb))
 }
 
-#[no_mangle]
-fn on_scan_result(env: Env<'_>, id: i32, callback_type: i32, scan_result: Arg<ScanResult>) -> Result<()> {
-    let scan_result = unsafe { scan_result.into_ref(env) }.non_null()?;
+struct ScanCallbackProxy {
+    start_sender: Sender<Result<()>>,
+    device_sender: Sender<AdvertisingDevice>,
+}
 
-    tracing::info!("got callback! {} {}", id, callback_type);
-
-    let scan_record = scan_result.getScanRecord()?.non_null()?;
-    let device = scan_result.getDevice()?.non_null()?;
-
-    let address = device.getAddress()?.non_null()?.to_string_lossy();
-    let rssi = scan_result.getRssi()?;
-    let is_connectable = scan_result.isConnectable()?;
-    let local_name = scan_record.getDeviceName()?.map(|s| s.to_string_lossy());
-    let tx_power_level = scan_record.getTxPowerLevel()?;
-
-    // Services
-    let mut services = Vec::new();
-    if let Some(uuids) = scan_record.getServiceUuids()? {
-        for uuid in JavaIterator(uuids.iterator()?.non_null()?) {
-            services.push(convert_uuid(uuid.cast()?)?)
+impl super::bindings::android::bluetooth::le::ScanCallbackProxy for ScanCallbackProxy {
+    fn onScanFailed<'env>(&self, _env: Env<'env>, error_code: i32) -> () {
+        let e = Error::new(
+            ErrorKind::Internal,
+            None,
+            format!("Scan failed to start with error code {error_code}"),
+        );
+        if let Err(e) = self.start_sender.try_send(Err(e)) {
+            warn!("onScanFailed failed to send error: {e:?}");
         }
     }
 
-    // Service data
-    let mut service_data = HashMap::new();
-    let sd = scan_record.getServiceData()?.non_null()?;
-    let sd = sd.entrySet()?.non_null()?;
-    for entry in JavaIterator(sd.iterator()?.non_null()?) {
-        let entry: Local<Map_Entry> = entry.cast()?;
-        let key: Local<ParcelUuid> = entry.getKey()?.non_null()?.cast()?;
-        let val: Local<ByteArray> = entry.getValue()?.non_null()?.cast()?;
-        service_data.insert(convert_uuid(key)?, val.as_vec().into_iter().map(|i| i as u8).collect());
+    fn onBatchScanResults<'env>(
+        &self,
+        env: Env<'env>,
+        scan_results: Option<Ref<'env, super::bindings::java::util::List>>,
+    ) -> () {
+        let Some(scan_results) = scan_results else {
+            warn!("onBatchScanResults: ignoring null scan_results");
+            return;
+        };
+
+        if let Err(e) = self.on_scan_result_list(env, &scan_results) {
+            warn!("onBatchScanResults failed: {e:?}");
+        }
     }
 
-    // Manufacturer data
-    let mut manufacturer_data = None;
-    let msd = scan_record.getManufacturerSpecificData()?.non_null()?;
-    // TODO there can be multiple manufacturer data entries, but the bluest API only supports one. So grab just the first.
-    if msd.size()? != 0 {
-        let val: Local<'_, ByteArray> = msd.valueAt(0)?.non_null()?.cast()?;
-        manufacturer_data = Some(ManufacturerData {
-            company_id: msd.keyAt(0)? as _,
-            data: val.as_vec().into_iter().map(|i| i as u8).collect(),
-        });
+    fn onScanResult<'env>(
+        &self,
+        env: Env<'env>,
+        _callback_type: i32,
+        scan_result: Option<Ref<'env, ScanResult>>,
+    ) -> () {
+        let Some(scan_result) = scan_result else {
+            warn!("onScanResult: ignoring null scan_result");
+            return;
+        };
+
+        if let Err(e) = self.on_scan_result(env, &scan_result) {
+            warn!("onScanResult failed: {e:?}");
+        }
     }
-
-    let device_id = DeviceId(address);
-
-    let d = AdvertisingDevice {
-        device: Device(DeviceImpl {
-            id: device_id,
-            device: device.as_global(),
-        }),
-        adv_data: AdvertisementData {
-            is_connectable,
-            local_name,
-            manufacturer_data, // TODO, SparseArray is cursed.
-            service_data,
-            services,
-            tx_power_level: Some(tx_power_level as _),
-        },
-        rssi: Some(rssi as _),
-    };
-    SCAN_CALLBACKS.callback(id, d);
-
-    Ok(())
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanFailed(
-    _env: Env<'_>,
-    _class: *mut (), // self class, ignore
-    id: i32,
-    error_code: i32,
-) {
-    tracing::error!("got scan fail! {} {}", id, error_code);
-    todo!()
+impl ScanCallbackProxy {
+    fn on_scan_result_list(&self, env: Env<'_>, scan_results: &Ref<super::bindings::java::util::List>) -> Result<()> {
+        for scan_result in JavaIterator(scan_results.iterator()?.non_null()?) {
+            let scan_result: Local<ScanResult> = scan_result.cast()?;
+            self.on_scan_result(env, &scan_result)?;
+        }
+        Ok(())
+    }
+
+    fn on_scan_result(&self, _env: Env<'_>, scan_result: &Ref<ScanResult>) -> Result<()> {
+        let scan_record = scan_result.getScanRecord()?.non_null()?;
+        let device = scan_result.getDevice()?.non_null()?;
+
+        let address = device.getAddress()?.non_null()?.to_string_lossy();
+        let rssi = scan_result.getRssi()?;
+        let is_connectable = scan_result.isConnectable()?;
+        let local_name = scan_record.getDeviceName()?.map(|s| s.to_string_lossy());
+        let tx_power_level = scan_record.getTxPowerLevel()?;
+
+        // Services
+        let mut services = Vec::new();
+        if let Some(uuids) = scan_record.getServiceUuids()? {
+            for uuid in JavaIterator(uuids.iterator()?.non_null()?) {
+                services.push(convert_uuid(uuid.cast()?)?)
+            }
+        }
+
+        // Service data
+        let mut service_data = HashMap::new();
+        let sd = scan_record.getServiceData()?.non_null()?;
+        let sd = sd.entrySet()?.non_null()?;
+        for entry in JavaIterator(sd.iterator()?.non_null()?) {
+            let entry: Local<Map_Entry> = entry.cast()?;
+            let key: Local<ParcelUuid> = entry.getKey()?.non_null()?.cast()?;
+            let val: Local<ByteArray> = entry.getValue()?.non_null()?.cast()?;
+            service_data.insert(convert_uuid(key)?, val.as_vec().into_iter().map(|i| i as u8).collect());
+        }
+
+        // Manufacturer data
+        let mut manufacturer_data = None;
+        let msd = scan_record.getManufacturerSpecificData()?.non_null()?;
+        // TODO there can be multiple manufacturer data entries, but the bluest API only supports one. So grab just the first.
+        if msd.size()? != 0 {
+            let val: Local<'_, ByteArray> = msd.valueAt(0)?.non_null()?.cast()?;
+            manufacturer_data = Some(ManufacturerData {
+                company_id: msd.keyAt(0)? as _,
+                data: val.as_vec().into_iter().map(|i| i as u8).collect(),
+            });
+        }
+
+        let device_id = DeviceId(address);
+
+        let d = AdvertisingDevice {
+            device: Device(DeviceImpl {
+                id: device_id,
+                device: device.as_global(),
+            }),
+            adv_data: AdvertisementData {
+                is_connectable,
+                local_name,
+                manufacturer_data, // TODO, SparseArray is cursed.
+                service_data,
+                services,
+                tx_power_level: Some(tx_power_level as _),
+            },
+            rssi: Some(rssi as _),
+        };
+
+        self.start_sender.try_send(Ok(())).ok();
+        self.device_sender.try_send(d).ok();
+
+        Ok(())
+    }
+}
+
+struct BluetoothGattCallbackProxy;
+impl super::bindings::android::bluetooth::BluetoothGattCallbackProxy for BluetoothGattCallbackProxy {
+    fn onPhyUpdate<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+        _arg3: i32,
+    ) {
+    }
+    fn onPhyRead<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+        _arg3: i32,
+    ) {
+    }
+    fn onConnectionStateChange<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: i32,
+        _arg2: i32,
+    ) {
+    }
+    fn onServicesDiscovered<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32) {}
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_byte_array_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: Option<Ref<'env, ByteArray>>,
+        _arg3: i32,
+    ) {
+    }
+    fn onCharacteristicWrite<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+    ) {
+    }
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic_byte_array<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattCharacteristic>>,
+        _arg2: Option<Ref<'env, ByteArray>>,
+    ) {
+    }
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int_byte_array<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+        _arg3: Option<Ref<'env, ByteArray>>,
+    ) {
+    }
+    fn onDescriptorWrite<'env>(
+        &self,
+        _env: Env<'env>,
+        _arg0: Option<Ref<'env, BluetoothGatt>>,
+        _arg1: Option<Ref<'env, BluetoothGattDescriptor>>,
+        _arg2: i32,
+    ) {
+    }
+    fn onReliableWriteCompleted<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32) {}
+    fn onReadRemoteRssi<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32, _arg2: i32) {
+    }
+    fn onMtuChanged<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32, _arg2: i32) {}
+    fn onServiceChanged<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>) {}
 }

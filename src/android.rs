@@ -42,10 +42,7 @@ impl<'env> Iterator for JavaIterator<'env> {
     type Item = Local<'env, bindings::java::lang::Object>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.0.hasNext().unwrap() {
-            let obj = self.0.next().unwrap().unwrap();
-            // upgrade lifetime to the original env.
-            let obj = unsafe { Local::from_raw(self.0.env(), obj.into_raw()) };
-            Some(obj)
+            Some(self.0.next().unwrap().unwrap())
         } else {
             None
         }
