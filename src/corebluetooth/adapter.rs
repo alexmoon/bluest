@@ -50,8 +50,8 @@ impl std::fmt::Debug for AdapterImpl {
 }
 
 impl AdapterImpl {
-    /// Creates an interface to the default Bluetooth adapter for the system
-    pub async fn default() -> Option<Self> {
+    /// Creates an interface to a Bluetooth adapter using the provided config.
+    pub async fn with_config(config: AdapterConfig) -> Result<Self> {
         match CentralManager::authorization() {
             CBManagerAuthorization::AllowedAlways => info!("Bluetooth authorization is allowed"),
             CBManagerAuthorization::Denied => error!("Bluetooth authorization is denied"),
@@ -65,7 +65,7 @@ impl AdapterImpl {
         let central = CentralManager::background(
             DispatchQoS::new(dispatch2::DispatchQoS::Default, 0),
             |executor| Box::new(CentralDelegate::new(executor.clone())),
-            false,
+            config.show_power_alert,
             None,
             |central, executor| executor.handle(central),
         );
