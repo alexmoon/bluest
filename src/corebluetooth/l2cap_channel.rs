@@ -1,8 +1,10 @@
 use core::ptr::NonNull;
-use std::fmt;
-use std::sync::Arc;
+use std::io::{Read, Write};
+use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
+use std::{fmt, pin};
 
-use async_channel::{Receiver, Sender, TryRecvError, TrySendError};
+use futures_lite::io::{AsyncRead, AsyncWrite, BlockOn};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{define_class, msg_send, sel, AnyThread, DefinedClass};
@@ -11,10 +13,10 @@ use objc2_foundation::{
     NSDefaultRunLoopMode, NSInputStream, NSNotification, NSNotificationCenter, NSObject, NSObjectProtocol,
     NSOutputStream, NSRunLoop, NSStream, NSStreamDelegate, NSStreamEvent, NSString,
 };
-use tracing::debug;
+use tracing::{debug, trace, warn};
 
 use super::dispatch::Dispatched;
-use crate::error::{Error, ErrorKind};
+use crate::l2cap_channel::PIPE_CAPACITY;
 use crate::Result;
 
 /// Utility struct to close the channel on drop.
@@ -43,7 +45,7 @@ impl Drop for L2capCloser {
 
 /// The reader side of an L2CAP channel.
 pub struct L2capChannelReader {
-    stream: Receiver<Vec<u8>>,
+    stream: piper::Reader,
     closer: Arc<L2capCloser>,
     _delegate: Retained<InputStreamDelegate>,
 }
@@ -51,14 +53,14 @@ pub struct L2capChannelReader {
 impl L2capChannelReader {
     /// Creates a new L2capChannelReader.
     pub(crate) fn new(channel: Dispatched<CBL2CAPChannel>) -> Self {
-        let (sender, receiver) = async_channel::bounded(16);
+        let (read_rx, read_tx) = piper::pipe(PIPE_CAPACITY);
         let closer = Arc::new(L2capCloser {
             channel: channel.clone(),
         });
 
         let delegate = channel.dispatch(|channel| unsafe {
             let input_stream = channel.inputStream().unwrap();
-            let delegate = InputStreamDelegate::new(sender);
+            let delegate = InputStreamDelegate::new(read_tx);
             input_stream.setDelegate(Some(&ProtocolObject::from_retained(delegate.clone())));
             input_stream.scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
             input_stream.open();
@@ -66,57 +68,23 @@ impl L2capChannelReader {
         });
 
         Self {
-            stream: receiver,
+            stream: read_rx,
             _delegate: delegate,
             closer,
         }
-    }
-
-    /// Reads data from the L2CAP channel into the provided buffer.
-    #[inline]
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self
-            .stream
-            .recv()
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-        Ok(packet.len())
-    }
-
-    /// Attempts to read data from the L2CAP channel into the provided buffer without blocking.
-    #[inline]
-    pub fn try_read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let packet = self.stream.try_recv().map_err(|e| match e {
-            TryRecvError::Empty => Error::new(ErrorKind::NotReady, None, "no received packet in queue".to_string()),
-            TryRecvError::Closed => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
-        })?;
-
-        if packet.len() > buf.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidParameter,
-                None,
-                "Buffer is too small".to_string(),
-            ));
-        }
-
-        buf[..packet.len()].copy_from_slice(&packet);
-        Ok(packet.len())
     }
 
     /// Closes the L2CAP channel reader.
     pub async fn close(&mut self) -> Result<()> {
         self.closer.close();
         Ok(())
+    }
+}
+
+impl AsyncRead for L2capChannelReader {
+    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_read(cx, buf)
     }
 }
 
@@ -128,7 +96,7 @@ impl fmt::Debug for L2capChannelReader {
 
 /// The writer side of an L2CAP channel.
 pub struct L2capChannelWriter {
-    stream: Sender<Vec<u8>>,
+    stream: piper::Writer,
     closer: Arc<L2capCloser>,
     _delegate: Retained<OutputStreamDelegate>,
 }
@@ -136,14 +104,14 @@ pub struct L2capChannelWriter {
 impl L2capChannelWriter {
     /// Creates a new L2capChannelWriter.
     pub(crate) fn new(channel: Dispatched<CBL2CAPChannel>) -> Self {
-        let (sender, receiver) = async_channel::bounded(16);
+        let (write_rx, write_tx) = piper::pipe(PIPE_CAPACITY);
         let closer = Arc::new(L2capCloser {
             channel: channel.clone(),
         });
 
         let delegate = channel.dispatch(|channel| unsafe {
             let output_stream = channel.outputStream().unwrap();
-            let delegate = OutputStreamDelegate::new(receiver, Dispatched::retain(&output_stream));
+            let delegate = OutputStreamDelegate::new(write_rx, Dispatched::retain(&output_stream));
             output_stream.setDelegate(Some(&ProtocolObject::from_retained(delegate.clone())));
             output_stream.scheduleInRunLoop_forMode(&NSRunLoop::mainRunLoop(), NSDefaultRunLoopMode);
             output_stream.open();
@@ -155,30 +123,10 @@ impl L2capChannelWriter {
         });
 
         Self {
-            stream: sender,
+            stream: write_tx,
             _delegate: delegate,
             closer,
         }
-    }
-
-    /// Writes data to the L2CAP channel.
-    pub async fn write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream
-            .send(packet.to_vec())
-            .await
-            .map_err(|_| Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()))?;
-        self.notify();
-        Ok(())
-    }
-
-    /// Attempts to write data to the L2CAP channel without blocking.
-    pub fn try_write(&mut self, packet: &[u8]) -> Result<()> {
-        self.stream.try_send(packet.to_vec()).map_err(|e| match e {
-            TrySendError::Closed(_) => Error::new(ErrorKind::ConnectionFailed, None, "channel is closed".to_string()),
-            TrySendError::Full(_) => Error::new(ErrorKind::NotReady, None, "No buffer space for write".to_string()),
-        })?;
-        self.notify();
-        Ok(())
     }
 
     fn notify(&self) {
@@ -196,21 +144,42 @@ impl L2capChannelWriter {
     }
 }
 
+impl AsyncWrite for L2capChannelWriter {
+    fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        let stream = pin::pin!(&mut self.stream);
+        let ret = stream.poll_write(cx, buf);
+        if matches!(ret, Poll::Ready(Ok(_))) {
+            self.notify();
+        }
+        ret
+    }
+
+    fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_flush(cx)
+    }
+
+    fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        self.closer.close();
+        let stream = pin::pin!(&mut self.stream);
+        stream.poll_close(cx)
+    }
+}
+
 impl fmt::Debug for L2capChannelWriter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("L2capChannelWriter")
     }
 }
 
-#[derive(Debug)]
 struct InputStreamDelegateIvars {
-    sender: Sender<Vec<u8>>,
+    writer: Mutex<BlockOn<piper::Writer>>,
 }
 
 define_class!(
     #[unsafe(super(NSObject))]
     #[ivars = InputStreamDelegateIvars]
-    #[derive(Debug, PartialEq, Eq, Hash)]
+    #[derive(PartialEq, Eq, Hash)]
     struct InputStreamDelegate;
 
     unsafe impl NSObjectProtocol for InputStreamDelegate {}
@@ -218,19 +187,21 @@ define_class!(
     unsafe impl NSStreamDelegate for InputStreamDelegate {
         #[unsafe(method(stream:handleEvent:))]
         fn handle_event(&self, stream: &NSStream, event_code: NSStreamEvent) {
-            let mut buf = [0u8; 1024];
             let input_stream = stream.downcast_ref::<NSInputStream>().unwrap();
             if let NSStreamEvent::HasBytesAvailable = event_code {
+                // This is the only writer task, so there should never be contention on this lock
+                let mut writer = self.ivars().writer.try_lock().unwrap();
+                // This is the the only task that writes to the pipe so at least this many bytes will be available
+                let to_fill = writer.get_ref().capacity() - writer.get_ref().len();
+                let mut buf = vec![0u8; to_fill].into_boxed_slice();
                 let res = unsafe { input_stream.read_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len()) };
                 if res < 0 {
                     debug!("Read Loop Error: Stream read failed");
                     return;
                 }
-                let size = res.try_into().unwrap();
-                let mut packet = Vec::new();
-                packet.extend_from_slice(&buf[..size]);
-                if self.ivars().sender.try_send(packet).is_err() {
-                    debug!("Read Loop Error: Sender is closed");
+                let filled = res.try_into().unwrap();
+                if let Err(e) = writer.write_all(&buf[..filled]) {
+                    debug!("Read Loop Error: {:?}", e);
                     unsafe {
                         input_stream.setDelegate(None);
                         input_stream.close();
@@ -242,23 +213,24 @@ define_class!(
 );
 
 impl InputStreamDelegate {
-    pub fn new(sender: Sender<Vec<u8>>) -> Retained<Self> {
-        let ivars = InputStreamDelegateIvars { sender };
+    pub fn new(writer: piper::Writer) -> Retained<Self> {
+        let ivars = InputStreamDelegateIvars {
+            writer: Mutex::new(BlockOn::new(writer)),
+        };
         let this = InputStreamDelegate::alloc().set_ivars(ivars);
         unsafe { msg_send![super(this), init] }
     }
 }
 
-#[derive(Debug)]
 struct OutputStreamDelegateIvars {
-    receiver: Receiver<Vec<u8>>,
+    receiver: Mutex<BlockOn<piper::Reader>>,
     stream: Dispatched<NSOutputStream>,
 }
 
 define_class!(
     #[unsafe(super(NSObject))]
     #[ivars = OutputStreamDelegateIvars]
-    #[derive(Debug, PartialEq, Eq, Hash)]
+    #[derive(PartialEq, Eq, Hash)]
     struct OutputStreamDelegate;
 
     unsafe impl NSObjectProtocol for OutputStreamDelegate {}
@@ -268,46 +240,65 @@ define_class!(
         fn handle_event(&self, stream: &NSStream, event_code: NSStreamEvent) {
             let output_stream = stream.downcast_ref::<NSOutputStream>().unwrap();
             if let NSStreamEvent::HasSpaceAvailable = event_code {
-                if let Ok(mut packet) = self.ivars().receiver.try_recv() {
-                    let res = unsafe {
-                        output_stream.write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len())
-                    };
-                    if res < 0 {
-                        debug!("Write Loop Error: Stream write failed");
-                        unsafe {
-                            output_stream.setDelegate(None);
-                            output_stream.close();
-                            let center = NSNotificationCenter::defaultCenter();
-                            center.removeObserver(self);
-                        }
-                    }
-                }
+                self.send_packet(output_stream)
             }
         }
 
         #[unsafe(method(onNotified:))]
         fn on_notified(&self, _n: &NSNotification) {
-            if let Ok(mut packet) = self.ivars().receiver.try_recv() {
-                let stream = unsafe { self.ivars().stream.get() };
-                let res = unsafe { stream.write_maxLength(NonNull::new_unchecked(packet.as_mut_ptr()), packet.len()) };
-                if res < 0 {
-                    debug!("Write Loop Error: Stream write failed");
-                    unsafe {
-                        stream.setDelegate(None);
-                        stream.close();
-                        let center = NSNotificationCenter::defaultCenter();
-                        center.removeObserver(self);
-                    }
-                }
-            }
+            let stream = unsafe { self.ivars().stream.get() };
+            self.send_packet(stream)
         }
     }
 );
 
 impl OutputStreamDelegate {
-    pub fn new(receiver: Receiver<Vec<u8>>, stream: Dispatched<NSOutputStream>) -> Retained<Self> {
-        let ivars = OutputStreamDelegateIvars { receiver, stream };
+    pub fn new(receiver: piper::Reader, stream: Dispatched<NSOutputStream>) -> Retained<Self> {
+        let ivars = OutputStreamDelegateIvars {
+            receiver: Mutex::new(BlockOn::new(receiver)),
+            stream,
+        };
         let this = OutputStreamDelegate::alloc().set_ivars(ivars);
         unsafe { msg_send![super(this), init] }
+    }
+
+    fn send_packet(&self, output_stream: &NSOutputStream) {
+        let mut receiver = self.ivars().receiver.lock().unwrap();
+
+        // This is racy but there will always be at least this many bytesin the channel
+        let to_write = receiver.get_ref().len();
+        if to_write == 0 {
+            trace!("No data to write");
+            return;
+        }
+        let mut buf = vec![0u8; to_write];
+        let to_write = match receiver.read(&mut buf) {
+            Err(e) => {
+                warn!("Error reading from stream {:?}", e);
+                return;
+            }
+            Ok(0) => {
+                trace!("No more data to write");
+                self.close(output_stream);
+                return;
+            }
+            Ok(n) => n,
+        };
+
+        buf.truncate(to_write);
+        let res = unsafe { output_stream.write_maxLength(NonNull::new_unchecked(buf.as_mut_ptr()), buf.len()) };
+        if res < 0 {
+            debug!("Write Loop Error: Stream write failed");
+            self.close(output_stream);
+        }
+    }
+
+    fn close(&self, output_stream: &NSOutputStream) {
+        unsafe {
+            output_stream.setDelegate(None);
+            output_stream.close();
+            let center = NSNotificationCenter::defaultCenter();
+            center.removeObserver(self);
+        }
     }
 }
