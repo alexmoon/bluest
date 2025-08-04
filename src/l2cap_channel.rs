@@ -6,6 +6,7 @@ use futures_lite::io::{AsyncRead, AsyncWrite};
 
 use crate::{sys, Result};
 
+#[allow(unused)]
 pub(crate) const PIPE_CAPACITY: usize = 0x100000; // 1Mb
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
