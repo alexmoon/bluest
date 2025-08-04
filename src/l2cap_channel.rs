@@ -4,7 +4,7 @@ use std::task::{Context, Poll};
 
 use futures_lite::io::{AsyncRead, AsyncWrite};
 
-use crate::{sys, Result};
+use crate::sys;
 
 #[allow(unused)]
 pub(crate) const PIPE_CAPACITY: usize = 0x100000; // 1Mb
@@ -36,7 +36,7 @@ impl L2capChannel {
     /// The channel is automatically closed when `L2capChannel` is dropped, so
     /// you don't need to call this explicitly.
     #[inline]
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> std::io::Result<()> {
         self.writer.close().await
     }
 
@@ -80,7 +80,7 @@ impl L2capChannelReader {
     /// The channel is automatically closed when both the `L2capChannelWriter`
     /// and `L2capChannelReader` are dropped, so you don't need to call this explicitly.
     #[inline]
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> std::io::Result<()> {
         self.reader.close().await
     }
 }
@@ -100,7 +100,7 @@ impl L2capChannelWriter {
     /// The channel is automatically closed when both the `L2capChannelWriter`
     /// and `L2capChannelReader` are dropped, so you don't need to call this explicitly.
     #[inline]
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> std::io::Result<()> {
         self.writer.close().await
     }
 }

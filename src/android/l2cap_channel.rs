@@ -156,7 +156,7 @@ pub struct L2capChannelReader {
 }
 
 impl L2capChannelReader {
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> std::io::Result<()> {
         self.closer.close();
         Ok(())
     }
@@ -181,7 +181,7 @@ pub struct L2capChannelWriter {
 }
 
 impl L2capChannelWriter {
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> std::io::Result<()> {
         self.closer.close();
         Ok(())
     }
