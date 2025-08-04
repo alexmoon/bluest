@@ -24,3 +24,34 @@ fn kind_from_bluer(err: &bluer::Error) -> ErrorKind {
         _ => ErrorKind::Other,
     }
 }
+
+#[cfg(feature = "l2cap")]
+impl From<std::io::Error> for crate::Error {
+    fn from(err: std::io::Error) -> Self {
+        crate::Error::new(kind_from_io(&err.kind()), Some(Box::new(err)), String::new())
+    }
+}
+
+#[cfg(feature = "l2cap")]
+fn kind_from_io(err: &std::io::ErrorKind) -> ErrorKind {
+    use std::io::ErrorKind as StdErrorKind;
+
+    match err {
+        StdErrorKind::NotFound => ErrorKind::NotFound,
+        StdErrorKind::PermissionDenied => ErrorKind::NotAuthorized,
+        StdErrorKind::ConnectionRefused
+        | StdErrorKind::ConnectionReset
+        | StdErrorKind::HostUnreachable
+        | StdErrorKind::NetworkUnreachable
+        | StdErrorKind::ConnectionAborted => ErrorKind::ConnectionFailed,
+        StdErrorKind::NotConnected => ErrorKind::NotConnected,
+        StdErrorKind::AddrNotAvailable | StdErrorKind::NetworkDown | StdErrorKind::ResourceBusy => {
+            ErrorKind::AdapterUnavailable
+        }
+        StdErrorKind::TimedOut => ErrorKind::Timeout,
+        StdErrorKind::Unsupported => ErrorKind::NotSupported,
+        StdErrorKind::Other => ErrorKind::Other,
+        // None of the other errors have semantic meaning for us
+        _ => ErrorKind::Internal,
+    }
+}
