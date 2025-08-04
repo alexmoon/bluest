@@ -190,8 +190,7 @@ impl L2capChannelWriter {
 impl AsyncWrite for L2capChannelWriter {
     fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
         let stream = pin::pin!(&mut self.stream);
-        let ret = stream.poll_write(cx, buf);
-        ret
+        stream.poll_write(cx, buf)
     }
 
     fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
