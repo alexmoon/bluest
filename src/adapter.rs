@@ -21,7 +21,6 @@ impl Adapter {
 
     /// Creates an interface to a Bluetooth adapter using the default config.
     #[inline]
-    #[cfg(not(target_os = "android"))]
     pub async fn default() -> Result<Self> {
         sys::adapter::AdapterImpl::with_config(AdapterConfig::default())
             .await

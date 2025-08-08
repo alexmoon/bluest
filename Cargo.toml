@@ -17,11 +17,13 @@ targets = [
     "x86_64-apple-darwin",
     "x86_64-pc-windows-msvc",
     "x86_64-unknown-linux-gnu",
-    "aarch64-linux-android"
+    "aarch64-linux-android",
 ]
 
 [features]
 unstable = []
+# TODO: remove these default features!
+default = ["unstable", "l2cap"]
 l2cap = []
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
@@ -31,6 +33,9 @@ futures-core = "0.3.28"
 futures-lite = { version = "1.13.0", default-features = false }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
+
+[build-dependencies]
+android-build = "0.1.2"
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
@@ -53,7 +58,7 @@ windows = { version = "0.48.0", features = [
     "Storage_Streams",
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
-    "Win32_System_SystemInformation"
+    "Win32_System_SystemInformation",
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -62,7 +67,10 @@ tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 java-spaghetti = "0.2.0"
+ndk-context = "0.1.1"
 async-channel = "2.2.0"
+async-broadcast = "0.7.2"
+async-lock = "3.4.0"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.7.2"

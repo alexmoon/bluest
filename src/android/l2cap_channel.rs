@@ -8,7 +8,7 @@ use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
-use super::OptionExt;
+use super::{vm_context::jni_with_env, OptionExt};
 use crate::error::ErrorKind;
 use crate::{Error, Result};
 
@@ -17,7 +17,7 @@ pub fn open_l2cap_channel(
     psm: u16,
     secure: bool,
 ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-    device.vm().with_env(|env| {
+    jni_with_env(|env| {
         let device = device.as_local(env);
 
         let channel = if secure {
@@ -49,7 +49,7 @@ pub fn open_l2cap_channel(
         thread::spawn(move || {
             debug!("l2cap read thread running!");
 
-            input_stream.vm().with_env(|env| {
+            jni_with_env(|env| {
                 let stream = input_stream.as_local(env);
                 let arr: Local<ByteArray> = ByteArray::new(env, 1024);
 
@@ -82,7 +82,7 @@ pub fn open_l2cap_channel(
         thread::spawn(move || {
             debug!("l2cap write thread running!");
 
-            output_stream.vm().with_env(|env| {
+            jni_with_env(|env| {
                 let stream = output_stream.as_local(env);
 
                 loop {
@@ -125,7 +125,7 @@ pub(super) struct L2capCloser {
 
 impl L2capCloser {
     fn close(&self) {
-        self.channel.vm().with_env(|env| {
+        jni_with_env(|env| {
             let channel = self.channel.as_local(env);
             match channel.close() {
                 Ok(()) => debug!("l2cap channel closed"),

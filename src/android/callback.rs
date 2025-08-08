@@ -1,0 +1,819 @@
+#![allow(non_snake_case)]
+#![allow(dead_code)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::unused_unit)]
+
+use java_spaghetti::{Env, Global, Ref};
+use std::ffi::{c_char, c_void, CStr};
+use std::sync::LazyLock;
+
+use crate::android::bindings::java::lang::Class;
+use crate::android::vm_context::jni_load_class_with;
+
+use super::bindings::{
+    android::{
+        bluetooth::le::*,
+        bluetooth::*,
+        content::{BroadcastReceiver, Context, Intent},
+    },
+    java::lang::ClassLoader,
+    java::{self, lang::Throwable},
+};
+use super::vm_context::android_load_dex;
+use java_spaghetti::sys::JNINativeMethod;
+
+const DEX_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));
+static DEX_CLASS_LOADER: LazyLock<Global<ClassLoader>> = LazyLock::new(|| android_load_dex(DEX_DATA));
+
+// TODO: remove code below after publishing a new version of `java-spaghetti`.
+
+trait EnvExt<'env> {
+    unsafe fn register_native_method(
+        &'env self,
+        class: &Ref<'env, Class>,
+        method: &CStr,
+        descriptor: &CStr,
+        fn_ptr: *mut c_void,
+    );
+}
+
+impl<'env> EnvExt<'env> for Env<'env> {
+    /// Binds the function pointer to the native method of `class` according to method name and signature.
+    ///
+    /// # Safety
+    ///
+    /// The native method pointer must be a valid, non-null pointer to a function that match the signature
+    /// of the corresponding Java method of `class`.
+    unsafe fn register_native_method(
+        &self,
+        class: &Ref<'env, Class>,
+        method: &CStr,
+        descriptor: &CStr,
+        fn_ptr: *mut c_void,
+    ) {
+        // `RegisterNatives` shouldn't modify `name` and `signature`, but still clone them.
+        let (method, descriptor) = (method.to_owned(), descriptor.to_owned());
+        let mut native_methods = [JNINativeMethod {
+            name: method.as_ptr() as *mut c_char,
+            signature: descriptor.as_ptr() as *mut c_char,
+            fnPtr: fn_ptr,
+        }];
+        let jnienv = self.as_raw();
+        let res = ((**jnienv).v1_2.RegisterNatives)(jnienv, class.as_raw(), native_methods.as_mut_ptr(), 1);
+
+        let exception = unsafe { ((**jnienv).v1_2.ExceptionOccurred)(jnienv) };
+        assert!(
+            exception.is_null() && res >= 0,
+            "error ocurred while calling JNI RegisterNatives"
+        );
+    }
+}
+
+pub trait BroadcastReceiverProxy: ::std::marker::Send + ::std::marker::Sync + 'static {
+    fn onReceive<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, Context>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, Intent>>,
+    ) -> ();
+}
+impl BroadcastReceiver {
+    pub fn new_proxy<'env>(
+        env: ::java_spaghetti::Env<'env>,
+        proxy: ::std::sync::Arc<dyn BroadcastReceiverProxy>,
+    ) -> Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, Throwable>> {
+        static __CLASS: ::std::sync::OnceLock<Global<Class>> = ::std::sync::OnceLock::new();
+        let __jni_class = if let Some(cached) = __CLASS.get() {
+            cached
+        } else {
+            let loaded = {
+                let loader = DEX_CLASS_LOADER.as_ref(env);
+                jni_load_class_with(
+                    loader,
+                    "com/github/alexmoon/bluest/proxy/android/content/BroadcastReceiver",
+                )
+                .unwrap()
+            };
+            Self::register_proxy_methods(env, &loaded.as_ref(env));
+            __CLASS.get_or_init(|| loaded)
+        }
+        .as_raw();
+        let b = ::std::boxed::Box::new(proxy);
+        let ptr = ::std::boxed::Box::into_raw(b);
+        unsafe {
+            let __jni_args = [::java_spaghetti::sys::jvalue {
+                j: ptr.expose_provenance() as i64,
+            }];
+            let __jni_method = env.require_method(__jni_class, "<init>\0", "(J)V\0");
+            env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+        }
+    }
+    fn register_proxy_methods<'env>(env: ::java_spaghetti::Env<'env>, proxy_class: &Ref<'env, Class>) {
+        unsafe {
+            {
+                let method_name = c"native_onReceive";
+                let descriptor = c"(JLandroid/content/Context;Landroid/content/Intent;)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_content_BroadcastReceiver_native_1onReceive__JLandroid_content_Context_2Landroid_content_Intent_2 as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_finalize";
+                let descriptor = c"(J)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_content_BroadcastReceiver_native_1finalize__J
+                    as *mut _;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_content_BroadcastReceiver_native_1finalize__J(
+    __jni_env: ::java_spaghetti::Env<'_>,
+    _class: *mut (),
+    ptr: i64,
+) {
+    let ptr: *mut ::std::sync::Arc<dyn BroadcastReceiverProxy> = ::std::ptr::with_exposed_provenance_mut(ptr as usize);
+    let _ = unsafe { Box::from_raw(ptr) };
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_content_BroadcastReceiver_native_1onReceive__JLandroid_content_Context_2Landroid_content_Intent_2<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<Context>,
+    arg1: ::java_spaghetti::Arg<Intent>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BroadcastReceiverProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onReceive(__jni_env, arg0.into_ref(__jni_env), arg1.into_ref(__jni_env)) }
+}
+
+pub trait ScanCallbackProxy: ::std::marker::Send + ::std::marker::Sync + 'static {
+    fn onScanResult<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: i32,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, ScanResult>>,
+    ) -> ();
+    fn onBatchScanResults<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, java::util::List>>,
+    ) -> ();
+    fn onScanFailed<'env>(&self, env: ::java_spaghetti::Env<'env>, arg0: i32) -> ();
+}
+
+impl ScanCallback {
+    pub fn new_proxy<'env>(
+        env: ::java_spaghetti::Env<'env>,
+        proxy: ::std::sync::Arc<dyn ScanCallbackProxy>,
+    ) -> Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, Throwable>> {
+        static __CLASS: ::std::sync::OnceLock<Global<Class>> = ::std::sync::OnceLock::new();
+        let __jni_class = if let Some(cached) = __CLASS.get() {
+            cached
+        } else {
+            let loaded = {
+                let loader = DEX_CLASS_LOADER.as_ref(env);
+                jni_load_class_with(
+                    loader,
+                    "com/github/alexmoon/bluest/proxy/android/bluetooth/le/ScanCallback",
+                )
+                .unwrap()
+            };
+            Self::register_proxy_methods(env, &loaded.as_ref(env));
+            __CLASS.get_or_init(|| loaded)
+        }
+        .as_raw();
+        let b = ::std::boxed::Box::new(proxy);
+        let ptr = ::std::boxed::Box::into_raw(b);
+        unsafe {
+            let __jni_args = [::java_spaghetti::sys::jvalue {
+                j: ptr.expose_provenance() as i64,
+            }];
+            let __jni_method = env.require_method(__jni_class, "<init>\0", "(J)V\0");
+            env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+        }
+    }
+    fn register_proxy_methods<'env>(env: ::java_spaghetti::Env<'env>, proxy_class: &Ref<'env, Class>) {
+        unsafe {
+            {
+                let method_name = c"native_onScanResult";
+                let descriptor = c"(JILandroid/bluetooth/le/ScanResult;)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onScanResult__JILandroid_bluetooth_le_ScanResult_2 as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onBatchScanResults";
+                let descriptor = c"(JLjava/util/List;)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onBatchScanResults__JLjava_util_List_2 as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onScanFailed";
+                let descriptor = c"(JI)V";
+                let fn_ptr =
+                    Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onScanFailed__JI
+                        as *mut _;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_finalize";
+                let descriptor = c"(J)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1finalize__J
+                    as *mut _;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1finalize__J(
+    __jni_env: ::java_spaghetti::Env<'_>,
+    _class: *mut (),
+    ptr: i64,
+) {
+    let ptr: *mut ::std::sync::Arc<dyn ScanCallbackProxy> = ::std::ptr::with_exposed_provenance_mut(ptr as usize);
+    let _ = unsafe { Box::from_raw(ptr) };
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onScanResult__JILandroid_bluetooth_le_ScanResult_2<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: i32,
+    arg1: ::java_spaghetti::Arg<ScanResult>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn ScanCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onScanResult(__jni_env, arg0, arg1.into_ref(__jni_env)) }
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onBatchScanResults__JLjava_util_List_2<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<java::util::List>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn ScanCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onBatchScanResults(__jni_env, arg0.into_ref(__jni_env)) }
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_le_ScanCallback_native_1onScanFailed__JI<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn ScanCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onScanFailed(__jni_env, arg0) }
+}
+
+pub trait BluetoothGattCallbackProxy: ::std::marker::Send + ::std::marker::Sync + 'static {
+    fn onPhyUpdate<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+        arg2: i32,
+        arg3: i32,
+    ) -> ();
+    fn onPhyRead<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+        arg2: i32,
+        arg3: i32,
+    ) -> ();
+    fn onConnectionStateChange<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+        arg2: i32,
+    ) -> ();
+    fn onServicesDiscovered<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+    ) -> ();
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_int<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattCharacteristic>>,
+        arg2: i32,
+    ) -> ();
+    fn onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_byte_array_int<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattCharacteristic>>,
+        arg2: ::std::option::Option<::java_spaghetti::Ref<'env, ::java_spaghetti::ByteArray>>,
+        arg3: i32,
+    ) -> ();
+    fn onCharacteristicWrite<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattCharacteristic>>,
+        arg2: i32,
+    ) -> ();
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattCharacteristic>>,
+    ) -> ();
+    fn onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic_byte_array<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattCharacteristic>>,
+        arg2: ::std::option::Option<::java_spaghetti::Ref<'env, ::java_spaghetti::ByteArray>>,
+    ) -> ();
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattDescriptor>>,
+        arg2: i32,
+    ) -> ();
+    fn onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int_byte_array<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattDescriptor>>,
+        arg2: i32,
+        arg3: ::std::option::Option<::java_spaghetti::Ref<'env, ::java_spaghetti::ByteArray>>,
+    ) -> ();
+    fn onDescriptorWrite<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGattDescriptor>>,
+        arg2: i32,
+    ) -> ();
+    fn onReliableWriteCompleted<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+    ) -> ();
+    fn onReadRemoteRssi<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+        arg2: i32,
+    ) -> ();
+    fn onMtuChanged<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+        arg1: i32,
+        arg2: i32,
+    ) -> ();
+    fn onServiceChanged<'env>(
+        &self,
+        env: ::java_spaghetti::Env<'env>,
+        arg0: ::std::option::Option<::java_spaghetti::Ref<'env, BluetoothGatt>>,
+    ) -> ();
+}
+
+impl BluetoothGattCallback {
+    pub fn new_proxy<'env>(
+        env: ::java_spaghetti::Env<'env>,
+        proxy: ::std::sync::Arc<dyn BluetoothGattCallbackProxy>,
+    ) -> Result<::java_spaghetti::Local<'env, Self>, ::java_spaghetti::Local<'env, Throwable>> {
+        static __CLASS: ::std::sync::OnceLock<Global<Class>> = ::std::sync::OnceLock::new();
+        let __jni_class = if let Some(cached) = __CLASS.get() {
+            cached
+        } else {
+            let loaded = {
+                let loader = DEX_CLASS_LOADER.as_ref(env);
+                jni_load_class_with(
+                    loader,
+                    "com/github/alexmoon/bluest/proxy/android/bluetooth/BluetoothGattCallback",
+                )
+                .unwrap()
+            };
+            Self::register_proxy_methods(env, &loaded.as_ref(env));
+            __CLASS.get_or_init(|| loaded)
+        }
+        .as_raw();
+        let b = ::std::boxed::Box::new(proxy);
+        let ptr = ::std::boxed::Box::into_raw(b);
+        unsafe {
+            let __jni_args = [::java_spaghetti::sys::jvalue {
+                j: ptr.expose_provenance() as i64,
+            }];
+            let __jni_method = env.require_method(__jni_class, "<init>\0", "(J)V\0");
+            env.new_object_a(__jni_class, __jni_method, __jni_args.as_ptr())
+        }
+    }
+
+    fn register_proxy_methods<'env>(env: ::java_spaghetti::Env<'env>, proxy_class: &Ref<'env, Class>) {
+        unsafe {
+            {
+                let method_name = c"native_onPhyUpdate";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;III)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onPhyUpdate__JLandroid_bluetooth_BluetoothGatt_2III as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onPhyRead";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;III)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onPhyRead__JLandroid_bluetooth_BluetoothGatt_2III as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onConnectionStateChange";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;II)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onConnectionStateChange__JLandroid_bluetooth_BluetoothGatt_2II as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onServicesDiscovered";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onServicesDiscovered__JLandroid_bluetooth_BluetoothGatt_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onCharacteristicRead";
+                let descriptor =
+                    c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onCharacteristicRead";
+                let descriptor =
+                    c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[BI)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2_3BI as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onCharacteristicWrite";
+                let descriptor =
+                    c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicWrite__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onCharacteristicChanged";
+                let descriptor =
+                    c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicChanged__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2 as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onCharacteristicChanged";
+                let descriptor =
+                    c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattCharacteristic;[B)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicChanged__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2_3B as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onDescriptorRead";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onDescriptorRead";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I[B)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I_3B as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onDescriptorWrite";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;Landroid/bluetooth/BluetoothGattDescriptor;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorWrite__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onReliableWriteCompleted";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;I)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onReliableWriteCompleted__JLandroid_bluetooth_BluetoothGatt_2I as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onReadRemoteRssi";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;II)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onReadRemoteRssi__JLandroid_bluetooth_BluetoothGatt_2II as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onMtuChanged";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;II)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onMtuChanged__JLandroid_bluetooth_BluetoothGatt_2II as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_onServiceChanged";
+                let descriptor = c"(JLandroid/bluetooth/BluetoothGatt;)V";
+                let fn_ptr = Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onServiceChanged__JLandroid_bluetooth_BluetoothGatt_2 as * mut _ ;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+            {
+                let method_name = c"native_finalize";
+                let descriptor = c"(J)V";
+                let fn_ptr =
+                    Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1finalize__J
+                        as *mut _;
+                let _ = env.register_native_method(proxy_class, method_name, descriptor, fn_ptr);
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1finalize__J(
+    __jni_env: ::java_spaghetti::Env<'_>,
+    _class: *mut (),
+    ptr: i64,
+) {
+    let ptr: *mut ::std::sync::Arc<dyn BluetoothGattCallbackProxy> =
+        ::std::ptr::with_exposed_provenance_mut(ptr as usize);
+    let _ = unsafe { Box::from_raw(ptr) };
+}
+
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onPhyUpdate__JLandroid_bluetooth_BluetoothGatt_2III<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+    arg2: i32,
+    arg3: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onPhyUpdate(__jni_env, arg0.into_ref(__jni_env), arg1, arg2, arg3) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onPhyRead__JLandroid_bluetooth_BluetoothGatt_2III<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+    arg2: i32,
+    arg3: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onPhyRead(__jni_env, arg0.into_ref(__jni_env), arg1, arg2, arg3) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onConnectionStateChange__JLandroid_bluetooth_BluetoothGatt_2II<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onConnectionStateChange(__jni_env, arg0.into_ref(__jni_env), arg1, arg2) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onServicesDiscovered__JLandroid_bluetooth_BluetoothGatt_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onServicesDiscovered(__jni_env, arg0.into_ref(__jni_env), arg1) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattCharacteristic>,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_int(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+            arg2,
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2_3BI<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattCharacteristic>,
+    arg2: ::java_spaghetti::Arg<::java_spaghetti::ByteArray>,
+    arg3: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onCharacteristicRead_BluetoothGatt_BluetoothGattCharacteristic_byte_array_int(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+            arg2.into_ref(__jni_env),
+            arg3,
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicWrite__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattCharacteristic>,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onCharacteristicWrite(__jni_env, arg0.into_ref(__jni_env), arg1.into_ref(__jni_env), arg2) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicChanged__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattCharacteristic>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onCharacteristicChanged__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattCharacteristic_2_3B<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattCharacteristic>,
+    arg2: ::java_spaghetti::Arg<::java_spaghetti::ByteArray>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onCharacteristicChanged_BluetoothGatt_BluetoothGattCharacteristic_byte_array(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+            arg2.into_ref(__jni_env),
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattDescriptor>,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+            arg2,
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorRead__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I_3B<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattDescriptor>,
+    arg2: i32,
+    arg3: ::java_spaghetti::Arg<::java_spaghetti::ByteArray>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe {
+        (*ptr).onDescriptorRead_BluetoothGatt_BluetoothGattDescriptor_int_byte_array(
+            __jni_env,
+            arg0.into_ref(__jni_env),
+            arg1.into_ref(__jni_env),
+            arg2,
+            arg3.into_ref(__jni_env),
+        )
+    }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onDescriptorWrite__JLandroid_bluetooth_BluetoothGatt_2Landroid_bluetooth_BluetoothGattDescriptor_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: ::java_spaghetti::Arg<BluetoothGattDescriptor>,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onDescriptorWrite(__jni_env, arg0.into_ref(__jni_env), arg1.into_ref(__jni_env), arg2) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onReliableWriteCompleted__JLandroid_bluetooth_BluetoothGatt_2I<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onReliableWriteCompleted(__jni_env, arg0.into_ref(__jni_env), arg1) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onReadRemoteRssi__JLandroid_bluetooth_BluetoothGatt_2II<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onReadRemoteRssi(__jni_env, arg0.into_ref(__jni_env), arg1, arg2) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onMtuChanged__JLandroid_bluetooth_BluetoothGatt_2II<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+    arg1: i32,
+    arg2: i32,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onMtuChanged(__jni_env, arg0.into_ref(__jni_env), arg1, arg2) }
+}
+#[unsafe(no_mangle)]
+extern "system" fn Java_com_github_alexmoon_bluest_proxy_android_bluetooth_BluetoothGattCallback_native_1onServiceChanged__JLandroid_bluetooth_BluetoothGatt_2<
+    'env,
+>(
+    __jni_env: ::java_spaghetti::Env<'env>,
+    _class: *mut (),
+    ptr: i64,
+    arg0: ::java_spaghetti::Arg<BluetoothGatt>,
+) -> () {
+    let ptr: *const std::sync::Arc<dyn BluetoothGattCallbackProxy> = ::std::ptr::with_exposed_provenance(ptr as usize);
+    unsafe { (*ptr).onServiceChanged(__jni_env, arg0.into_ref(__jni_env)) }
+}
