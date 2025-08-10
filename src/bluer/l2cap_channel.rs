@@ -1,54 +1,51 @@
 #![cfg(feature = "l2cap")]
 
-use std::fmt;
+use std::pin::Pin;
+use std::task::Context;
 
-use crate::Result;
+use futures_lite::io::{AsyncRead, AsyncWrite};
 
+#[derive(Debug)]
 pub struct L2capChannelReader {
     _private: (),
 }
 
 impl L2capChannelReader {
-    #[inline]
-    pub async fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
-
-    pub fn try_read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
-
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> crate::Result<()> {
         todo!()
     }
 }
 
-impl fmt::Debug for L2capChannelReader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelReader")
+impl AsyncRead for L2capChannelReader {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        _buf: &mut [u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        todo!()
     }
 }
-
+#[derive(Debug)]
 pub struct L2capChannelWriter {
     _private: (),
 }
 
 impl L2capChannelWriter {
-    pub async fn write(&mut self, _packet: &[u8]) -> Result<()> {
-        todo!()
-    }
-
-    pub fn try_write(&mut self, _packet: &[u8]) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn close(&mut self) -> Result<()> {
+    pub async fn close(&mut self) -> crate::Result<()> {
         todo!()
     }
 }
 
-impl fmt::Debug for L2capChannelWriter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelWriter")
+impl AsyncWrite for L2capChannelWriter {
+    fn poll_write(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &[u8]) -> std::task::Poll<std::io::Result<usize>> {
+        todo!()
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+        todo!()
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+        todo!()
     }
 }

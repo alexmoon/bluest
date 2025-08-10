@@ -22,7 +22,7 @@ targets = [
 
 [features]
 unstable = []
-l2cap = []
+l2cap = ["dep:piper", "futures-lite/std", "futures-lite/alloc"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
@@ -69,10 +69,11 @@ ndk-context = "0.1.1"
 async-channel = "2.2.0"
 async-broadcast = "0.7.2"
 async-lock = "3.4.0"
+piper = {version = "0.2.4", optional = true}
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.7.2"
-async-channel = "2.3.1"
+piper = {version = "0.2.4", optional = true}
 objc2 = "0.6.1"
 objc2-foundation = "0.3.1"
 objc2-core-bluetooth = "0.3.1"
