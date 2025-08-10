@@ -237,6 +237,10 @@ impl DeviceImpl {
         psm: u16,
         secure: bool,
     ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+        use tracing::warn;
+        if self.get_connection().is_ok() {
+            warn!("trying to open L2CAP channel while there is a GATT connection. this is problematic.");
+        }
         super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
     }
 

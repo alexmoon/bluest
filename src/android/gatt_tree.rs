@@ -20,7 +20,7 @@ use crate::{ConnectionEvent, DeviceId, Uuid};
 static GATT_CONNECTIONS: LazyLock<Mutex<HashMap<DeviceId, Arc<GattConnection>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-static CONNECTION_EVENTS: LazyLock<Notifier<(DeviceId, ConnectionEvent)>> = LazyLock::new(|| Notifier::new(32));
+static CONNECTION_EVENTS: Notifier<(DeviceId, ConnectionEvent)> = Notifier::new(32);
 
 pub(crate) use cached_weak::CachedWeak;
 mod cached_weak {

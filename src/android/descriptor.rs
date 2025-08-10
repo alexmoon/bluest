@@ -56,6 +56,9 @@ impl DescriptorImpl {
         ))??)
     }
 
+    // NOTE: the sequence of gaining read lock and write lock should be the same
+    // in `read` and `write` methods, otherwise deadlock may occur.
+
     pub async fn read(&self) -> Result<Vec<u8>> {
         let conn = GattTree::find_connection(&self.dev_id).ok_or_check_conn(&self.dev_id)?;
         let inner = self.get_inner()?;

@@ -10,8 +10,9 @@ use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, trace, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
-use super::vm_context::jni_with_env;
+use super::vm_context::{android_api_level, jni_with_env};
 use super::OptionExt;
+use crate::error::ErrorKind;
 use crate::l2cap_channel::PIPE_CAPACITY;
 use crate::Result;
 
@@ -20,6 +21,13 @@ pub fn open_l2cap_channel(
     psm: u16,
     secure: bool,
 ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+    if android_api_level() < 29 {
+        return Err(crate::Error::new(
+            ErrorKind::NotSupported,
+            None,
+            "creating L2CAP channel requires Android API level 29 or higher",
+        ));
+    }
     jni_with_env(|env| {
         let device = device.as_local(env);
 
@@ -190,8 +198,7 @@ impl L2capChannelWriter {
 impl AsyncWrite for L2capChannelWriter {
     fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
         let stream = pin::pin!(&mut self.stream);
-        let ret = stream.poll_write(cx, buf);
-        ret
+        stream.poll_write(cx, buf)
     }
 
     fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
