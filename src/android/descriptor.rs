@@ -1,14 +1,13 @@
-use java_spaghetti::ByteArray;
 use std::sync::Arc;
 
-use crate::{error::ErrorKind, DeviceId, Result, Uuid};
+use java_spaghetti::ByteArray;
 
-use super::{
-    gatt_tree::{CachedWeak, DescriptorInner, GattTree},
-    jni::{ByteArrayExt, Monitor},
-    vm_context::{android_api_level, jni_with_env},
-    BoolExt, IntExt, OptionExt,
-};
+use super::gatt_tree::{CachedWeak, DescriptorInner, GattTree};
+use super::jni::{ByteArrayExt, Monitor};
+use super::vm_context::{android_api_level, jni_with_env};
+use super::{BoolExt, IntExt, OptionExt};
+use crate::error::ErrorKind;
+use crate::{DeviceId, Result, Uuid};
 
 #[derive(Debug, Clone)]
 pub struct DescriptorImpl {

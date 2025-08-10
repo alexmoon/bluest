@@ -1,5 +1,5 @@
-use std::sync::Arc;
-use std::{collections::HashMap, sync::OnceLock};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 
 use futures_core::Stream;
 use futures_lite::{stream, StreamExt};
@@ -7,29 +7,29 @@ use java_spaghetti::{ByteArray, Env, Global, IntArray, Local, Null, PrimitiveArr
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-use super::bindings::{
-    android::{
-        bluetooth::{
-            le::{ScanCallback, ScanFilter_Builder, ScanResult, ScanSettings, ScanSettings_Builder},
-            BluetoothAdapter, BluetoothDevice, BluetoothGattCallback, BluetoothManager, BluetoothProfile,
-        },
-        content::Context as AndroidContext,
-        os::ParcelUuid,
-    },
-    java::{self, lang::String as JString, util::Map_Entry},
+use super::async_util::StreamUntil;
+use super::bindings::android::bluetooth::le::{
+    ScanCallback, ScanFilter_Builder, ScanResult, ScanSettings, ScanSettings_Builder,
 };
-use super::{
-    async_util::StreamUntil,
-    device::DeviceImpl,
-    event_receiver::{EventReceiver, GlobalEvent},
-    gatt_tree::{BluetoothGattCallbackProxy, CachedWeak, GattTree},
-    jni::{ByteArrayExt, Monitor, VM},
-    vm_context::{android_api_level, android_context, jni_get_vm, jni_set_vm, jni_with_env},
-    JavaIterator, OptionExt,
+use super::bindings::android::bluetooth::{
+    BluetoothAdapter, BluetoothDevice, BluetoothGattCallback, BluetoothManager, BluetoothProfile,
 };
+use super::bindings::android::content::Context as AndroidContext;
+use super::bindings::android::os::ParcelUuid;
+use super::bindings::java::lang::String as JString;
+use super::bindings::java::util::Map_Entry;
+use super::bindings::java::{self};
+use super::device::DeviceImpl;
+use super::event_receiver::{EventReceiver, GlobalEvent};
+use super::gatt_tree::{BluetoothGattCallbackProxy, CachedWeak, GattTree};
+use super::jni::{ByteArrayExt, Monitor, VM};
+use super::vm_context::{android_api_level, android_context, jni_get_vm, jni_set_vm, jni_with_env};
+use super::{JavaIterator, OptionExt};
+use crate::error::ErrorKind;
+use crate::util::defer;
 use crate::{
-    error::ErrorKind, util::defer, AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device,
-    DeviceId, Error, ManufacturerData, Result,
+    AdapterEvent, AdvertisementData, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, ManufacturerData,
+    Result,
 };
 
 #[derive(Clone)]

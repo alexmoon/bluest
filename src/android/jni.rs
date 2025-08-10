@@ -3,7 +3,8 @@
 use std::ptr::null_mut;
 use std::slice::from_raw_parts;
 
-use java_spaghetti::{sys::*, ByteArray, Env, Local, PrimitiveArray, Ref, ReferenceType};
+use java_spaghetti::sys::*;
+use java_spaghetti::{ByteArray, Env, Local, PrimitiveArray, Ref, ReferenceType};
 
 /// FFI: Use **&VM** instead of *const JavaVM.  This represents a global, process-wide Java exection environment.
 ///

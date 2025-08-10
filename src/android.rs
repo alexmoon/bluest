@@ -127,8 +127,9 @@ trait IntExt {
 impl IntExt for i32 {
     #[track_caller]
     fn check_status_code(self) -> Result<(), crate::Error> {
-        use crate::Error;
         use bindings::android::bluetooth::BluetoothStatusCodes;
+
+        use crate::Error;
         if self == BluetoothStatusCodes::SUCCESS {
             return Ok(());
         }

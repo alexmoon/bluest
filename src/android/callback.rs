@@ -3,24 +3,20 @@
 #![allow(clippy::let_unit_value)]
 #![allow(clippy::unused_unit)]
 
-use java_spaghetti::{Env, Global, Ref};
 use std::ffi::{c_char, c_void, CStr};
 use std::sync::LazyLock;
 
+use java_spaghetti::sys::JNINativeMethod;
+use java_spaghetti::{Env, Global, Ref};
+
+use super::bindings::android::bluetooth::le::*;
+use super::bindings::android::bluetooth::*;
+use super::bindings::android::content::{BroadcastReceiver, Context, Intent};
+use super::bindings::java::lang::{ClassLoader, Throwable};
+use super::bindings::java::{self};
+use super::vm_context::android_load_dex;
 use crate::android::bindings::java::lang::Class;
 use crate::android::vm_context::jni_load_class_with;
-
-use super::bindings::{
-    android::{
-        bluetooth::le::*,
-        bluetooth::*,
-        content::{BroadcastReceiver, Context, Intent},
-    },
-    java::lang::ClassLoader,
-    java::{self, lang::Throwable},
-};
-use super::vm_context::android_load_dex;
-use java_spaghetti::sys::JNINativeMethod;
 
 const DEX_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));
 static DEX_CLASS_LOADER: LazyLock<Global<ClassLoader>> = LazyLock::new(|| android_load_dex(DEX_DATA));

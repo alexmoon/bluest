@@ -1,11 +1,10 @@
+use std::sync::{Arc, OnceLock};
+
 use futures_core::Stream;
 use futures_lite::StreamExt;
 use java_spaghetti::Global;
-use std::sync::{Arc, OnceLock};
 use tracing::info;
 use uuid::Uuid;
-
-use crate::{error::ErrorKind, pairing::PairingAgent, DeviceId, Error, Result, Service, ServicesChanged};
 
 use super::bindings::android::bluetooth::BluetoothDevice;
 use super::event_receiver::GlobalEvent;
@@ -16,6 +15,9 @@ use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::service::ServiceImpl;
 use super::vm_context::{android_api_level, jni_with_env};
 use super::{BoolExt, OptionExt};
+use crate::error::ErrorKind;
+use crate::pairing::PairingAgent;
+use crate::{DeviceId, Error, Result, Service, ServicesChanged};
 
 #[derive(Clone)]
 pub struct DeviceImpl {

@@ -6,14 +6,11 @@ use std::sync::OnceLock;
 use java_spaghetti::{Env, Global, Ref};
 use tracing::warn;
 
-use super::bindings::{
-    android::{content::Context, os::Build_VERSION},
-    dalvik::system::{DexClassLoader, InMemoryDexClassLoader},
-    java::{
-        lang::{Class, ClassLoader, Object, String as JString, Throwable},
-        nio,
-    },
-};
+use super::bindings::android::content::Context;
+use super::bindings::android::os::Build_VERSION;
+use super::bindings::dalvik::system::{DexClassLoader, InMemoryDexClassLoader};
+use super::bindings::java::lang::{Class, ClassLoader, Object, String as JString, Throwable};
+use super::bindings::java::nio;
 use super::jni::{ByteArrayExt, VM};
 
 static JAVA_VM: OnceLock<VM> = OnceLock::new();

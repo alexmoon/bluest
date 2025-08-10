@@ -1,15 +1,15 @@
+use std::sync::{Arc, Mutex, OnceLock, Weak};
+
+use java_spaghetti::{Env, Global, Ref};
+use tracing::{error, info};
+
+use super::async_util::{Notifier, NotifierReceiver};
 use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothDevice};
 use super::bindings::android::content::{BroadcastReceiver, Context, Intent, IntentFilter};
 use super::bindings::java::lang::{Class, String as JString};
+use super::gatt_tree::GattTree;
 use super::vm_context::{android_api_level, android_context, jni_with_env};
-use super::{
-    async_util::{Notifier, NotifierReceiver},
-    DeviceId,
-};
-use super::{gatt_tree::GattTree, OptionExt};
-use java_spaghetti::{Env, Global, Ref};
-use std::sync::{Arc, Mutex, OnceLock, Weak};
-use tracing::{error, info}; // TODO: make it working in the thread of Java callback
+use super::{DeviceId, OptionExt}; // TODO: make it working in the thread of Java callback
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]

@@ -1,12 +1,11 @@
-use super::{
-    bindings::android::bluetooth::BluetoothGattService,
-    characteristic::CharacteristicImpl,
-    gatt_tree::{CachedWeak, GattTree, ServiceInner},
-    vm_context::jni_with_env,
-    DeviceId, JavaIterator, OptionExt, UuidExt,
-};
-use crate::{Characteristic, Result, Service, Uuid};
 use std::sync::Arc;
+
+use super::bindings::android::bluetooth::BluetoothGattService;
+use super::characteristic::CharacteristicImpl;
+use super::gatt_tree::{CachedWeak, GattTree, ServiceInner};
+use super::vm_context::jni_with_env;
+use super::{DeviceId, JavaIterator, OptionExt, UuidExt};
+use crate::{Characteristic, Result, Service, Uuid};
 
 #[derive(Debug, Clone)]
 pub struct ServiceImpl {

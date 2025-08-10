@@ -10,11 +10,10 @@ use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, trace, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
-
-use super::{vm_context::jni_with_env, OptionExt};
-use crate::error::ErrorKind;
-use crate::{Error, Result};
+use super::vm_context::jni_with_env;
+use super::OptionExt;
 use crate::l2cap_channel::PIPE_CAPACITY;
+use crate::Result;
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,

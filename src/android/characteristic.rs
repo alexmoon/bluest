@@ -1,19 +1,18 @@
+use std::sync::Arc;
+
 use futures_core::Stream;
 use futures_lite::StreamExt;
 use java_spaghetti::ByteArray;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{error::ErrorKind, CharacteristicProperties, Descriptor, DeviceId, Result};
-
-use super::{
-    bindings::android::bluetooth::BluetoothGattCharacteristic,
-    descriptor::DescriptorImpl,
-    gatt_tree::{CachedWeak, CharacteristicInner, GattTree},
-    jni::{ByteArrayExt, Monitor},
-    vm_context::{android_api_level, jni_with_env},
-    BoolExt, IntExt, OptionExt,
-};
+use super::bindings::android::bluetooth::BluetoothGattCharacteristic;
+use super::descriptor::DescriptorImpl;
+use super::gatt_tree::{CachedWeak, CharacteristicInner, GattTree};
+use super::jni::{ByteArrayExt, Monitor};
+use super::vm_context::{android_api_level, jni_with_env};
+use super::{BoolExt, IntExt, OptionExt};
+use crate::error::ErrorKind;
+use crate::{CharacteristicProperties, Descriptor, DeviceId, Result};
 
 #[derive(Debug, Clone)]
 pub struct CharacteristicImpl {

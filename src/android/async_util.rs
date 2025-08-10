@@ -1,11 +1,12 @@
-use async_broadcast::{Receiver, Sender};
-use async_lock::{Mutex, MutexGuard};
-use futures_core::Stream;
-use futures_lite::StreamExt;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task;
+
+use async_broadcast::{Receiver, Sender};
+use async_lock::{Mutex, MutexGuard};
+use futures_core::Stream;
+use futures_lite::StreamExt;
 
 /// Reusable exclusive register for `ExcluderLock`.
 pub struct Excluder<T: Send + Clone> {
