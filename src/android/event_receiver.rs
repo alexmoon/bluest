@@ -9,15 +9,16 @@ use super::{
 use super::{gatt_tree::GattTree, OptionExt};
 use java_spaghetti::{Env, Global, Ref};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
-use tracing::{error, info};
+use tracing::{error, info}; // TODO: make it working in the thread of Java callback
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
 pub enum GlobalEvent {
     /// contains EXTRA_STATE
     AdapterStateChanged(i32),
-    /// contains device address and EXTRA_CONNECTION_STATE (EXTRA_PREVIOUS_CONNECTION_STATE is not read)
-    ConnectionStateChanged(DeviceId, i32),
+    /// contains device address
+    #[allow(unused)] // NOTE: this may not be received; this can be removed.
+    AclConnectionStateChanged(DeviceId, bool),
     /// contains device address, EXTRA_PREVIOUS_BOND_STATE, and EXTRA_BOND_STATE
     BondStateChanged(DeviceId, i32, i32),
 }
@@ -60,7 +61,8 @@ impl EventReceiver {
                         let filter = IntentFilter::new(env)?;
                         for action in [
                             BluetoothAdapter::ACTION_STATE_CHANGED,
-                            BluetoothAdapter::ACTION_CONNECTION_STATE_CHANGED,
+                            BluetoothDevice::ACTION_ACL_CONNECTED,
+                            BluetoothDevice::ACTION_ACL_DISCONNECTED,
                             BluetoothDevice::ACTION_BOND_STATE_CHANGED,
                         ] {
                             let action_jstring = JString::from_env_str(env, action);
@@ -119,19 +121,29 @@ impl super::callback::BroadcastReceiverProxy for BroadcastReceiverProxy {
                 rec_hdl.notifier.notify(GlobalEvent::AdapterStateChanged(val));
                 Ok::<_, crate::Error>(())
             }
-            BluetoothAdapter::ACTION_CONNECTION_STATE_CHANGED => {
-                let dev_id = get_extra_device_id(&intent)?;
-                let extra_conn_state = JString::from_env_str(env, BluetoothAdapter::EXTRA_CONNECTION_STATE);
-                let conn_state = intent.getIntExtra(&extra_conn_state, 0)?;
-                if conn_state == BluetoothAdapter::STATE_DISCONNECTED {
-                    // all connections should be removed
+            BluetoothDevice::ACTION_ACL_CONNECTED => {
+                let extra_transport = JString::from_env_str(env, BluetoothDevice::EXTRA_TRANSPORT);
+                let transport = intent.getIntExtra(&extra_transport, 0)?;
+                if transport == BluetoothDevice::TRANSPORT_LE {
+                    let dev_id = get_extra_device_id(&intent)?;
+                    rec_hdl
+                        .notifier
+                        .notify(GlobalEvent::AclConnectionStateChanged(dev_id, true));
+                }
+                Ok(())
+            }
+            BluetoothDevice::ACTION_ACL_DISCONNECTED => {
+                let extra_transport = JString::from_env_str(env, BluetoothDevice::EXTRA_TRANSPORT);
+                let transport = intent.getIntExtra(&extra_transport, 0)?;
+                if transport == BluetoothDevice::TRANSPORT_LE {
+                    let dev_id = get_extra_device_id(&intent)?;
                     if GattTree::deregister_connection(&dev_id) {
                         info!("deregistered connection with {dev_id} in BroadcastReceiverProxy");
                     }
+                    rec_hdl
+                        .notifier
+                        .notify(GlobalEvent::AclConnectionStateChanged(dev_id, false));
                 }
-                rec_hdl
-                    .notifier
-                    .notify(GlobalEvent::ConnectionStateChanged(dev_id, conn_state));
                 Ok(())
             }
             BluetoothDevice::ACTION_BOND_STATE_CHANGED => {

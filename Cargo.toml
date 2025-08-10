@@ -22,8 +22,6 @@ targets = [
 
 [features]
 unstable = []
-# TODO: remove these default features!
-default = ["unstable", "l2cap"]
 l2cap = []
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 

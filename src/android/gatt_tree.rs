@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex, OnceLock, Weak};
 
+use futures_core::Stream;
 use java_spaghetti::{ByteArray, Env, Global, Ref};
 use tracing::{error, info};
 
@@ -14,10 +15,12 @@ use super::jni::{ByteArrayExt, Monitor};
 use super::vm_context::{android_api_level, jni_with_env};
 use super::{BoolExt, JavaIterator, OptionExt, UuidExt};
 use crate::error::AttError;
-use crate::{DeviceId, Uuid};
+use crate::{ConnectionEvent, DeviceId, Uuid};
 
 static GATT_CONNECTIONS: LazyLock<Mutex<HashMap<DeviceId, Arc<GattConnection>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+
+static CONNECTION_EVENTS: LazyLock<Notifier<(DeviceId, ConnectionEvent)>> = LazyLock::new(|| Notifier::new(32));
 
 pub(crate) use cached_weak::CachedWeak;
 mod cached_weak {
@@ -80,6 +83,7 @@ mod cached_weak {
 pub(crate) struct GattConnection {
     pub(super) gatt: Global<BluetoothGatt>,
     pub(super) callback_hdl_weak: Weak<BluetoothGattCallbackProxy>,
+    pub(super) gatt_connect: Excluder<()>,
     pub(super) global_event_receiver: Arc<EventReceiver>,
     pub(super) services: Mutex<HashMap<Uuid, Arc<ServiceInner>>>,
     pub(super) discover_services: Excluder<Result<(), AttError>>,
@@ -141,6 +145,7 @@ impl GattTree {
             Arc::new(GattConnection {
                 gatt,
                 callback_hdl_weak: Arc::downgrade(callback_hdl),
+                gatt_connect: Excluder::new(),
                 global_event_receiver: event_receiver.clone(),
                 services: Mutex::new(HashMap::new()),
                 discover_services: Excluder::new(),
@@ -150,9 +155,33 @@ impl GattTree {
         );
     }
 
+    /// Call it *once* right after calling `register_connection`.
+    /// Returns `None` if it's still disconnected.
+    pub async fn wait_connection_available(dev_id: &DeviceId) -> Option<()> {
+        let conn = Self::find_connection(dev_id)?;
+        if conn.gatt_connect.last_value().is_none() {
+            conn.gatt_connect.lock().await.wait_unlock().await
+        } else {
+            Some(())
+        }
+    }
+
     /// Call this when the actual disconnection is realized.
+    ///
+    /// XXX: This prevents reconnection with the same BluetoothGatt object;
+    /// this is problematic for reconnecting paired random address devices,
+    /// but changing this behavior will break the current bluest `DeviceId` API
+    /// (probably not being able to keep the uniqueness of `DeviceId`).
     pub fn deregister_connection(dev_id: &DeviceId) -> bool {
-        GATT_CONNECTIONS.lock().unwrap().remove(dev_id).is_some()
+        let deregistered = GATT_CONNECTIONS.lock().unwrap().remove(dev_id).is_some();
+        if deregistered {
+            CONNECTION_EVENTS.notify((dev_id.clone(), ConnectionEvent::Disconnected));
+        }
+        deregistered
+    }
+
+    pub async fn connection_events() -> impl Stream<Item = (DeviceId, ConnectionEvent)> {
+        CONNECTION_EVENTS.subscribe(|| Ok::<_, ()>(()), || ()).await.unwrap()
     }
 
     /// Call this on adapter disabling event.
@@ -299,8 +328,13 @@ impl super::callback::BluetoothGattCallbackProxy for BluetoothGattCallbackProxy 
         _status: i32,
         new_state: i32,
     ) {
-        if new_state == BluetoothProfile::STATE_DISCONNECTED {
-            // no reconnection with the same BluetoothGatt object
+        #[allow(clippy::collapsible_if)]
+        if new_state == BluetoothProfile::STATE_CONNECTED {
+            CONNECTION_EVENTS.notify((self.dev_id.clone(), ConnectionEvent::Connected));
+            if let Some(conn) = GattTree::find_connection(&self.dev_id) {
+                conn.gatt_connect.unlock(());
+            }
+        } else if new_state == BluetoothProfile::STATE_DISCONNECTED {
             if GattTree::deregister_connection(&self.dev_id) {
                 info!(
                     "deregistered connection with {} in onConnectionStateChange()",

@@ -1,5 +1,8 @@
 use async_broadcast::{Receiver, Sender};
 use async_lock::{Mutex, MutexGuard};
+use futures_core::Stream;
+use futures_lite::StreamExt;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task;
@@ -164,7 +167,7 @@ pub struct NotifierReceiver<T: Send + Clone> {
 
 impl<T: Send + Clone> Notifier<T> {
     /// Creates a new inactive `Notifier`.
-    pub fn new(capacity: usize) -> Self {
+    pub const fn new(capacity: usize) -> Self {
         Self {
             capacity,
             inner: Mutex::new(Weak::new()),
@@ -253,5 +256,59 @@ impl<T: Send + Clone> Drop for Notifier<T> {
 impl<T: Send + Clone> Drop for NotifierInner<T> {
     fn drop(&mut self) {
         (self.on_stop)()
+    }
+}
+
+/// Wraps the main stream and also checks an event stream; ends and fuses the main stream when
+/// the event stream ends or the checker returns true for a received event item.
+pub struct StreamUntil<T, E, S, F>
+where
+    T: Send + Unpin,
+    E: Send,
+    S: Stream<Item = E> + Send + Unpin,
+    F: Fn(&E) -> bool + Send + Sync + Unpin + 'static,
+{
+    stream: S,
+    event_checker: F,
+    ph: PhantomData<T>,
+}
+
+impl<T, E, S, F> StreamUntil<T, E, S, F>
+where
+    T: Send + Unpin,
+    E: Send,
+    S: Stream<Item = E> + Send + Unpin,
+    F: Fn(&E) -> bool + Send + Sync + Unpin + 'static,
+{
+    /// Creates the `StreamUntil`.
+    pub fn create(stream: impl Stream<Item = T>, event_stream: S, event_checker: F) -> impl Stream<Item = T> {
+        stream
+            .or(StreamUntil {
+                stream: event_stream,
+                event_checker,
+                ph: PhantomData,
+            })
+            .fuse()
+    }
+}
+
+impl<T, E, S, F> futures_core::Stream for StreamUntil<T, E, S, F>
+where
+    T: Send + Unpin,
+    E: Send,
+    S: Stream<Item = E> + Send + Unpin,
+    F: Fn(&E) -> bool + Send + Sync + Unpin + 'static,
+{
+    type Item = T;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        use futures_core::task::Poll;
+        match self.stream.poll_next(cx) {
+            Poll::Ready(Some(event)) if (self.event_checker)(&event) => Poll::Ready(None),
+            Poll::Ready(None) => Poll::Ready(None),
+            _ => Poll::Pending,
+        }
     }
 }

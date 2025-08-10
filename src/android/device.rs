@@ -74,8 +74,9 @@ impl DeviceImpl {
         self.name()
     }
 
+    // NOTE: currently this returns false for devices connected outside this crate.
     pub async fn is_connected(&self) -> bool {
-        self.connection.get().is_some()
+        self.get_connection().is_ok()
     }
 
     pub async fn is_paired(&self) -> Result<bool> {
@@ -162,7 +163,7 @@ impl DeviceImpl {
             Ok::<_, crate::Error>(())
         })?;
         disc_lock.wait_unlock().await.ok_or_check_conn(&self.id)??;
-        self.services().await
+        self.collect_discovered_services()
     }
 
     pub async fn discover_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
@@ -175,6 +176,15 @@ impl DeviceImpl {
     }
 
     pub async fn services(&self) -> Result<Vec<Service>> {
+        let conn = self.get_connection()?;
+        if conn.discover_services.last_value().is_some() {
+            self.collect_discovered_services()
+        } else {
+            self.discover_services().await
+        }
+    }
+
+    fn collect_discovered_services(&self) -> Result<Vec<Service>> {
         Ok(self
             .get_connection()?
             .services
@@ -228,7 +238,7 @@ impl DeviceImpl {
         super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
     }
 
-    fn get_connection(&self) -> Result<Arc<GattConnection>, crate::Error> {
+    pub(crate) fn get_connection(&self) -> Result<Arc<GattConnection>, crate::Error> {
         self.connection
             .get_or_find(|| GattTree::find_connection(&self.id).ok_or(ErrorKind::NotConnected.into()))
     }
