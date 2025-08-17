@@ -12,7 +12,7 @@ use tracing::{debug, trace, warn};
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
 use super::OptionExt;
 use crate::l2cap_channel::PIPE_CAPACITY;
-use crate::Result;
+use crate::{derive_async_read, derive_async_write};
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,
@@ -116,11 +116,11 @@ pub fn open_l2cap_channel(
 
         Ok((
             L2capChannelReader {
-                closer: closer.clone(),
+                _closer: closer.clone(),
                 stream: read_receiver,
             },
             L2capChannelWriter {
-                closer,
+                _closer: closer,
                 stream: write_sender,
             },
         ))
@@ -150,24 +150,26 @@ impl Drop for L2capCloser {
     }
 }
 
+pub struct L2capChannel {
+    pub(super) reader: L2capChannelReader,
+    pub(super) writer: L2capChannelWriter,
+}
+
+impl L2capChannel {
+    pub fn split(self) -> (L2capChannelReader, L2capChannelWriter) {
+        (self.reader, self.writer)
+    }
+}
+
+derive_async_read!(L2capChannel, reader);
+derive_async_write!(L2capChannel, writer);
+
 pub struct L2capChannelReader {
     stream: piper::Reader,
-    closer: Arc<L2capCloser>,
+    _closer: Arc<L2capCloser>,
 }
 
-impl L2capChannelReader {
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
-    }
-}
-
-impl AsyncRead for L2capChannelReader {
-    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
-        let stream = pin::pin!(&mut self.stream);
-        stream.poll_read(cx, buf)
-    }
-}
+derive_async_read!(L2capChannelReader, stream);
 
 impl fmt::Debug for L2capChannelReader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -177,33 +179,10 @@ impl fmt::Debug for L2capChannelReader {
 
 pub struct L2capChannelWriter {
     stream: piper::Writer,
-    closer: Arc<L2capCloser>,
+    _closer: Arc<L2capCloser>,
 }
 
-impl L2capChannelWriter {
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
-    }
-}
-
-impl AsyncWrite for L2capChannelWriter {
-    fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
-        let stream = pin::pin!(&mut self.stream);
-        stream.poll_write(cx, buf)
-    }
-
-    fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
-        let stream = pin::pin!(&mut self.stream);
-        stream.poll_flush(cx)
-    }
-
-    fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        self.closer.close();
-        let stream = pin::pin!(&mut self.stream);
-        stream.poll_close(cx)
-    }
-}
+derive_async_write!(L2capChannelWriter, stream);
 
 impl fmt::Debug for L2capChannelWriter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

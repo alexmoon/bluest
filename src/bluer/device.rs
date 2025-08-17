@@ -296,16 +296,14 @@ impl DeviceImpl {
         &self,
         psm: u16,
         _secure: bool,
-    ) -> Result<crate::l2cap_channel::L2capChannel, crate::Error> {
+    ) -> Result<super::l2cap_channel::L2capChannel, crate::Error> {
         use async_compat::Compat;
         use bluer::l2cap::{SocketAddr, Stream as L2CapStream};
         use bluer::AddressType;
 
         let target_sa = SocketAddr::new(self.inner.address(), AddressType::LePublic, psm);
         let stream = L2CapStream::connect(target_sa).await?;
-        Ok(crate::l2cap_channel::L2capChannel {
-            stream: Compat::new(stream),
-        })
+        Ok(super::l2cap_channel::L2capChannel(Compat::new(stream)))
     }
 }
 
