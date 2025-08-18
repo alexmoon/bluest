@@ -1,38 +1,53 @@
-use objc2::rc::Retained;
-use objc2::{define_class, msg_send, AnyThread, DefinedClass, Message};
-use objc2_core_bluetooth::{
-    CBCentralManager, CBCentralManagerDelegate, CBCharacteristic, CBConnectionEvent, CBDescriptor, CBL2CAPChannel,
-    CBPeripheral, CBPeripheralDelegate, CBService,
-};
-use objc2_foundation::{NSArray, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString};
+use std::any::Any;
+
+use corebluetooth::error::CBError;
+use corebluetooth::{CBConnectionEvent, CBManagerState};
+use dispatch_executor::{Executor, Handle};
 use tracing::{debug, warn};
 
-use super::dispatch::Dispatched;
-use crate::{AdvertisementData, ConnectionEvent};
+#[cfg(feature = "l2cap")]
+use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
+use crate::ConnectionEvent;
+
+pub fn subscribe_peripheral(
+    delegate: &dyn corebluetooth::PeripheralDelegate,
+) -> async_broadcast::Receiver<PeripheralEvent> {
+    let delegate: &dyn Any = delegate;
+    let delegate: &PeripheralDelegate = delegate.downcast_ref().unwrap();
+    delegate.subscribe()
+}
+
+pub fn subscribe_central(
+    delegate: &dyn corebluetooth::CentralManagerDelegate,
+) -> async_broadcast::Receiver<CentralEvent> {
+    let delegate: &dyn Any = delegate;
+    let delegate: &CentralDelegate = delegate.downcast_ref().unwrap();
+    delegate.subscribe()
+}
 
 #[derive(Clone)]
 pub enum CentralEvent {
     Connect {
-        peripheral: Dispatched<CBPeripheral>,
+        peripheral: Handle<corebluetooth::Peripheral>,
     },
     Disconnect {
-        peripheral: Dispatched<CBPeripheral>,
-        error: Option<Retained<NSError>>,
+        peripheral: Handle<corebluetooth::Peripheral>,
+        error: Option<corebluetooth::Error>,
     },
     ConnectFailed {
-        peripheral: Dispatched<CBPeripheral>,
-        error: Option<Retained<NSError>>,
+        peripheral: Handle<corebluetooth::Peripheral>,
+        error: corebluetooth::Error,
     },
     ConnectionEvent {
-        peripheral: Dispatched<CBPeripheral>,
+        peripheral: Handle<corebluetooth::Peripheral>,
         event: ConnectionEvent,
     },
     Discovered {
-        peripheral: Dispatched<CBPeripheral>,
-        adv_data: AdvertisementData,
+        peripheral: Handle<corebluetooth::Peripheral>,
+        advertisement_data: crate::AdvertisementData,
         rssi: i16,
     },
-    StateChanged,
+    StateChanged(CBManagerState),
 }
 
 impl std::fmt::Debug for CentralEvent {
@@ -59,7 +74,7 @@ impl std::fmt::Debug for CentralEvent {
                 .field("peripheral", peripheral)
                 .field("rssi", rssi)
                 .finish(),
-            Self::StateChanged => write!(f, "StateChanged"),
+            Self::StateChanged(state) => f.debug_tuple("StateChanged").field(state).finish(),
         }
     }
 }
@@ -68,423 +83,357 @@ impl std::fmt::Debug for CentralEvent {
 pub enum PeripheralEvent {
     Connected,
     Disconnected {
-        error: Option<Retained<NSError>>,
+        error: corebluetooth::Error,
     },
     DiscoveredServices {
-        error: Option<Retained<NSError>>,
+        result: corebluetooth::Result<()>,
     },
     DiscoveredIncludedServices {
-        service: Dispatched<CBService>,
-        error: Option<Retained<NSError>>,
+        service: Handle<corebluetooth::Service>,
+        result: corebluetooth::Result<()>,
     },
     DiscoveredCharacteristics {
-        service: Dispatched<CBService>,
-        error: Option<Retained<NSError>>,
+        service: Handle<corebluetooth::Service>,
+        result: corebluetooth::Result<()>,
     },
     DiscoveredDescriptors {
-        characteristic: Dispatched<CBCharacteristic>,
-        error: Option<Retained<NSError>>,
+        characteristic: Handle<corebluetooth::Characteristic>,
+        result: corebluetooth::Result<()>,
     },
     CharacteristicValueUpdate {
-        characteristic: Dispatched<CBCharacteristic>,
-        data: Vec<u8>,
-        error: Option<Retained<NSError>>,
+        characteristic: Handle<corebluetooth::Characteristic>,
+        result: corebluetooth::Result<Vec<u8>>,
     },
     DescriptorValueUpdate {
-        descriptor: Dispatched<CBDescriptor>,
-        error: Option<Retained<NSError>>,
+        descriptor: Handle<corebluetooth::Descriptor>,
+        result: corebluetooth::Result<()>,
     },
     CharacteristicValueWrite {
-        characteristic: Dispatched<CBCharacteristic>,
-        error: Option<Retained<NSError>>,
+        characteristic: Handle<corebluetooth::Characteristic>,
+        result: corebluetooth::Result<()>,
     },
     DescriptorValueWrite {
-        descriptor: Dispatched<CBDescriptor>,
-        error: Option<Retained<NSError>>,
+        descriptor: Handle<corebluetooth::Descriptor>,
+        result: corebluetooth::Result<()>,
     },
     ReadyToWrite,
     NotificationStateUpdate {
-        characteristic: Dispatched<CBCharacteristic>,
-        error: Option<Retained<NSError>>,
+        characteristic: Handle<corebluetooth::Characteristic>,
+        result: corebluetooth::Result<()>,
     },
     ReadRssi {
-        rssi: i16,
-        error: Option<Retained<NSError>>,
+        rssi: corebluetooth::Result<i16>,
     },
     NameUpdate,
     ServicesChanged {
-        invalidated_services: Vec<Dispatched<CBService>>,
+        invalidated_services: Vec<Handle<corebluetooth::Service>>,
     },
-    #[allow(unused)]
+    #[cfg(feature = "l2cap")]
     L2CAPChannelOpened {
-        channel: Dispatched<CBL2CAPChannel>,
-        error: Option<Retained<NSError>>,
+        result: corebluetooth::Result<(L2capChannelReader, L2capChannelWriter)>,
     },
 }
 
-#[derive(Debug)]
-pub(crate) struct CentralDelegateIvars {
+pub(crate) struct CentralDelegate {
     pub sender: async_broadcast::Sender<CentralEvent>,
     _receiver: async_broadcast::InactiveReceiver<CentralEvent>,
+    executor: Executor,
 }
 
-define_class!(
-    #[unsafe(super(NSObject))]
-    #[ivars = CentralDelegateIvars]
-    #[derive(Debug, PartialEq, Eq, Hash)]
-    pub(crate) struct CentralDelegate;
+impl corebluetooth::CentralManagerDelegate for CentralDelegate {
+    fn new_peripheral_delegate(&self) -> Box<dyn corebluetooth::PeripheralDelegate> {
+        Box::new(PeripheralDelegate::new(self.executor.clone()))
+    }
 
-    unsafe impl NSObjectProtocol for CentralDelegate {}
+    fn did_update_state(&self, central: corebluetooth::CentralManager) {
+        let _ = self.sender.try_broadcast(CentralEvent::StateChanged(central.state()));
+    }
 
-    unsafe impl CBCentralManagerDelegate for CentralDelegate {
-        #[unsafe(method(centralManagerDidUpdateState:))]
-        fn did_update_state(&self, _central: &CBCentralManager) {
-            let _ = self.ivars().sender.try_broadcast(CentralEvent::StateChanged);
-        }
+    fn did_discover(
+        &self,
+        _central: corebluetooth::CentralManager,
+        peripheral: corebluetooth::Peripheral,
+        advertisement_data: corebluetooth::advertisement_data::AdvertisementData,
+        rssi: i16,
+    ) {
+        let event = CentralEvent::Discovered {
+            peripheral: self.executor.handle(peripheral),
+            advertisement_data: advertisement_data.into(),
+            rssi,
+        };
+        debug!("CentralDelegate received {:?}", event);
+        let _res = self.sender.try_broadcast(event);
+    }
 
-        #[unsafe(method(centralManager:didConnectPeripheral:))]
-        fn did_connect_peripheral(&self, _central: &CBCentralManager, peripheral: &CBPeripheral) {
-            let sender = &self.ivars().sender;
-            unsafe {
-                if let Some(delegate) = peripheral
-                    .delegate()
-                    .and_then(|d| d.downcast::<PeripheralDelegate>().ok())
-                {
-                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Connected);
-                }
-                let event = CentralEvent::Connect {
-                    peripheral: Dispatched::retain(peripheral),
-                };
-                debug!("CentralDelegate received {:?}", event);
-                let _ = sender.try_broadcast(event);
-            }
-        }
+    fn did_connect(&self, _central: corebluetooth::CentralManager, peripheral: corebluetooth::Peripheral) {
+        let delegate: &dyn Any = peripheral.delegate();
+        let delegate: &PeripheralDelegate = delegate.downcast_ref().unwrap();
+        let _res = delegate.sender.try_broadcast(PeripheralEvent::Connected);
 
-        #[unsafe(method(centralManager:didDisconnectPeripheral:error:))]
-        fn did_disconnect_peripheral_error(
-            &self,
-            _central: &CBCentralManager,
-            peripheral: &CBPeripheral,
-            error: Option<&NSError>,
-        ) {
-            unsafe {
-                let sender = &self.ivars().sender;
-                if let Some(delegate) = peripheral
-                    .delegate()
-                    .and_then(|d| d.downcast::<PeripheralDelegate>().ok())
-                {
-                    let _res = delegate.sender().try_broadcast(PeripheralEvent::Disconnected {
-                        error: error.map(|e| e.retain()),
-                    });
-                }
-                let event = CentralEvent::Disconnect {
-                    peripheral: Dispatched::retain(peripheral),
-                    error: error.map(|e| e.retain()),
-                };
-                debug!("CentralDelegate received {:?}", event);
-                let _res = sender.try_broadcast(event);
-            }
-        }
+        let peripheral = self.executor.handle(peripheral);
+        let event = CentralEvent::Connect { peripheral };
+        debug!("CentralDelegate received {:?}", event);
+        let _ = self.sender.try_broadcast(event);
+    }
 
-        #[unsafe(method(centralManager:didDiscoverPeripheral:advertisementData:RSSI:))]
-        fn did_discover_peripheral(
-            &self,
-            _central: &CBCentralManager,
-            peripheral: &CBPeripheral,
-            adv_data: &NSDictionary<NSString>,
-            rssi: &NSNumber,
-        ) {
-            let sender = &self.ivars().sender;
-            let rssi: i16 = rssi.shortValue();
-            let event = CentralEvent::Discovered {
-                peripheral: unsafe { Dispatched::retain(peripheral) },
-                adv_data: AdvertisementData::from_nsdictionary(adv_data),
-                rssi,
-            };
-            debug!("CentralDelegate received {:?}", event);
+    fn did_fail_to_connect(
+        &self,
+        _central: corebluetooth::CentralManager,
+        peripheral: corebluetooth::Peripheral,
+        error: corebluetooth::Error,
+    ) {
+        let peripheral = self.executor.handle(peripheral);
+        let _ = self
+            .sender
+            .try_broadcast(CentralEvent::ConnectFailed { peripheral, error });
+    }
+
+    fn did_disconnect(
+        &self,
+        _central: corebluetooth::CentralManager,
+        peripheral: corebluetooth::Peripheral,
+        _timestamp: Option<std::time::SystemTime>,
+        _is_reconnecting: bool,
+        error: Option<corebluetooth::Error>,
+    ) {
+        let delegate: &dyn Any = peripheral.delegate();
+        let delegate: &PeripheralDelegate = delegate.downcast_ref().unwrap();
+        let _res = delegate.sender.try_broadcast(PeripheralEvent::Disconnected {
+            error: error.clone().unwrap_or_else(|| {
+                corebluetooth::Error::from(corebluetooth::error::ErrorKind::Bluetooth(CBError::NotConnected))
+            }),
+        });
+
+        let peripheral = self.executor.handle(peripheral);
+        let event = CentralEvent::Disconnect { peripheral, error };
+        debug!("CentralDelegate received {:?}", event);
+        let _ = self.sender.try_broadcast(event);
+    }
+
+    fn on_connection_event(
+        &self,
+        _central: corebluetooth::CentralManager,
+        event: CBConnectionEvent,
+        peripheral: corebluetooth::Peripheral,
+    ) {
+        debug!("CentralDelegate received {:?}", event);
+
+        let sender = &self.sender;
+        let event = if event == CBConnectionEvent::PeerConnected {
+            Some(ConnectionEvent::Connected)
+        } else if event == CBConnectionEvent::PeerDisconnected {
+            Some(ConnectionEvent::Disconnected)
+        } else {
+            None
+        };
+
+        if let Some(event) = event {
+            let peripheral = self.executor.handle(peripheral);
+            let event = CentralEvent::ConnectionEvent { peripheral, event };
             let _res = sender.try_broadcast(event);
-        }
-
-        #[unsafe(method(centralManager:connectionEventDidOccur:forPeripheral:))]
-        fn on_connection_event(
-            &self,
-            _central: &CBCentralManager,
-            event: CBConnectionEvent,
-            peripheral: &CBPeripheral,
-        ) {
-            debug!("CentralDelegate received {:?}", event);
-
-            let sender = &self.ivars().sender;
-            let event = if event == CBConnectionEvent::PeerConnected {
-                Some(ConnectionEvent::Connected)
-            } else if event == CBConnectionEvent::PeerDisconnected {
-                Some(ConnectionEvent::Disconnected)
-            } else {
-                None
-            };
-
-            if let Some(event) = event {
-                let event = CentralEvent::ConnectionEvent {
-                    peripheral: unsafe { Dispatched::retain(peripheral) },
-                    event,
-                };
-                let _res = sender.try_broadcast(event);
-            } else {
-                warn!("Unrecognized connection event received");
-            }
-        }
-
-        #[unsafe(method(centralManager:didFailToConnectPeripheral:error:))]
-        fn did_fail_to_connect(&self, _central: &CBCentralManager, peripheral: &CBPeripheral, error: Option<&NSError>) {
-            let _ = self.ivars().sender.try_broadcast(CentralEvent::ConnectFailed {
-                peripheral: unsafe { Dispatched::retain(peripheral) },
-                error: error.map(|e| e.retain()),
-            });
+        } else {
+            warn!("Unrecognized connection event received");
         }
     }
-);
+}
 
 impl CentralDelegate {
-    pub fn new() -> Retained<Self> {
+    pub fn new(executor: Executor) -> Self {
         let (mut sender, receiver) = async_broadcast::broadcast::<CentralEvent>(16);
         sender.set_overflow(true);
-        let receiver = receiver.deactivate();
+        let _receiver = receiver.deactivate();
 
-        let ivars = CentralDelegateIvars {
+        Self {
             sender,
-            _receiver: receiver,
-        };
-        let this = CentralDelegate::alloc().set_ivars(ivars);
-        unsafe { msg_send![super(this), init] }
+            _receiver,
+            executor,
+        }
     }
 
-    pub fn sender(&self) -> async_broadcast::Sender<CentralEvent> {
-        self.ivars().sender.clone()
+    pub fn subscribe(&self) -> async_broadcast::Receiver<CentralEvent> {
+        self.sender.new_receiver()
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct PeripheralDelegateIvars {
+pub(crate) struct PeripheralDelegate {
     pub sender: async_broadcast::Sender<PeripheralEvent>,
     _receiver: async_broadcast::InactiveReceiver<PeripheralEvent>,
+    executor: Executor,
 }
 
-define_class!(
-    #[unsafe(super(NSObject))]
-    #[ivars = PeripheralDelegateIvars]
-    #[derive(Debug, PartialEq, Eq, Hash)]
-    pub(crate) struct PeripheralDelegate;
-
-    unsafe impl NSObjectProtocol for PeripheralDelegate {}
-
-    unsafe impl CBPeripheralDelegate for PeripheralDelegate {
-        #[unsafe(method(peripheral:didUpdateValueForCharacteristic:error:))]
-        fn did_update_value_for_characteristic_error(
-            &self,
-            _peripheral: &CBPeripheral,
-            characteristic: &CBCharacteristic,
-            error: Option<&NSError>,
-        ) {
-            unsafe {
-                let sender = &self.ivars().sender;
-                let data = characteristic
-                    .value()
-                    .map(|x| x.as_bytes_unchecked().to_vec())
-                    .unwrap_or_default();
-                let event = PeripheralEvent::CharacteristicValueUpdate {
-                    characteristic: Dispatched::retain(characteristic),
-                    data,
-                    error: error.map(|e| e.retain()),
-                };
-                debug!("PeripheralDelegate received {:?}", event);
-                let _res = sender.try_broadcast(event);
-            }
-        }
-
-        #[unsafe(method(peripheral:didDiscoverServices:))]
-        fn did_discover_services(&self, _peripheral: &CBPeripheral, error: Option<&NSError>) {
-            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::DiscoveredServices {
-                error: error.map(|e| e.retain()),
-            });
-        }
-
-        #[unsafe(method(peripheral:didDiscoverIncludedServicesForService:error:))]
-        fn did_discover_included_services(
-            &self,
-            _peripheral: &CBPeripheral,
-            service: &CBService,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DiscoveredIncludedServices {
-                    service: unsafe { Dispatched::retain(service) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheralDidUpdateName:))]
-        fn did_update_name(&self, _peripheral: &CBPeripheral) {
-            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::NameUpdate);
-        }
-
-        #[unsafe(method(peripheral:didModifyServices:))]
-        fn did_modify_services(&self, _peripheral: &CBPeripheral, invalidated_services: &NSArray<CBService>) {
-            let invalidated_services = invalidated_services
-                .iter()
-                .map(|x| unsafe { Dispatched::new(x) })
-                .collect();
-
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::ServicesChanged { invalidated_services });
-        }
-
-        #[unsafe(method(peripheralDidUpdateRSSI:error:))]
-        fn did_update_rssi(&self, _peripheral: &CBPeripheral, _error: Option<&NSError>) {}
-
-        #[unsafe(method(peripheral:didReadRSSI:error:))]
-        fn did_read_rssi(&self, _peripheral: &CBPeripheral, rssi: &NSNumber, error: Option<&NSError>) {
-            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadRssi {
-                rssi: rssi.shortValue(),
-                error: error.map(|e| e.retain()),
-            });
-        }
-
-        #[unsafe(method(peripheral:didDiscoverCharacteristicsForService:error:))]
-        fn did_discover_characteristics_for_service(
-            &self,
-            _peripheral: &CBPeripheral,
-            service: &CBService,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DiscoveredCharacteristics {
-                    service: unsafe { Dispatched::retain(service) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheral:didWriteValueForCharacteristic:error:))]
-        fn did_write_value_for_characteristic(
-            &self,
-            _peripheral: &CBPeripheral,
-            characteristic: &CBCharacteristic,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::CharacteristicValueWrite {
-                    characteristic: unsafe { Dispatched::retain(characteristic) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheral:didUpdateNotificationStateForCharacteristic:error:))]
-        fn did_update_notification_state_for_characteristic(
-            &self,
-            _peripheral: &CBPeripheral,
-            characteristic: &CBCharacteristic,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::NotificationStateUpdate {
-                    characteristic: unsafe { Dispatched::retain(characteristic) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheral:didDiscoverDescriptorsForCharacteristic:error:))]
-        fn did_discover_descriptors_for_characteristic(
-            &self,
-            _peripheral: &CBPeripheral,
-            characteristic: &CBCharacteristic,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DiscoveredDescriptors {
-                    characteristic: unsafe { Dispatched::retain(characteristic) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheral:didUpdateValueForDescriptor:error:))]
-        fn did_update_value_for_descriptor(
-            &self,
-            _peripheral: &CBPeripheral,
-            descriptor: &CBDescriptor,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DescriptorValueUpdate {
-                    descriptor: unsafe { Dispatched::retain(descriptor) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheral:didWriteValueForDescriptor:error:))]
-        fn did_write_value_for_descriptor(
-            &self,
-            _peripheral: &CBPeripheral,
-            descriptor: &CBDescriptor,
-            error: Option<&NSError>,
-        ) {
-            let _ = self
-                .ivars()
-                .sender
-                .try_broadcast(PeripheralEvent::DescriptorValueWrite {
-                    descriptor: unsafe { Dispatched::retain(descriptor) },
-                    error: error.map(|e| e.retain()),
-                });
-        }
-
-        #[unsafe(method(peripheralIsReadyToSendWriteWithoutResponse:))]
-        fn is_ready_to_write_without_response(&self, _peripheral: &CBPeripheral) {
-            let _ = self.ivars().sender.try_broadcast(PeripheralEvent::ReadyToWrite);
-        }
-
-        #[unsafe(method(peripheral:didOpenL2CAPChannel:error:))]
-        fn did_open_l2cap_channel(
-            &self,
-            _peripheral: &CBPeripheral,
-            channel: Option<&CBL2CAPChannel>,
-            error: Option<&NSError>,
-        ) {
-            if let Some(channel) = channel {
-                let _ = self.ivars().sender.try_broadcast(PeripheralEvent::L2CAPChannelOpened {
-                    channel: unsafe { Dispatched::retain(channel) },
-                    error: error.map(|e| e.retain()),
-                });
-            }
-        }
+impl corebluetooth::PeripheralDelegate for PeripheralDelegate {
+    fn did_update_name(&self, _peripheral: corebluetooth::Peripheral) {
+        let _ = self.sender.try_broadcast(PeripheralEvent::NameUpdate);
     }
-);
+
+    fn did_modify_services(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        invalidated_services: Vec<corebluetooth::Service>,
+    ) {
+        let invalidated_services = invalidated_services
+            .into_iter()
+            .map(|service| self.executor.handle(service))
+            .collect();
+
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::ServicesChanged { invalidated_services });
+    }
+
+    fn did_read_rssi(&self, _peripheral: corebluetooth::Peripheral, rssi: corebluetooth::Result<i16>) {
+        let _ = self.sender.try_broadcast(PeripheralEvent::ReadRssi { rssi });
+    }
+
+    fn did_discover_services(&self, _peripheral: corebluetooth::Peripheral, result: corebluetooth::Result<()>) {
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DiscoveredServices { result });
+    }
+
+    fn did_discover_included_services(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        service: corebluetooth::Service,
+        result: corebluetooth::Result<()>,
+    ) {
+        let service = self.executor.handle(service);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DiscoveredIncludedServices { service, result });
+    }
+
+    fn did_discover_characteristics(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        service: corebluetooth::Service,
+        result: corebluetooth::Result<()>,
+    ) {
+        let service = self.executor.handle(service);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DiscoveredCharacteristics { service, result });
+    }
+
+    fn did_update_value_for_characteristic(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        characteristic: corebluetooth::Characteristic,
+        result: corebluetooth::Result<()>,
+    ) {
+        let result = result.map(|_| characteristic.value().unwrap());
+        let characteristic = self.executor.handle(characteristic);
+        let event = PeripheralEvent::CharacteristicValueUpdate { characteristic, result };
+        debug!("PeripheralDelegate received {:?}", event);
+        let _res = self.sender.try_broadcast(event);
+    }
+
+    fn did_write_value_for_characteristic(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        characteristic: corebluetooth::Characteristic,
+        result: corebluetooth::Result<()>,
+    ) {
+        let characteristic = self.executor.handle(characteristic);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::CharacteristicValueWrite { characteristic, result });
+    }
+
+    fn did_update_notification_state_for_characteristic(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        characteristic: corebluetooth::Characteristic,
+        result: corebluetooth::Result<()>,
+    ) {
+        let characteristic = self.executor.handle(characteristic);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::NotificationStateUpdate { characteristic, result });
+    }
+
+    fn did_discover_descriptors_for_characteristic(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        characteristic: corebluetooth::Characteristic,
+        result: corebluetooth::Result<()>,
+    ) {
+        let characteristic = self.executor.handle(characteristic);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DiscoveredDescriptors { characteristic, result });
+    }
+
+    fn did_update_value_for_descriptor(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        descriptor: corebluetooth::Descriptor,
+        result: corebluetooth::Result<()>,
+    ) {
+        let descriptor = self.executor.handle(descriptor);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DescriptorValueUpdate { descriptor, result });
+    }
+
+    fn did_write_value_for_descriptor(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        descriptor: corebluetooth::Descriptor,
+        result: corebluetooth::Result<()>,
+    ) {
+        let descriptor = self.executor.handle(descriptor);
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::DescriptorValueWrite { descriptor, result });
+    }
+
+    fn is_ready_to_send_write_without_response(&self, _peripheral: corebluetooth::Peripheral) {
+        let _ = self.sender.try_broadcast(PeripheralEvent::ReadyToWrite);
+    }
+
+    #[cfg(feature = "l2cap")]
+    fn did_open_l2cap_channel(
+        &self,
+        _peripheral: corebluetooth::Peripheral,
+        result: corebluetooth::Result<(
+            corebluetooth::L2capChannel<corebluetooth::Peripheral>,
+            std::os::unix::net::UnixStream,
+        )>,
+    ) {
+        use std::sync::Arc;
+
+        use async_io::Async;
+
+        let result = match result {
+            Ok((channel, stream)) => {
+                let stream = Arc::new(Async::new(stream).unwrap());
+                let reader = L2capChannelReader::new(self.executor.handle(channel.clone()), stream.clone());
+                let writer = L2capChannelWriter::new(self.executor.handle(channel), stream);
+                Ok((reader, writer))
+            }
+            Err(err) => Err(err),
+        };
+
+        let _ = self
+            .sender
+            .try_broadcast(PeripheralEvent::L2CAPChannelOpened { result });
+    }
+}
 
 impl PeripheralDelegate {
-    pub fn new() -> Retained<Self> {
+    pub fn new(executor: Executor) -> Self {
         let (mut sender, receiver) = async_broadcast::broadcast::<PeripheralEvent>(16);
         sender.set_overflow(true);
-        let receiver = receiver.deactivate();
-        let ivars = PeripheralDelegateIvars {
+        let _receiver = receiver.deactivate();
+        Self {
             sender,
-            _receiver: receiver,
-        };
-        let this = PeripheralDelegate::alloc().set_ivars(ivars);
-        unsafe { msg_send![super(this), init] }
+            _receiver,
+            executor,
+        }
     }
 
-    pub fn sender(&self) -> async_broadcast::Sender<PeripheralEvent> {
-        self.ivars().sender.clone()
+    pub fn subscribe(&self) -> async_broadcast::Receiver<PeripheralEvent> {
+        self.sender.new_receiver()
     }
 }

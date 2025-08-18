@@ -48,14 +48,14 @@ impl Characteristic {
         self.0.read().await
     }
 
-    /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
+    /// Write `value` to this characteristic on the device and request the device return a response indicating
     /// a successful write.
     #[inline]
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         self.0.write(value).await
     }
 
-    /// Write the value of this descriptor on the device to `value` without requesting a response.
+    /// Write `value` to this characteristic on the device without requesting a response.
     #[inline]
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
         self.0.write_without_response(value).await
