@@ -10,6 +10,7 @@ pub mod device;
 pub mod l2cap_channel;
 pub mod service;
 
+#[allow(mismatched_lifetime_syntaxes)]
 pub(crate) mod bindings;
 
 /// A platform-specific device identifier.
