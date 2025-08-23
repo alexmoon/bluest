@@ -10,7 +10,9 @@ use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, trace, warn};
 
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
+use super::vm_context::{android_api_level, jni_with_env};
 use super::OptionExt;
+use crate::error::ErrorKind;
 use crate::l2cap_channel::PIPE_CAPACITY;
 use crate::Result;
 
@@ -19,7 +21,14 @@ pub fn open_l2cap_channel(
     psm: u16,
     secure: bool,
 ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-    device.vm().with_env(|env| {
+    if android_api_level() < 29 {
+        return Err(crate::Error::new(
+            ErrorKind::NotSupported,
+            None,
+            "creating L2CAP channel requires Android API level 29 or higher",
+        ));
+    }
+    jni_with_env(|env| {
         let device = device.as_local(env);
 
         let channel = if secure {
@@ -52,7 +61,7 @@ pub fn open_l2cap_channel(
             debug!("l2cap read thread running!");
             let mut read_sender = BlockOn::new(read_sender);
 
-            input_stream.vm().with_env(|env| {
+            jni_with_env(|env| {
                 let stream = input_stream.as_local(env);
                 let arr: Local<ByteArray> = ByteArray::new(env, 1024);
 
@@ -84,9 +93,8 @@ pub fn open_l2cap_channel(
 
         thread::spawn(move || {
             debug!("l2cap write thread running!");
-
             let mut write_receiver = BlockOn::new(write_receiver);
-            output_stream.vm().with_env(|env| {
+            jni_with_env(|env| {
                 let stream = output_stream.as_local(env);
                 let mut buf = vec![0; PIPE_CAPACITY];
 
@@ -134,7 +142,7 @@ pub(super) struct L2capCloser {
 
 impl L2capCloser {
     fn close(&self) {
-        self.channel.vm().with_env(|env| {
+        jni_with_env(|env| {
             let channel = self.channel.as_local(env);
             match channel.close() {
                 Ok(()) => debug!("l2cap channel closed"),
@@ -190,8 +198,7 @@ impl L2capChannelWriter {
 impl AsyncWrite for L2capChannelWriter {
     fn poll_write(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
         let stream = pin::pin!(&mut self.stream);
-        let ret = stream.poll_write(cx, buf);
-        ret
+        stream.poll_write(cx, buf)
     }
 
     fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
