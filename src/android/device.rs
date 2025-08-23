@@ -4,8 +4,6 @@ use java_spaghetti::Global;
 use uuid::Uuid;
 
 use super::bindings::android::bluetooth::BluetoothDevice;
-#[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use crate::pairing::PairingAgent;
 use crate::{DeviceId, Result, Service, ServicesChanged};
 
@@ -100,12 +98,10 @@ impl DeviceImpl {
     }
 
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
-        &self,
-        psm: u16,
-        secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-        super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<super::l2cap_channel::L2capChannel> {
+        let (reader, writer) = super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)?;
+
+        Ok(super::l2cap_channel::L2capChannel { reader, writer })
     }
 }
 

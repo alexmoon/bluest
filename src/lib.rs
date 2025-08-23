@@ -91,9 +91,9 @@
 //!| [`Characteristic::max_write_len`][Characteristic::max_write_len]         | ✅ | ✅ | ⌛️ |
 //!| [`Descriptor::uuid`][Descriptor::uuid]                                   | ✅ | ✅ | ⌛️ |
 //!
-//! ✅ = supported  
-//! ✨ = managed automatically by the OS, this method is a no-op  
-//! ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
+//! ✅ = supported
+//! ✨ = managed automatically by the OS, this method is a no-op
+//! ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally
 //! ❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
 //!
 //! Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,
@@ -119,7 +119,11 @@ mod characteristic;
 mod descriptor;
 mod device;
 pub mod error;
+
+#[cfg(feature = "l2cap")]
+#[macro_use]
 mod l2cap_channel;
+
 pub mod pairing;
 mod service;
 mod util;
