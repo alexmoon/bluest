@@ -9,8 +9,6 @@ use crate::sys;
 #[allow(unused)]
 pub(crate) const PIPE_CAPACITY: usize = 0x100000; // 1Mb
 
-#[macro_export]
-#[doc(hidden)]
 macro_rules! derive_async_read {
     ($type:ty, $field:tt) => {
         impl AsyncRead for $type {
@@ -26,8 +24,6 @@ macro_rules! derive_async_read {
     };
 }
 
-#[macro_export]
-#[doc(hidden)]
 macro_rules! derive_async_write {
     ($type:ty, $field:tt) => {
         impl AsyncWrite for $type {

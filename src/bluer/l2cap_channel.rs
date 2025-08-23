@@ -9,8 +9,6 @@ use bluer::l2cap::stream::{OwnedReadHalf, OwnedWriteHalf};
 use bluer::l2cap::Stream;
 use futures_lite::io::{AsyncRead, AsyncWrite};
 
-use crate::{derive_async_read, derive_async_write};
-
 pub struct L2capChannel(pub(super) Compat<Stream>);
 
 impl L2capChannel {

@@ -12,7 +12,6 @@ use tracing::{debug, trace, warn};
 use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
 use super::OptionExt;
 use crate::l2cap_channel::PIPE_CAPACITY;
-use crate::{derive_async_read, derive_async_write};
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,
