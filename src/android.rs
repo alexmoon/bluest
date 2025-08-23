@@ -13,6 +13,7 @@ pub mod service;
 // **NOTE**: it is important to use `jni_get_vm` or `jni_with_env` instead of `Global::vm`
 // so that a few bugs in `java-spaghetti` 0.2.0 may be avoided.
 pub(crate) mod async_util;
+#[allow(mismatched_lifetime_syntaxes)]
 pub(crate) mod bindings;
 pub(crate) mod callback;
 pub(crate) mod event_receiver;
