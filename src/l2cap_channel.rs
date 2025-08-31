@@ -1,4 +1,3 @@
-#![cfg(feature = "l2cap")]
 use std::pin;
 use std::task::{Context, Poll};
 
