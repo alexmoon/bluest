@@ -16,7 +16,7 @@ use objc2_foundation::{
 use tracing::{debug, trace, warn};
 
 use super::dispatch::Dispatched;
-use crate::l2cap_channel::PIPE_CAPACITY;
+use crate::l2cap_channel::{derive_async_read, derive_async_write, PIPE_CAPACITY};
 
 /// Utility struct to close the channel on drop.
 pub(super) struct L2capCloser {

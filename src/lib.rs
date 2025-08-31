@@ -121,7 +121,6 @@ mod device;
 pub mod error;
 
 #[cfg(feature = "l2cap")]
-#[macro_use]
 mod l2cap_channel;
 
 pub mod pairing;
