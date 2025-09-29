@@ -227,11 +227,7 @@ impl DeviceImpl {
 
     /// Open L2CAP channel given PSM
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
-        &self,
-        psm: u16,
-        _secure: bool,
-    ) -> Result<(L2capChannelReader, L2capChannelWriter)> {
+    pub async fn open_l2cap_channel(&self, psm: u16, _secure: bool) -> Result<super::l2cap_channel::L2capChannel> {
         use tracing::{debug, info};
 
         let mut receiver = self.delegate.sender().new_receiver();
@@ -267,7 +263,7 @@ impl DeviceImpl {
         let reader = L2capChannelReader::new(l2capchannel.clone());
         let writer = L2capChannelWriter::new(l2capchannel);
 
-        Ok((reader, writer))
+        Ok(super::l2cap_channel::L2capChannel { reader, writer })
     }
 }
 

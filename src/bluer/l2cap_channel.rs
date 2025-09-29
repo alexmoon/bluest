@@ -1,51 +1,49 @@
 #![cfg(feature = "l2cap")]
 
-use std::pin::Pin;
-use std::task::Context;
+use std::fmt::Debug;
+use std::pin;
+use std::task::{Context, Poll};
 
+use async_compat::Compat;
+use bluer::l2cap::stream::{OwnedReadHalf, OwnedWriteHalf};
+use bluer::l2cap::Stream;
 use futures_lite::io::{AsyncRead, AsyncWrite};
 
-#[derive(Debug)]
+use crate::l2cap_channel::{derive_async_read, derive_async_write};
+
+pub struct L2capChannel(pub(super) Compat<Stream>);
+
+impl L2capChannel {
+    pub fn split(self) -> (L2capChannelReader, L2capChannelWriter) {
+        let (reader, writer) = self.0.into_inner().into_split();
+        let (reader, writer) = (Compat::new(reader), Compat::new(writer));
+        (L2capChannelReader { reader }, L2capChannelWriter { writer })
+    }
+}
+
+derive_async_read!(L2capChannel, 0);
+derive_async_write!(L2capChannel, 0);
+
 pub struct L2capChannelReader {
-    _private: (),
+    pub(crate) reader: Compat<OwnedReadHalf>,
 }
 
-impl L2capChannelReader {
-    pub async fn close(&mut self) -> crate::Result<()> {
-        todo!()
+derive_async_read!(L2capChannelReader, reader);
+
+impl Debug for L2capChannelReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self.reader.get_ref(), f)
     }
 }
 
-impl AsyncRead for L2capChannelReader {
-    fn poll_read(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        _buf: &mut [u8],
-    ) -> std::task::Poll<std::io::Result<usize>> {
-        todo!()
-    }
-}
-#[derive(Debug)]
 pub struct L2capChannelWriter {
-    _private: (),
+    pub(crate) writer: Compat<OwnedWriteHalf>,
 }
 
-impl L2capChannelWriter {
-    pub async fn close(&mut self) -> crate::Result<()> {
-        todo!()
-    }
-}
+derive_async_write!(L2capChannelWriter, writer);
 
-impl AsyncWrite for L2capChannelWriter {
-    fn poll_write(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &[u8]) -> std::task::Poll<std::io::Result<usize>> {
-        todo!()
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> std::task::Poll<std::io::Result<()>> {
-        todo!()
-    }
-
-    fn poll_close(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> std::task::Poll<std::io::Result<()>> {
-        todo!()
+impl Debug for L2capChannelWriter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self.writer.get_ref(), f)
     }
 }

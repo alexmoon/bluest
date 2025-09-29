@@ -22,7 +22,7 @@ targets = [
 
 [features]
 unstable = []
-l2cap = ["dep:piper", "futures-lite/std", "futures-lite/alloc"]
+l2cap = ["dep:piper", "futures-lite/std", "futures-lite/alloc", "bluer/l2cap", "async-compat"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
@@ -57,7 +57,8 @@ windows = { version = "0.48.0", features = [
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-bluer = { version = "0.16.1", features = ["bluetoothd"] }
+bluer = { version = "0.17.4", features = ["bluetoothd"] }
+async-compat = { version = "0.2", optional = true }
 tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
