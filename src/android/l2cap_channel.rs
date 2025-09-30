@@ -14,7 +14,6 @@ use super::vm_context::{android_api_level, jni_with_env};
 use super::OptionExt;
 use crate::error::ErrorKind;
 use crate::l2cap_channel::{derive_async_read, derive_async_write, PIPE_CAPACITY};
-use crate::Result;
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,

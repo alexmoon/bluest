@@ -10,8 +10,6 @@ use super::bindings::android::bluetooth::BluetoothDevice;
 use super::event_receiver::GlobalEvent;
 use super::gatt_tree::{CachedWeak, GattConnection, GattTree};
 use super::jni::Monitor;
-#[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::service::ServiceImpl;
 use super::vm_context::{android_api_level, jni_with_env};
 use super::{BoolExt, OptionExt};
