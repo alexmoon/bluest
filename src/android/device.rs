@@ -235,16 +235,13 @@ impl DeviceImpl {
     }
 
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
-        &self,
-        psm: u16,
-        secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<super::l2cap_channel::L2capChannel> {
         use tracing::warn;
         if self.get_connection().is_ok() {
-            warn!("trying to open L2CAP channel while there is a GATT connection. this is problematic.");
+            warn!("trying to open L2CAP channel while there is a GATT connection.");
         }
-        super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
+        let (reader, writer) = super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)?;
+        Ok(super::l2cap_channel::L2capChannel { reader, writer })
     }
 
     pub(crate) fn get_connection(&self) -> Result<Arc<GattConnection>, crate::Error> {

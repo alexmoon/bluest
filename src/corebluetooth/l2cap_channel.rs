@@ -16,8 +16,7 @@ use objc2_foundation::{
 use tracing::{debug, trace, warn};
 
 use super::dispatch::Dispatched;
-use crate::l2cap_channel::PIPE_CAPACITY;
-use crate::Result;
+use crate::l2cap_channel::{derive_async_read, derive_async_write, PIPE_CAPACITY};
 
 /// Utility struct to close the channel on drop.
 pub(super) struct L2capCloser {
@@ -43,10 +42,24 @@ impl Drop for L2capCloser {
     }
 }
 
+pub struct L2capChannel {
+    pub(super) reader: L2capChannelReader,
+    pub(super) writer: L2capChannelWriter,
+}
+
+impl L2capChannel {
+    pub fn split(self) -> (L2capChannelReader, L2capChannelWriter) {
+        (self.reader, self.writer)
+    }
+}
+
+derive_async_read!(L2capChannel, reader);
+derive_async_write!(L2capChannel, writer);
+
 /// The reader side of an L2CAP channel.
 pub struct L2capChannelReader {
     stream: piper::Reader,
-    closer: Arc<L2capCloser>,
+    _closer: Arc<L2capCloser>,
     _delegate: Retained<InputStreamDelegate>,
 }
 
@@ -70,23 +83,12 @@ impl L2capChannelReader {
         Self {
             stream: read_rx,
             _delegate: delegate,
-            closer,
+            _closer: closer,
         }
     }
-
-    /// Closes the L2CAP channel reader.
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
-    }
 }
 
-impl AsyncRead for L2capChannelReader {
-    fn poll_read(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
-        let stream = pin::pin!(&mut self.stream);
-        stream.poll_read(cx, buf)
-    }
-}
+derive_async_read!(L2capChannelReader, stream);
 
 impl fmt::Debug for L2capChannelReader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -135,12 +137,6 @@ impl L2capChannelWriter {
             let center = NSNotificationCenter::defaultCenter();
             center.postNotificationName_object(&name, None);
         }
-    }
-
-    /// Closes the L2CAP channel writer.
-    pub async fn close(&mut self) -> Result<()> {
-        self.closer.close();
-        Ok(())
     }
 }
 

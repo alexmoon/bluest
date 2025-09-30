@@ -164,8 +164,8 @@ impl Device {
     #[inline]
     #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<L2capChannel> {
-        let (reader, writer) = self.0.open_l2cap_channel(psm, secure).await?;
-        Ok(L2capChannel { reader, writer })
+        let channel = self.0.open_l2cap_channel(psm, secure).await?;
+        Ok(L2capChannel(channel))
     }
 }
 
