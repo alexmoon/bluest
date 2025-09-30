@@ -17,7 +17,7 @@ targets = [
     "x86_64-apple-darwin",
     "x86_64-pc-windows-msvc",
     "x86_64-unknown-linux-gnu",
-    "aarch64-linux-android"
+    "aarch64-linux-android",
 ]
 
 [features]
@@ -31,6 +31,9 @@ futures-core = "0.3.28"
 futures-lite = { version = "1.13.0", default-features = false }
 serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
+
+[build-dependencies]
+android-build = "0.1.2"
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
@@ -53,7 +56,7 @@ windows = { version = "0.48.0", features = [
     "Storage_Streams",
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
-    "Win32_System_SystemInformation"
+    "Win32_System_SystemInformation",
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -63,12 +66,16 @@ tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 java-spaghetti = "0.2.0"
+ndk-context = "0.1.1"
 async-channel = "2.2.0"
-piper = {version = "0.2.4", optional = true}
+async-broadcast = "0.7.2"
+async-lock = "3.4.0"
+futures-timer = "3.0.3"
+piper = { version = "0.2.4", optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.7.2"
-piper = {version = "0.2.4", optional = true}
+piper = { version = "0.2.4", optional = true }
 objc2 = "0.6.1"
 objc2-foundation = "0.3.1"
 objc2-core-bluetooth = "0.3.1"
