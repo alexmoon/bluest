@@ -73,6 +73,9 @@ impl CharacteristicImpl {
 
     // NOTE: the sequence of gaining read lock and write lock should be the same
     // in `read` and `write` methods, otherwise deadlock may occur.
+    //
+    // To make `wait_unlock` exit on device disconnection, `drop((conn, inner))`
+    // cannot be removed here.
 
     pub async fn read(&self) -> Result<Vec<u8>> {
         let conn = GattTree::find_connection(&self.dev_id).ok_or_check_conn(&self.dev_id)?;
@@ -86,15 +89,32 @@ impl CharacteristicImpl {
                 .map_err(|e| e.into())
                 .and_then(|b| b.non_false())
         })?;
+        drop((conn, inner));
         Ok(read_lock.wait_unlock().await.ok_or_check_conn(&self.dev_id)??)
     }
 
+    // NOTE: It is tested that `AttError::INVALID_ATTRIBUTE_VALUE_LENGTH` is returned if the data length
+    // is too long; a successful write means it is not truncated. Is this really guaranteed?
     pub async fn write(&self, value: &[u8]) -> Result<()> {
         self.write_internal(value, true).await
     }
 
+    // NOTE: It is tested that writing *without response* may never cause an error from the Android API
+    // even if the write length is horrible.
+    //
+    // See <https://developer.android.com/reference/android/bluetooth/BluetoothGatt#requestMtu(int)>:
+    // When performing a write request operation (write without response), the data sent is truncated
+    // to the MTU size.
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
-        self.write_internal(value, false).await
+        if value.len() <= self.max_write_len()? {
+            self.write_internal(value, false).await
+        } else {
+            Err(crate::Error::new(
+                ErrorKind::InvalidParameter,
+                None,
+                "write length probably exceeded the MTU's limitation",
+            ))
+        }
     }
 
     async fn write_internal(&self, value: &[u8], with_response: bool) -> Result<()> {
@@ -125,13 +145,15 @@ impl CharacteristicImpl {
                     .and_then(|b| b.non_false())
             }
         })?;
+        drop((conn, inner));
         Ok(write_lock.wait_unlock().await.ok_or_check_conn(&self.dev_id)??)
     }
 
+    // NOTE: this returns a rather preservative value.
     pub fn max_write_len(&self) -> Result<usize> {
-        // XXX: call `BluetoothGatt.requetMtu(int)` on connection and get the value in `onMtuChanged`.
-        // See <https://developer.android.com/about/versions/14/behavior-changes-all#mtu-set-to-517>.
-        Ok(23 - 5)
+        let conn = GattTree::find_connection(&self.dev_id).ok_or_check_conn(&self.dev_id)?;
+        let mtu = conn.mtu_changed_received.last_value().unwrap_or(23);
+        Ok(mtu - 5)
     }
 
     pub async fn max_write_len_async(&self) -> Result<usize> {

@@ -76,7 +76,7 @@ impl DeviceImpl {
         self.name()
     }
 
-    // NOTE: currently this returns false for devices connected outside this crate.
+    // NOTE: this just checks if it is registered in `bluest`.
     pub async fn is_connected(&self) -> bool {
         self.get_connection().is_ok()
     }
@@ -112,6 +112,7 @@ impl DeviceImpl {
                 })?;
             }
         }
+        drop(conn);
 
         // Inspired by <https://github.com/NordicSemiconductor/Android-BLE-Library>, BleManagerHandler.java
         while let Some(event) = receiver.next().await {
@@ -164,6 +165,7 @@ impl DeviceImpl {
             gatt.discoverServices()?.non_false()?;
             Ok::<_, crate::Error>(())
         })?;
+        drop(conn);
         disc_lock.wait_unlock().await.ok_or_check_conn(&self.id)??;
         self.collect_discovered_services()
     }
@@ -207,16 +209,16 @@ impl DeviceImpl {
                 "this requires BluetoothGattCallback.onServiceChanged() introduced in API level 31",
             ));
         }
-        Ok(self
+        let receiver = self
             .get_connection()?
             .services_changes
             .subscribe(|| Ok::<_, crate::Error>(()), || ())
-            .await?
-            .map(|_| {
-                Ok(ServicesChanged(ServicesChangedImpl {
-                    dev_id: self.id.clone(),
-                }))
+            .await?;
+        Ok(receiver.map(|_| {
+            Ok(ServicesChanged(ServicesChangedImpl {
+                dev_id: self.id.clone(),
             }))
+        }))
     }
 
     pub async fn rssi(&self) -> Result<i16> {
@@ -228,6 +230,7 @@ impl DeviceImpl {
             gatt.readRemoteRssi()?.non_false()?;
             Ok::<_, crate::Error>(())
         })?;
+        drop(conn);
         Ok(read_rssi_lock.wait_unlock().await.ok_or_check_conn(&self.id)??)
     }
 

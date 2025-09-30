@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 use java_spaghetti::{Env, Global, Ref};
-use tracing::{error, info}; // TODO: make it working reliably in the thread of Java callbacks
+use tracing::{error, info};
 
 use super::async_util::{Notifier, NotifierReceiver};
 use super::bindings::android::bluetooth::{BluetoothAdapter, BluetoothDevice};
@@ -91,6 +91,16 @@ impl EventReceiver {
 
 struct BroadcastReceiverProxy {
     rec_hdl: Weak<EventReceiver>,
+}
+
+// TODO: make clear of how to make `tracing` crate working in the thread of Java callbacks.
+// `println` also requires something like <https://docs.rs/crate/android-activity/0.6.0/source/src/util.rs#39-75>,
+// which is automatically done by `android-activity`.
+macro_rules! error {
+    ($($arg:tt)+) => (eprintln!($($arg)+))
+}
+macro_rules! info {
+    ($($arg:tt)+) => (println!($($arg)+))
 }
 
 impl super::callback::BroadcastReceiverProxy for BroadcastReceiverProxy {

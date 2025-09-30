@@ -74,6 +74,16 @@ pub fn android_api_level() -> i32 {
     *API_LEVEL.get_or_init(|| jni_with_env(Build_VERSION::SDK_INT))
 }
 
+pub fn android_has_permission(permission: &str) -> bool {
+    const PERMISSION_GRANTED: i32 = 0;
+    assert!(android_api_level() >= 23);
+    jni_with_env(|env| {
+        let context = android_context();
+        let permission = JString::from_env_str(env, permission);
+        context.as_ref(env).checkSelfPermission(&permission).unwrap_or(1) == PERMISSION_GRANTED
+    })
+}
+
 /// Note: this will panic if `dex_data` is invalid.
 pub fn android_load_dex(dex_data: &[u8]) -> Global<ClassLoader> {
     let vm = jni_get_vm();

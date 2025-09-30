@@ -2,11 +2,13 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task;
+use std::time::Duration;
 
 use async_broadcast::{Receiver, Sender};
 use async_lock::{Mutex, MutexGuard};
 use futures_core::Stream;
-use futures_lite::StreamExt;
+use futures_lite::{FutureExt, StreamExt};
+use futures_timer::Delay;
 
 /// Reusable exclusive register for `ExcluderLock`.
 pub struct Excluder<T: Send + Clone> {
@@ -147,6 +149,17 @@ impl<T: Send + Clone> ExcluderLock<T> {
         self.last_val
             .upgrade()
             .and_then(|arc| arc.lock_blocking().as_ref().cloned())
+    }
+
+    /// Waits until the unlock signal is sent from the "foreign" callback or the timeout
+    /// is reached. Returns `None` when timeout or when the corresponding `Excluder` is dropped.
+    pub async fn wait_unlock_with_timeout(self, timeout: Duration) -> Option<T> {
+        self.wait_unlock()
+            .or(async {
+                Delay::new(timeout).await;
+                None
+            })
+            .await
     }
 }
 

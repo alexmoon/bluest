@@ -38,8 +38,15 @@ class BluetoothGattCallback extends android.bluetooth.BluetoothGattCallback {
     }
     private native void native_onServicesDiscovered(long ptr, android.bluetooth.BluetoothGatt arg0, int arg1);
 
+    // NOTE: these `if (android.os.Build.VERSION.SDK_INT >= 33) { return; }` may be removed while updating `java-spaghetti`.
+    // This is a temporary optimization, hopefully making up for the performance costs of workarounds for the current `java-spaghetti`.
+    // The Rust code cannot rely on this behavior.
+
     @Override
     public void onCharacteristicRead(android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattCharacteristic arg1, int arg2) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return;
+        }
         native_onCharacteristicRead(ptr, arg0, arg1, arg2);
     }
     private native void native_onCharacteristicRead(long ptr, android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattCharacteristic arg1, int arg2);
@@ -58,6 +65,9 @@ class BluetoothGattCallback extends android.bluetooth.BluetoothGattCallback {
 
     @Override
     public void onCharacteristicChanged(android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattCharacteristic arg1) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return;
+        }
         native_onCharacteristicChanged(ptr, arg0, arg1);
     }
     private native void native_onCharacteristicChanged(long ptr, android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattCharacteristic arg1);
@@ -70,6 +80,9 @@ class BluetoothGattCallback extends android.bluetooth.BluetoothGattCallback {
 
     @Override
     public void onDescriptorRead(android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattDescriptor arg1, int arg2) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return;
+        }
         native_onDescriptorRead(ptr, arg0, arg1, arg2);
     }
     private native void native_onDescriptorRead(long ptr, android.bluetooth.BluetoothGatt arg0, android.bluetooth.BluetoothGattDescriptor arg1, int arg2);

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex, OnceLock, Weak};
+use std::time::Duration;
 
 use futures_core::Stream;
 use java_spaghetti::{ByteArray, Env, Global, Ref};
@@ -89,6 +90,7 @@ pub(crate) struct GattConnection {
     pub(super) discover_services: Excluder<Result<(), AttError>>,
     pub(super) read_rssi: Excluder<Result<i16, AttError>>,
     pub(super) services_changes: Notifier<()>,
+    pub(super) mtu_changed_received: Excluder<usize>,
 }
 
 pub(crate) struct ServiceInner {
@@ -151,18 +153,31 @@ impl GattTree {
                 discover_services: Excluder::new(),
                 read_rssi: Excluder::new(),
                 services_changes: Notifier::new(16),
+                mtu_changed_received: Excluder::new(),
             }),
         );
     }
 
     /// Call it *once* right after calling `register_connection`.
     /// Returns `None` if it's still disconnected.
-    pub async fn wait_connection_available(dev_id: &DeviceId) -> Option<()> {
-        let conn = Self::find_connection(dev_id)?;
+    pub async fn wait_connection_available(dev_id: &DeviceId) -> Result<(), crate::Error> {
+        let conn = Self::find_connection(dev_id).ok_or_check_conn(dev_id)?;
+        let connect_lock = conn.gatt_connect.lock().await;
         if conn.gatt_connect.last_value().is_none() {
-            conn.gatt_connect.lock().await.wait_unlock().await
+            // Inspired by `CONNECTION_TIMEOUT_THRESHOLD` in `Android-BLE-Library`.
+            drop(conn);
+            if connect_lock
+                .wait_unlock_with_timeout(Duration::from_secs(20))
+                .await
+                .is_some()
+            {
+                Ok(())
+            } else {
+                let _ = Self::find_connection(dev_id).ok_or_check_conn(dev_id)?;
+                Err(crate::Error::from(crate::error::ErrorKind::Timeout))
+            }
         } else {
-            Some(())
+            Ok(())
         }
     }
 
@@ -173,11 +188,16 @@ impl GattTree {
     /// but changing this behavior will break the current bluest `DeviceId` API
     /// (probably not being able to keep the uniqueness of `DeviceId`).
     pub fn deregister_connection(dev_id: &DeviceId) -> bool {
-        let deregistered = GATT_CONNECTIONS.lock().unwrap().remove(dev_id).is_some();
-        if deregistered {
+        let deregistered = GATT_CONNECTIONS.lock().unwrap().remove(dev_id);
+        if let Some(conn) = deregistered {
+            jni_with_env(|env| {
+                let _ = conn.gatt.as_ref(env).close(); // releases resources
+            });
             CONNECTION_EVENTS.notify((dev_id.clone(), ConnectionEvent::Disconnected));
+            true
+        } else {
+            false
         }
-        deregistered
     }
 
     pub async fn connection_events() -> impl Stream<Item = (DeviceId, ConnectionEvent)> {
@@ -284,6 +304,17 @@ fn construct_service_tree<'env>(service_obj: &Ref<'env, BluetoothGattService>) -
     })
 }
 
+// TODO: make clear of how to make `tracing` crate working in the thread of Java callbacks.
+// `println` also requires something like <https://docs.rs/crate/android-activity/0.6.0/source/src/util.rs#39-75>,
+// which is automatically done by `android-activity`.
+
+macro_rules! error {
+    ($($arg:tt)+) => (eprintln!($($arg)+))
+}
+macro_rules! info {
+    ($($arg:tt)+) => (println!($($arg)+))
+}
+
 fn callback_find_char(
     dev_id: &DeviceId,
     char: &Option<Ref<'_, BluetoothGattCharacteristic>>,
@@ -345,6 +376,7 @@ impl super::callback::BluetoothGattCallbackProxy for BluetoothGattCallbackProxy 
     }
 
     fn onServicesDiscovered<'env>(&self, _env: Env<'env>, _gatt: Option<Ref<'env, BluetoothGatt>>, status: i32) {
+        info!("onServicesDiscovered of {}, status {status}", self.dev_id);
         let Some(conn) = GattTree::find_connection(&self.dev_id) else {
             return;
         };
@@ -500,12 +532,22 @@ impl super::callback::BluetoothGattCallbackProxy for BluetoothGattCallbackProxy 
         conn.read_rssi.unlock(gatt_error_check(status).map(|_| rssi as _));
     }
 
-    fn onMtuChanged<'env>(&self, _env: Env<'env>, _arg0: Option<Ref<'env, BluetoothGatt>>, _arg1: i32, _arg2: i32) {}
+    fn onMtuChanged<'env>(&self, _env: Env<'env>, _gatt: Option<Ref<'env, BluetoothGatt>>, mtu: i32, _status: i32) {
+        let Some(conn) = GattTree::find_connection(&self.dev_id) else {
+            return;
+        };
+        // this should be true
+        if let Ok(mtu) = usize::try_from(mtu) {
+            info!("onMtuChanged of {}, mtu is {mtu}", self.dev_id);
+            conn.mtu_changed_received.unlock(mtu);
+        }
+    }
 
     fn onServiceChanged<'env>(&self, _env: Env<'env>, gatt: Option<Ref<'env, BluetoothGatt>>) {
         let Some(conn) = GattTree::find_connection(&self.dev_id) else {
             return;
         };
+        info!("onServiceChanged of {}", self.dev_id);
         if let Some(disc_lock) = conn.discover_services.try_lock() {
             let gatt = Monitor::new(gatt.as_ref().unwrap());
             if let Err(e) = gatt

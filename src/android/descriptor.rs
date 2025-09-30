@@ -71,6 +71,7 @@ impl DescriptorImpl {
                 .map_err(|e| e.into())
                 .and_then(|b| b.non_false())
         })?;
+        drop((conn, inner));
         Ok(read_lock.wait_unlock().await.ok_or_check_conn(&self.dev_id)??)
     }
 
@@ -96,6 +97,7 @@ impl DescriptorImpl {
                     .and_then(|b| b.non_false())
             }
         })?;
+        drop((conn, inner));
         Ok(write_lock.wait_unlock().await.ok_or_check_conn(&self.dev_id)??)
     }
 
