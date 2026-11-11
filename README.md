@@ -98,7 +98,7 @@ below.
 | [`Device::pair`][Device::pair]                                   |    ✨     |   ✅    |  ✅   |
 | [`Device::pair_with_agent`][Device::pair_with_agent]             |    ✨     |   ✅    |  ✅   |
 | [`Device::unpair`][Device::unpair]                               |    ❌     |   ✅    |  ✅   |
-| [`Device::rssi`][Device::rssi]                                   |    ✅     |   ❌    |  ❌   |
+| [`Device::rssi`][Device::rssi]                                   |    ✅     |   ❌    |  ✅   |
 | [`Service::uuid`][Service::uuid]                                 |    ✅     |   ✅    |  ⌛️   |
 | [`Service::is_primary`][Service::is_primary]                     |    ✅     |   ❌    |  ✅   |
 | [`Characteristic::uuid`][Characteristic::uuid]                   |    ✅     |   ✅    |  ⌛️   |
