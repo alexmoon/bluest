@@ -137,9 +137,23 @@ impl AdapterImpl {
         &'a self,
         services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
+        // Scan LE only. The default "auto" transport interleaves BR/EDR inquiry, which halves the LE scan time.
+        // If a discovery session is already active, the filter cannot change; keep the active one.
+        let filter = bluer::DiscoveryFilter {
+            transport: bluer::DiscoveryTransport::Le,
+            ..Default::default()
+        };
+        if let Err(err) = self.inner.set_discovery_filter(filter).await {
+            if err.kind != bluer::ErrorKind::DiscoveryActive {
+                return Err(err.into());
+            }
+        }
+
+        // BlueZ emits DeviceAdded once per device. Devices already known to BlueZ get their RSSI and fresh
+        // advertisement data only in later property changes, so also emit on changes.
         Ok(self
             .inner
-            .discover_devices()
+            .discover_devices_with_changes()
             .await?
             .then(move |event| {
                 Box::pin(async move {
