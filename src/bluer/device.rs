@@ -251,9 +251,10 @@ impl DeviceImpl {
     ///
     /// # Platform specific
     ///
-    /// Returns [ErrorKind::NotSupported].
+    /// Returns [ErrorKind::NotFound] if bluer knows the device but has not received an advertisement from it in the
+    /// current discovery.
     pub async fn rssi(&self) -> Result<i16> {
-        Err(ErrorKind::NotSupported.into())
+        self.inner.rssi().await?.ok_or_else(|| ErrorKind::NotFound.into())
     }
 
     pub(super) async fn adv_data(&self) -> AdvertisementData {
@@ -299,9 +300,9 @@ impl DeviceImpl {
     ) -> Result<super::l2cap_channel::L2capChannel, crate::Error> {
         use async_compat::Compat;
         use bluer::l2cap::{SocketAddr, Stream as L2CapStream};
-        use bluer::AddressType;
 
-        let target_sa = SocketAddr::new(self.inner.address(), AddressType::LePublic, psm);
+        let addr_type = self.inner.address_type().await?;
+        let target_sa = SocketAddr::new(self.inner.address(), addr_type, psm);
         let stream = L2CapStream::connect(target_sa).await?;
         Ok(super::l2cap_channel::L2capChannel(Compat::new(stream)))
     }
