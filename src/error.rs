@@ -35,10 +35,10 @@ impl Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match (self.message.is_empty(), &self.source) {
-            (true, None) => write!(f, "{}", &self.kind),
-            (false, None) => write!(f, "{}: {}", &self.kind, &self.message),
-            (true, Some(err)) => write!(f, "{}: {} ({})", &self.kind, &self.message, err),
-            (false, Some(err)) => write!(f, "{}: {}", &self.kind, err),
+            (true, None) => write!(f, "{}", self.kind),
+            (false, None) => write!(f, "{}: {}", self.kind, self.message),
+            (true, Some(err)) => write!(f, "{}: {} ({})", self.kind, self.message, err),
+            (false, Some(err)) => write!(f, "{}: {}", self.kind, err),
         }
     }
 }

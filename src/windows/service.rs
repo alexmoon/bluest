@@ -1,6 +1,6 @@
-use windows::core::GUID;
 use windows::Devices::Bluetooth::BluetoothCacheMode;
 use windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
+use windows_core::GUID;
 
 use super::error::check_communication_status;
 use crate::error::ErrorKind;

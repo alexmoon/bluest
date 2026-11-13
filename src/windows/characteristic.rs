@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use futures_core::Stream;
 use futures_lite::StreamExt;
 use tracing::{error, warn};
@@ -6,8 +8,10 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::{
     GattCharacteristic, GattClientCharacteristicConfigurationDescriptorValue, GattValueChangedEventArgs,
     GattWriteOption, GattWriteResult,
 };
-use windows::Foundation::{AsyncOperationCompletedHandler, TypedEventHandler};
+use windows::Foundation::TypedEventHandler;
 use windows::Storage::Streams::{DataReader, DataWriter};
+use windows_core::Ref;
+use windows_future::AsyncOperationCompletedHandler;
 
 use super::error::check_communication_status;
 use crate::error::ErrorKind;
@@ -162,9 +166,10 @@ impl CharacteristicImpl {
             ));
         };
 
-        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
+        let (sender, receiver) = futures_channel::mpsc::channel(16);
+        let sender = Mutex::new(sender);
         let token = self.inner.ValueChanged(&TypedEventHandler::new(
-            move |_characteristic, event_args: &Option<GattValueChangedEventArgs>| {
+            move |_characteristic, event_args: Ref<GattValueChangedEventArgs>| {
                 let event_args = event_args
                     .as_ref()
                     .expect("GattValueChangedEventArgs was null in ValueChanged handler");
@@ -178,7 +183,7 @@ impl CharacteristicImpl {
                     Ok(data)
                 }
 
-                if let Err(err) = sender.try_send(get_value(event_args)) {
+                if let Err(err) = sender.lock().unwrap().try_send(get_value(event_args)) {
                     error!("Error sending characteristic value changed notification: {:?}", err);
                 }
 
@@ -208,7 +213,7 @@ impl CharacteristicImpl {
                 )
                 .and_then(|op| {
                     op.SetCompleted(&AsyncOperationCompletedHandler::new(move |op, _status| {
-                        fn check_status(res: windows::core::Result<GattWriteResult>) -> Result<()> {
+                        fn check_status(res: windows_core::Result<GattWriteResult>) -> Result<()> {
                             let res = res?;
                             check_communication_status(
                                 res.Status()?,
