@@ -4,8 +4,8 @@ use std::mem::MaybeUninit;
 use std::sync::OnceLock;
 
 use dispatch2::{DispatchQoS, DispatchQueue, DispatchQueueAttr, DispatchRetained};
-use objc2::rc::Retained;
 use objc2::Message;
+use objc2::rc::Retained;
 
 /// Get a serial dispatch queue to use for all CoreBluetooth operations
 pub(crate) fn queue() -> &'static DispatchQueue {
@@ -90,6 +90,6 @@ impl<T> Dispatched<T> {
     ///
     /// This method must only be called from within the context of `queue()`.
     pub unsafe fn get(&self) -> &T {
-        &*self.0.get()
+        unsafe { &*self.0.get() }
     }
 }

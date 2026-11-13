@@ -2,7 +2,7 @@
 name = "bluest"
 version = "0.6.10"
 authors = ["Alex Moon"]
-edition = "2021"
+edition = "2024"
 description = "A cross-platform Bluetooth Low Energy (BLE) library"
 documentation = "https://docs.rs/bluest"
 repository = "https://github.com/alexmoon/bluest/"
