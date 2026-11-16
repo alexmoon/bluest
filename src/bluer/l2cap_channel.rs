@@ -1,8 +1,6 @@
 #![cfg(feature = "l2cap")]
 
 use std::fmt::Debug;
-use std::pin;
-use std::task::{Context, Poll};
 
 use async_compat::Compat;
 use bluer::l2cap::Stream;
