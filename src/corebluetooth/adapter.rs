@@ -5,10 +5,10 @@ use corebluetooth::dispatch::DispatchQoS;
 use corebluetooth::{CBManagerAuthorization, CBManagerState, CentralManager};
 use dispatch_executor::Handle;
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use tracing::{debug, error, info, warn};
 
-use super::delegates::{self, subscribe_central, CentralDelegate, CentralEvent};
+use super::delegates::{self, CentralDelegate, CentralEvent, subscribe_central};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};

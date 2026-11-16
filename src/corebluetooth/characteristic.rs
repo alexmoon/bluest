@@ -3,7 +3,7 @@ use dispatch_executor::Handle;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
-use super::delegates::{subscribe_peripheral, PeripheralEvent};
+use super::delegates::{PeripheralEvent, subscribe_peripheral};
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{Characteristic, CharacteristicProperties, Descriptor, Error, Result, Uuid};
@@ -273,10 +273,10 @@ impl CharacteristicImpl {
 
         let guard = defer(move || {
             self.inner.lock(|characteristic, _| {
-                if let Some(peripheral) = characteristic.service().and_then(|x| x.peripheral()) {
-                    if peripheral.state() == CBPeripheralState::Connected {
-                        peripheral.set_notify(characteristic, false);
-                    }
+                if let Some(peripheral) = characteristic.service().and_then(|x| x.peripheral())
+                    && peripheral.state() == CBPeripheralState::Connected
+                {
+                    peripheral.set_notify(characteristic, false);
                 }
             });
         });

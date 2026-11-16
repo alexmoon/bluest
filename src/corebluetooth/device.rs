@@ -6,9 +6,7 @@ use dispatch_executor::Handle;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
-use super::delegates::{subscribe_peripheral, PeripheralEvent};
-#[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
+use super::delegates::{PeripheralEvent, subscribe_peripheral};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
@@ -237,10 +235,7 @@ impl DeviceImpl {
         }
         debug!("open_l2cap_channel success {:?}", self.peripheral);
 
-        let reader = l2capchannel.0;
-        let writer = l2capchannel.1;
-
-        Ok(super::l2cap_channel::L2capChannel { reader, writer })
+        Ok(l2capchannel)
     }
 }
 
