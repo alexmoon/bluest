@@ -22,7 +22,7 @@ targets = [
 
 [features]
 unstable = []
-l2cap = ["dep:piper", "futures-lite/std", "dep:async-io"]
+l2cap = ["dep:piper", "futures-lite/std", "bluer/l2cap", "dep:async-io"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
