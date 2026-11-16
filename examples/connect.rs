@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::time::Duration;
 
-use bluest::{btuuid, Adapter};
+use bluest::{Adapter, btuuid};
 use futures_lite::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
@@ -9,7 +9,7 @@ use tracing::metadata::LevelFilter;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

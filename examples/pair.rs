@@ -2,7 +2,7 @@ use std::error::Error;
 
 use async_trait::async_trait;
 use bluest::pairing::{IoCapability, PairingAgent, PairingRejected, Passkey};
-use bluest::{btuuid, Adapter, Device};
+use bluest::{Adapter, Device, btuuid};
 use futures_lite::StreamExt;
 use tracing::info;
 use tracing::metadata::LevelFilter;
@@ -71,7 +71,7 @@ impl PairingAgent for StdioPairingAgent {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

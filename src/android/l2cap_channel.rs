@@ -9,9 +9,9 @@ use futures_lite::io::{AsyncRead, AsyncWrite, BlockOn};
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
 use tracing::{debug, trace, warn};
 
-use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
 use super::OptionExt;
-use crate::l2cap_channel::{derive_async_read, derive_async_write, PIPE_CAPACITY};
+use super::bindings::android::bluetooth::{BluetoothDevice, BluetoothSocket};
+use crate::l2cap_channel::{PIPE_CAPACITY, derive_async_read, derive_async_write};
 
 pub fn open_l2cap_channel(
     device: Global<BluetoothDevice>,

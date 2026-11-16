@@ -1,4 +1,4 @@
-use crate::{sys, Result, Uuid};
+use crate::{Result, Uuid, sys};
 
 /// A Bluetooth GATT descriptor
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -39,16 +39,15 @@ impl AdvertisementData {
                 if let Some(val) = val.downcast_ref::<NSDictionary>() {
                     let mut res = HashMap::with_capacity(val.count());
                     for k in val.allKeys() {
-                        if let Some(key) = k.downcast_ref::<CBUUID>() {
-                            if let Some(val) = val
+                        if let Some(key) = k.downcast_ref::<CBUUID>()
+                            && let Some(val) = val
                                 .objectForKey_unchecked(&k)
                                 .and_then(|val| val.downcast_ref::<NSData>())
-                            {
-                                res.insert(
-                                    Uuid::from_bluetooth_bytes(key.data().as_bytes_unchecked()),
-                                    val.to_vec(),
-                                );
-                            }
+                        {
+                            res.insert(
+                                Uuid::from_bluetooth_bytes(key.data().as_bytes_unchecked()),
+                                val.to_vec(),
+                            );
                         }
                     }
                     res

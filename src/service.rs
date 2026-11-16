@@ -1,4 +1,4 @@
-use crate::{sys, Characteristic, Result, Uuid};
+use crate::{Characteristic, Result, Uuid, sys};
 
 /// A Bluetooth GATT service
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

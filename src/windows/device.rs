@@ -1,15 +1,16 @@
 use std::pin::pin;
+use std::sync::Mutex;
 
 use futures_channel::mpsc;
 use futures_core::Stream;
-use futures_lite::{future, StreamExt};
+use futures_lite::{StreamExt, future};
 use tracing::error;
-use windows::core::{GUID, HSTRING};
 use windows::Devices::Bluetooth::{
     BluetoothAddressType, BluetoothCacheMode, BluetoothConnectionStatus, BluetoothLEDevice,
 };
 use windows::Devices::Enumeration::{DeviceInformation, DevicePairingKinds, DevicePairingRequestedEventArgs};
 use windows::Foundation::TypedEventHandler;
+use windows_core::{GUID, HSTRING, Ref};
 
 use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
 use crate::device::ServicesChanged;
@@ -56,7 +57,7 @@ impl std::fmt::Display for DeviceImpl {
 }
 
 impl Device {
-    pub(super) async fn from_addr(addr: u64, kind: Option<BluetoothAddressType>) -> windows::core::Result<Self> {
+    pub(super) async fn from_addr(addr: u64, kind: Option<BluetoothAddressType>) -> windows_core::Result<Self> {
         let inner = if let Some(kind) = kind {
             BluetoothLEDevice::FromBluetoothAddressWithBluetoothAddressTypeAsync(addr, kind)?.await?
         } else {
@@ -65,7 +66,7 @@ impl Device {
         Ok(Device(DeviceImpl { inner }))
     }
 
-    pub(super) async fn from_id(id: &HSTRING) -> windows::core::Result<Self> {
+    pub(super) async fn from_id(id: &HSTRING) -> windows_core::Result<Self> {
         let inner = BluetoothLEDevice::FromIdAsync(id)?.await?;
         Ok(Device(DeviceImpl { inner }))
     }
@@ -146,13 +147,14 @@ impl DeviceImpl {
             }
         };
 
-        let (mut tx, mut rx) = mpsc::channel(1);
+        let (tx, mut rx) = mpsc::channel(1);
+        let tx = Mutex::new(tx);
         let custom = self.inner.DeviceInformation()?.Pairing()?.Custom()?;
         custom.PairingRequested(&TypedEventHandler::new(
-            move |_custom, event_args: &Option<DevicePairingRequestedEventArgs>| {
+            move |_custom, event_args: Ref<DevicePairingRequestedEventArgs>| {
                 if let Some(event_args) = event_args.clone() {
                     let deferral = event_args.GetDeferral()?;
-                    let _ = tx.try_send((event_args, deferral));
+                    let _ = tx.lock().unwrap().try_send((event_args, deferral));
                 }
                 Ok(())
             },
@@ -180,10 +182,10 @@ impl DeviceImpl {
                         }
                     }
                     DevicePairingKinds::ConfirmPinMatch => {
-                        if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>() {
-                            if let Ok(()) = agent.confirm_passkey(&device, passkey).await {
-                                event_args.Accept()?;
-                            }
+                        if let Ok(passkey) = event_args.Pin()?.to_string_lossy().parse::<Passkey>()
+                            && let Ok(()) = agent.confirm_passkey(&device, passkey).await
+                        {
+                            event_args.Accept()?;
                         }
                     }
                     _ => (),
@@ -258,9 +260,14 @@ impl DeviceImpl {
     pub async fn service_changed_indications(
         &self,
     ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
-        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
+        let (sender, receiver) = futures_channel::mpsc::channel(16);
+        let sender = Mutex::new(sender);
         let token = self.inner.GattServicesChanged(&TypedEventHandler::new(move |_, _| {
-            if let Err(err) = sender.try_send(Ok(ServicesChanged(ServicesChangedImpl))) {
+            if let Err(err) = sender
+                .lock()
+                .unwrap()
+                .try_send(Ok(ServicesChanged(ServicesChangedImpl)))
+            {
                 error!("Error sending service changed indication: {:?}", err);
             }
             Ok(())

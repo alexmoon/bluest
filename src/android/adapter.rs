@@ -6,7 +6,7 @@ use std::task::{Context, Poll};
 
 use async_channel::{Receiver, Sender};
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use java_spaghetti::{Arg, ByteArray, Env, Global, Local, Null, PrimitiveArray, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;
@@ -239,10 +239,10 @@ impl<T: Send + 'static> CallbackRouter<T> {
     }
 
     fn callback(&'static self, id: i32, val: T) {
-        if let Some(sender) = self.map.lock().unwrap().as_mut().unwrap().get_mut(&id) {
-            if let Err(e) = sender.send_blocking(val) {
-                warn!("failed to send scan callback: {:?}", e)
-            }
+        if let Some(sender) = self.map.lock().unwrap().as_mut().unwrap().get_mut(&id)
+            && let Err(e) = sender.send_blocking(val)
+        {
+            warn!("failed to send scan callback: {:?}", e)
         }
     }
 }
@@ -269,7 +269,7 @@ impl<T: Send> Drop for CallbackReceiver<T> {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanResult(
     env: Env<'_>,
     _class: *mut (), // self class, ignore
@@ -289,7 +289,7 @@ fn convert_uuid(uuid: Local<'_, ParcelUuid>) -> Result<Uuid> {
     Ok(Uuid::from_u64_pair(msb, lsb))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn on_scan_result(env: Env<'_>, id: i32, callback_type: i32, scan_result: Arg<ScanResult>) -> Result<()> {
     let scan_result = unsafe { scan_result.into_ref(env) }.non_null()?;
 
@@ -357,7 +357,7 @@ fn on_scan_result(env: Env<'_>, id: i32, callback_type: i32, scan_result: Arg<Sc
     Ok(())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_github_alexmoon_bluest_android_BluestScanCallback_nativeOnScanFailed(
     _env: Env<'_>,
     _class: *mut (), // self class, ignore

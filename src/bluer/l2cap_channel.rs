@@ -5,8 +5,8 @@ use std::pin;
 use std::task::{Context, Poll};
 
 use async_compat::Compat;
-use bluer::l2cap::stream::{OwnedReadHalf, OwnedWriteHalf};
 use bluer::l2cap::Stream;
+use bluer::l2cap::stream::{OwnedReadHalf, OwnedWriteHalf};
 use futures_lite::io::{AsyncRead, AsyncWrite};
 
 use crate::l2cap_channel::{derive_async_read, derive_async_write};

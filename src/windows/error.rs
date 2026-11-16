@@ -2,11 +2,11 @@ use windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatu
 use windows::Devices::Enumeration::{DevicePairingResultStatus, DeviceUnpairingResultStatus};
 use windows::Foundation::IReference;
 
-use crate::error::ErrorKind;
 use crate::Result;
+use crate::error::ErrorKind;
 
-impl From<windows::core::Error> for crate::Error {
-    fn from(err: windows::core::Error) -> Self {
+impl From<windows_core::Error> for crate::Error {
+    fn from(err: windows_core::Error) -> Self {
         crate::Error::new(ErrorKind::Other, Some(Box::new(err)), String::new())
     }
 }
@@ -26,7 +26,7 @@ impl std::fmt::Display for CommunicationError {
             GattCommunicationStatus::AccessDenied => "access denied",
             GattCommunicationStatus::Unreachable => "unreachable",
             GattCommunicationStatus::ProtocolError => "protocol error",
-            _ => return write!(f, "unknown ({})", self.0 .0),
+            _ => return write!(f, "unknown ({})", self.0.0),
         };
         f.write_str(str)
     }
@@ -36,7 +36,7 @@ impl std::error::Error for CommunicationError {}
 
 fn kind_from_communication_status(
     status: GattCommunicationStatus,
-    protocol_error: windows::core::Result<IReference<u8>>,
+    protocol_error: windows_core::Result<IReference<u8>>,
 ) -> Result<ErrorKind> {
     match status {
         GattCommunicationStatus::Success => {
@@ -51,7 +51,7 @@ fn kind_from_communication_status(
 
 pub(super) fn check_communication_status(
     status: GattCommunicationStatus,
-    protocol_error: windows::core::Result<IReference<u8>>,
+    protocol_error: windows_core::Result<IReference<u8>>,
     message: &str,
 ) -> Result<()> {
     use crate::Error;
@@ -96,7 +96,7 @@ impl std::fmt::Display for PairingError {
             DevicePairingResultStatus::RejectedByHandler => "rejected by handler",
             DevicePairingResultStatus::RemoteDeviceHasAssociation => "remote device has association",
             DevicePairingResultStatus::Failed => "failed",
-            _ => return write!(f, "unknown ({})", self.0 .0),
+            _ => return write!(f, "unknown ({})", self.0.0),
         };
         f.write_str(str)
     }
@@ -157,7 +157,7 @@ impl std::fmt::Display for UnpairingError {
             DeviceUnpairingResultStatus::OperationAlreadyInProgress => "operation already in progress",
             DeviceUnpairingResultStatus::AccessDenied => "access denied",
             DeviceUnpairingResultStatus::Failed => "failed",
-            _ => return write!(f, "unknown ({})", self.0 .0),
+            _ => return write!(f, "unknown ({})", self.0.0),
         };
         f.write_str(str)
     }

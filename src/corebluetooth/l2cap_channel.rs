@@ -7,7 +7,7 @@ use std::{fmt, pin};
 use futures_lite::io::{AsyncRead, AsyncWrite, BlockOn};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{define_class, msg_send, sel, AnyThread, DefinedClass};
+use objc2::{AnyThread, DefinedClass, define_class, msg_send, sel};
 use objc2_core_bluetooth::CBL2CAPChannel;
 use objc2_foundation::{
     NSDefaultRunLoopMode, NSInputStream, NSNotification, NSNotificationCenter, NSObject, NSObjectProtocol,
@@ -16,7 +16,7 @@ use objc2_foundation::{
 use tracing::{debug, trace, warn};
 
 use super::dispatch::Dispatched;
-use crate::l2cap_channel::{derive_async_read, derive_async_write, PIPE_CAPACITY};
+use crate::l2cap_channel::{PIPE_CAPACITY, derive_async_read, derive_async_write};
 
 /// Utility struct to close the channel on drop.
 pub(super) struct L2capCloser {

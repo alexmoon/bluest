@@ -2,7 +2,7 @@ use std::mem;
 
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows::Win32::System::SystemInformation::OSVERSIONINFOW;
-use windows::{s, w};
+use windows_core::{s, w};
 
 fn get_windows_version() -> Option<(u32, u32, u32)> {
     let handle = unsafe { GetModuleHandleW(w!("ntdll.dll")).ok()? };

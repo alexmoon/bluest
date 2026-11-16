@@ -1,5 +1,5 @@
 use objc2::rc::Retained;
-use objc2::{define_class, msg_send, AnyThread, DefinedClass, Message};
+use objc2::{AnyThread, DefinedClass, Message, define_class, msg_send};
 use objc2_core_bluetooth::{
     CBCentralManager, CBCentralManagerDelegate, CBCharacteristic, CBConnectionEvent, CBDescriptor, CBL2CAPChannel,
     CBPeripheral, CBPeripheralDelegate, CBService,

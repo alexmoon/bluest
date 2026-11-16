@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use tracing::{debug, error, trace, warn};
-use windows::core::HSTRING;
 use windows::Devices::Bluetooth::Advertisement::{
     BluetoothLEAdvertisement, BluetoothLEAdvertisementDataSection, BluetoothLEAdvertisementFilter,
     BluetoothLEAdvertisementReceivedEventArgs, BluetoothLEAdvertisementType, BluetoothLEAdvertisementWatcher,
@@ -14,9 +13,10 @@ use windows::Devices::Bluetooth::Advertisement::{
 use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothLEDevice};
 use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
 use windows::Devices::Radios::{Radio, RadioState};
-use windows::Foundation::Collections::{IIterable, IVector};
-use windows::Foundation::TypedEventHandler;
+use windows::Foundation::{IReference, TypedEventHandler};
 use windows::Storage::Streams::DataReader;
+use windows_collections::{IIterable, IVector};
+use windows_core::{HSTRING, Interface, Ref};
 
 use super::types::StringVec;
 use super::winver::windows_version_above;
@@ -75,12 +75,13 @@ impl AdapterImpl {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
-        let (mut sender, receiver) = futures_channel::mpsc::channel(16);
+        let (sender, receiver) = futures_channel::mpsc::channel(16);
+        let sender = Mutex::new(sender);
         let radio = self.inner.GetRadioAsync()?.await?;
-        let token = radio.StateChanged(&TypedEventHandler::new(move |radio: &Option<Radio>, _| {
+        let token = radio.StateChanged(&TypedEventHandler::new(move |radio: Ref<Radio>, _| {
             let radio = radio.as_ref().expect("radio is null in StateChanged event");
             let state = radio.State().expect("radio state getter failed in StateChanged event");
-            let res = sender.try_send(if state == RadioState::On {
+            let res = sender.lock().unwrap().try_send(if state == RadioState::On {
                 Ok(AdapterEvent::Available)
             } else {
                 Ok(AdapterEvent::Unavailable)
@@ -145,7 +146,7 @@ impl AdapterImpl {
         let device_ids: Vec<HSTRING> = devices
             .into_iter()
             .map(|x| x.Id())
-            .collect::<windows::core::Result<_>>()?;
+            .collect::<windows_core::Result<_>>()?;
 
         let mut res = Vec::with_capacity(device_ids.len());
         for id in device_ids {
@@ -234,7 +235,7 @@ impl AdapterImpl {
         let mut device_ids = HashSet::with_capacity(services.Size()? as usize);
         for service in services {
             let id = service.Properties()?.Lookup(&aep_id)?;
-            let id: HSTRING = id.try_into()?;
+            let id = id.cast::<IReference<HSTRING>>()?.Value()?;
             device_ids.insert(id.to_os_string());
         }
 
@@ -264,20 +265,20 @@ impl AdapterImpl {
         let ext_api_available = windows_version_above(10, 0, 19041);
 
         let (sender, receiver) = futures_channel::mpsc::channel(16);
-        let sender = Arc::new(std::sync::Mutex::new(sender));
+        let sender = Arc::new(Mutex::new(sender));
 
         let weak_sender = Arc::downgrade(&sender);
         let received_handler = TypedEventHandler::new(
-            move |watcher: &Option<BluetoothLEAdvertisementWatcher>,
-                  event_args: &Option<BluetoothLEAdvertisementReceivedEventArgs>| {
+            move |watcher: Ref<BluetoothLEAdvertisementWatcher>,
+                  event_args: Ref<BluetoothLEAdvertisementReceivedEventArgs>| {
                 if let Some(sender) = weak_sender.upgrade() {
-                    if let Some(event_args) = event_args {
+                    if let Some(event_args) = event_args.as_ref() {
                         let res = sender.lock().unwrap().try_send(event_args.clone());
                         if let Err(err) = res {
                             error!("Unable to send AdvertisingDevice: {:?}", err);
                         }
                     }
-                } else if let Some(watcher) = watcher {
+                } else if let Some(watcher) = watcher.as_ref() {
                     let res = watcher.Stop();
                     if let Err(err) = res {
                         warn!("Failed to stop BluetoothLEAdvertisementWatcher: {:?}", err);
@@ -287,11 +288,11 @@ impl AdapterImpl {
             },
         );
 
-        let mut sender = Some(sender);
+        let sender = Mutex::new(Some(sender));
         let stopped_handler = TypedEventHandler::new(
-            move |_watcher, _event_args: &Option<BluetoothLEAdvertisementWatcherStoppedEventArgs>| {
+            move |_watcher, _event_args: Ref<BluetoothLEAdvertisementWatcherStoppedEventArgs>| {
                 // Drop the sender, ending the stream
-                let _sender = sender.take();
+                let _sender = sender.lock().unwrap().take();
                 Ok(())
             },
         );
@@ -308,13 +309,13 @@ impl AdapterImpl {
             if let Some(uuid) = uuid {
                 let advertisement = BluetoothLEAdvertisement::new()?;
                 let service_uuids = advertisement.ServiceUuids()?;
-                service_uuids.Append(windows::core::GUID::from_u128(uuid.as_u128()))?;
+                service_uuids.Append(windows_core::GUID::from_u128(uuid.as_u128()))?;
                 let advertisement_filter = BluetoothLEAdvertisementFilter::new()?;
                 advertisement_filter.SetAdvertisement(&advertisement)?;
                 watcher.SetAdvertisementFilter(&advertisement_filter)?;
             }
 
-            Ok::<_, windows::core::Error>(watcher)
+            Ok::<_, windows_core::Error>(watcher)
         };
 
         let watchers = if services.is_empty() {
@@ -418,16 +419,17 @@ impl AdapterImpl {
         &'a self,
         device: &'a Device,
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
-        let (mut sender, receiver) = futures_channel::mpsc::channel::<BluetoothConnectionStatus>(16);
+        let (sender, receiver) = futures_channel::mpsc::channel::<BluetoothConnectionStatus>(16);
+        let sender = Mutex::new(sender);
 
         let token = {
-            let handler = TypedEventHandler::new(move |device: &Option<BluetoothLEDevice>, _| {
-                if let Some(device) = device {
-                    if let Ok(status) = device.ConnectionStatus() {
-                        let res = sender.try_send(status);
-                        if let Err(err) = res {
-                            error!("Unable to send BluetoothConnectionStatus: {:?}", err);
-                        }
+            let handler = TypedEventHandler::new(move |device: Ref<BluetoothLEDevice>, _| {
+                if let Some(device) = device.as_ref()
+                    && let Ok(status) = device.ConnectionStatus()
+                {
+                    let res = sender.lock().unwrap().try_send(status);
+                    if let Err(err) = res {
+                        error!("Unable to send BluetoothConnectionStatus: {:?}", err);
                     }
                 }
                 Ok(())
@@ -457,7 +459,7 @@ impl From<BluetoothConnectionStatus> for ConnectionEvent {
 }
 
 impl TryFrom<BluetoothLEManufacturerData> for ManufacturerData {
-    type Error = windows::core::Error;
+    type Error = windows_core::Error;
 
     fn try_from(val: BluetoothLEManufacturerData) -> Result<Self, Self::Error> {
         let company_id = val.CompanyId()?;
@@ -518,7 +520,7 @@ enum UuidKind {
     U128,
 }
 
-fn read_uuid(reader: &DataReader, kind: UuidKind) -> windows::core::Result<Uuid> {
+fn read_uuid(reader: &DataReader, kind: UuidKind) -> windows_core::Result<Uuid> {
     Ok(match kind {
         UuidKind::U16 => Uuid::from_u16(reader.ReadUInt16()?),
         UuidKind::U32 => Uuid::from_u32(reader.ReadUInt32()?),
@@ -532,7 +534,7 @@ fn read_uuid(reader: &DataReader, kind: UuidKind) -> windows::core::Result<Uuid>
 
 fn to_service_data(
     data_sections: &IVector<BluetoothLEAdvertisementDataSection>,
-) -> windows::core::Result<HashMap<Uuid, Vec<u8>>> {
+) -> windows_core::Result<HashMap<Uuid, Vec<u8>>> {
     let mut service_data = HashMap::new();
 
     for data in data_sections {

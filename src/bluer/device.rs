@@ -7,7 +7,7 @@ use super::DeviceId;
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
-use crate::{btuuid, AdvertisementData, Device, Error, ManufacturerData, Result, Service, Uuid};
+use crate::{AdvertisementData, Device, Error, ManufacturerData, Result, Service, Uuid, btuuid};
 
 /// A Bluetooth LE device
 #[derive(Debug, Clone)]
@@ -298,8 +298,8 @@ impl DeviceImpl {
         _secure: bool,
     ) -> Result<super::l2cap_channel::L2capChannel, crate::Error> {
         use async_compat::Compat;
-        use bluer::l2cap::{SocketAddr, Stream as L2CapStream};
         use bluer::AddressType;
+        use bluer::l2cap::{SocketAddr, Stream as L2CapStream};
 
         let target_sa = SocketAddr::new(self.inner.address(), AddressType::LePublic, psm);
         let stream = L2CapStream::connect(target_sa).await?;

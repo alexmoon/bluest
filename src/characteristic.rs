@@ -1,6 +1,6 @@
 use futures_core::Stream;
 
-use crate::{sys, CharacteristicProperties, Descriptor, Result, Uuid};
+use crate::{CharacteristicProperties, Descriptor, Result, Uuid, sys};
 
 /// A Bluetooth GATT characteristic
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
