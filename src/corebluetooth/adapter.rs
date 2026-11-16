@@ -1,11 +1,11 @@
 #![allow(clippy::let_unit_value)]
 
 use std::ops::Deref;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, Message};

@@ -6,7 +6,7 @@ use std::task::{Context, Poll};
 
 use async_channel::{Receiver, Sender};
 use futures_core::Stream;
-use futures_lite::{stream, StreamExt};
+use futures_lite::{StreamExt, stream};
 use java_spaghetti::{Arg, ByteArray, Env, Global, Local, Null, PrimitiveArray, VM};
 use tracing::{debug, warn};
 use uuid::Uuid;

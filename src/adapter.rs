@@ -2,7 +2,7 @@
 
 use futures_core::Stream;
 
-use crate::{sys, AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid};
+use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Result, Uuid, sys};
 
 /// The system's Bluetooth adapter interface.
 ///

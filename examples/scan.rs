@@ -8,7 +8,7 @@ use tracing::metadata::LevelFilter;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

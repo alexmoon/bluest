@@ -2,7 +2,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use bluest::{Adapter, Uuid};
-use futures_lite::{future, StreamExt};
+use futures_lite::{StreamExt, future};
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -13,7 +13,7 @@ const BLINKY_LED_STATE_CHARACTERISTIC: Uuid = Uuid::from_u128(0x00001525_1212_ef
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
     tracing_subscriber::registry()
         .with(fmt::layer())

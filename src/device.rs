@@ -7,7 +7,7 @@ use crate::error::ErrorKind;
 #[cfg(feature = "l2cap")]
 use crate::l2cap_channel::L2capChannel;
 use crate::pairing::PairingAgent;
-use crate::{sys, DeviceId, Error, Result, Service, Uuid};
+use crate::{DeviceId, Error, Result, Service, Uuid, sys};
 
 /// A Bluetooth LE device
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

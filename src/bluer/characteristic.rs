@@ -1,5 +1,5 @@
-use bluer::gatt::remote::CharacteristicWriteRequest;
 use bluer::gatt::WriteOp;
+use bluer::gatt::remote::CharacteristicWriteRequest;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
