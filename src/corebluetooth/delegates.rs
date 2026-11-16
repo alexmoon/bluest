@@ -6,7 +6,7 @@ use dispatch_executor::{Executor, Handle};
 use tracing::{debug, warn};
 
 #[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
+use super::l2cap_channel::L2capChannel;
 use crate::ConnectionEvent;
 
 pub fn subscribe_peripheral(
@@ -130,7 +130,7 @@ pub enum PeripheralEvent {
     },
     #[cfg(feature = "l2cap")]
     L2CAPChannelOpened {
-        result: corebluetooth::Result<(L2capChannelReader, L2capChannelWriter)>,
+        result: corebluetooth::Result<L2capChannel>,
     },
 }
 
@@ -408,9 +408,7 @@ impl corebluetooth::PeripheralDelegate for PeripheralDelegate {
         let result = match result {
             Ok((channel, stream)) => {
                 let stream = Arc::new(Async::new(stream).unwrap());
-                let reader = L2capChannelReader::new(self.executor.handle(channel.clone()), stream.clone());
-                let writer = L2capChannelWriter::new(self.executor.handle(channel), stream);
-                Ok((reader, writer))
+                Ok(L2capChannel::new(self.executor.handle(channel), stream))
             }
             Err(err) => Err(err),
         };

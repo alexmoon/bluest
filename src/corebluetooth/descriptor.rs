@@ -1,7 +1,7 @@
 use corebluetooth::CBPeripheralState;
 use dispatch_executor::Handle;
 
-use super::delegates::{subscribe_peripheral, PeripheralEvent};
+use super::delegates::{PeripheralEvent, subscribe_peripheral};
 use crate::error::ErrorKind;
 use crate::{Descriptor, Error, Result, Uuid};
 
