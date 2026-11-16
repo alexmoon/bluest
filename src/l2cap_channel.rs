@@ -1,6 +1,3 @@
-use std::pin;
-use std::task::{Context, Poll};
-
 use futures_lite::io::{AsyncRead, AsyncWrite};
 
 use crate::sys;
@@ -9,48 +6,59 @@ use crate::sys;
 pub(crate) const PIPE_CAPACITY: usize = 0x100000; // 1Mb
 
 macro_rules! derive_async_read {
-    ($type:ty, $field:tt) => {
+    ($type:ty, $($field:tt)*) => {
+        #[allow(unused_mut)]
         impl AsyncRead for $type {
             fn poll_read(
-                mut self: pin::Pin<&mut Self>,
-                cx: &mut Context<'_>,
+                mut self: std::pin::Pin<&mut Self>,
+                cx: &mut std::task::Context<'_>,
                 buf: &mut [u8],
-            ) -> Poll<std::io::Result<usize>> {
-                let reader = pin::pin!(&mut self.$field);
+            ) -> std::task::Poll<std::io::Result<usize>> {
+                let reader = std::pin::pin!(&mut self.$($field)*);
                 reader.poll_read(cx, buf)
+            }
+
+            fn poll_read_vectored(
+                mut self: std::pin::Pin<&mut Self>,
+                cx: &mut std::task::Context<'_>,
+                bufs: &mut [std::io::IoSliceMut<'_>],
+            ) -> std::task::Poll<std::io::Result<usize>> {
+                let reader = std::pin::pin!(&mut self.$($field)*);
+                reader.poll_read_vectored(cx, bufs)
             }
         }
     };
 }
 
 macro_rules! derive_async_write {
-    ($type:ty, $field:tt) => {
+    ($type:ty, $($field:tt)+) => {
+        #[allow(unused_mut)]
         impl AsyncWrite for $type {
             fn poll_write(
-                mut self: pin::Pin<&mut Self>,
-                cx: &mut Context<'_>,
+                mut self: std::pin::Pin<&mut Self>,
+                cx: &mut std::task::Context<'_>,
                 buf: &[u8],
-            ) -> Poll<std::io::Result<usize>> {
-                let writer = pin::pin!(&mut self.$field);
+            ) -> std::task::Poll<std::io::Result<usize>> {
+                let writer = std::pin::pin!(&mut self.$($field)+);
                 writer.poll_write(cx, buf)
             }
 
-            fn poll_flush(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-                let writer = pin::pin!(&mut self.$field);
+            fn poll_flush(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+                let writer = std::pin::pin!(&mut self.$($field)+);
                 writer.poll_flush(cx)
             }
 
-            fn poll_close(mut self: pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-                let writer = pin::pin!(&mut self.$field);
+            fn poll_close(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+                let writer = std::pin::pin!(&mut self.$($field)+);
                 writer.poll_close(cx)
             }
 
             fn poll_write_vectored(
-                mut self: pin::Pin<&mut Self>,
-                cx: &mut Context<'_>,
+                mut self: std::pin::Pin<&mut Self>,
+                cx: &mut std::task::Context<'_>,
                 bufs: &[std::io::IoSlice<'_>],
-            ) -> Poll<std::io::Result<usize>> {
-                let writer = pin::pin!(&mut self.$field);
+            ) -> std::task::Poll<std::io::Result<usize>> {
+                let writer = std::pin::pin!(&mut self.$($field)+);
                 writer.poll_write_vectored(cx, bufs)
             }
         }
