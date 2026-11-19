@@ -149,7 +149,7 @@ impl Device {
     ///
     /// # Platform specific
     ///
-    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on Windows and Linux.
+    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on Windows.
     #[inline]
     pub async fn rssi(&self) -> Result<i16> {
         self.0.rssi().await

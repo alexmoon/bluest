@@ -3,6 +3,9 @@
 ## 0.6.10 [in progress]
 
 - (Windows) `pair()` and `pair_with_agent()` now result in a `no-op` if the device is already paired (same behavior as Linux)
+- (Linux) `open_l2cap_channel()` uses the remote device's address type (was always LE public; failed for random addresses)
+- (Linux) Implement `Device::rssi()`
+- (Linux) `scan()` reports devices again when their advertisement data or RSSI change, and scans LE only
 
 ## 0.6.9
 
