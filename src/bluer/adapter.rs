@@ -143,11 +143,10 @@ impl AdapterImpl {
             transport: bluer::DiscoveryTransport::Le,
             ..Default::default()
         };
-        if let Err(err) = self.inner.set_discovery_filter(filter).await {
-            if err.kind != bluer::ErrorKind::DiscoveryActive {
+        if let Err(err) = self.inner.set_discovery_filter(filter).await
+            && err.kind != bluer::ErrorKind::DiscoveryActive {
                 return Err(err.into());
             }
-        }
 
         // BlueZ emits DeviceAdded once per device. Devices already known to BlueZ get their RSSI and fresh
         // advertisement data only in later property changes, so also emit on changes.
