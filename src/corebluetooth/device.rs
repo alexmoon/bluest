@@ -1,12 +1,15 @@
 #![allow(clippy::let_unit_value)]
 
+use std::fmt;
+
 use btuuid::BluetoothUuid;
 use corebluetooth::CBPeripheralState;
-use dispatch_executor::Handle;
+use dispatch_executor::{DispatchCell, Ref};
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
-use super::delegates::{PeripheralEvent, subscribe_peripheral};
+use super::delegates::PeripheralEvent;
+use crate::corebluetooth::delegates::peripheral_delegate;
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
@@ -15,7 +18,8 @@ use crate::{Device, DeviceId, Error, Result, Service, Uuid};
 /// A Bluetooth LE device
 #[derive(Clone)]
 pub struct DeviceImpl {
-    pub(super) peripheral: Handle<corebluetooth::Peripheral>,
+    pub(super) peripheral: DispatchCell<corebluetooth::Peripheral>,
+    identifier: Uuid,
 }
 
 impl PartialEq for DeviceImpl {
@@ -32,28 +36,32 @@ impl std::hash::Hash for DeviceImpl {
     }
 }
 
-impl std::fmt::Debug for DeviceImpl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Device").field(&self.peripheral).finish()
+impl fmt::Debug for DeviceImpl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.identifier.fmt(f)
     }
 }
 
-impl std::fmt::Display for DeviceImpl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DeviceImpl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.name().as_deref().unwrap_or("(Unknown)"))
     }
 }
 
 impl Device {
-    pub(super) fn new(peripheral: Handle<corebluetooth::Peripheral>) -> Self {
-        Device(DeviceImpl { peripheral })
+    pub(super) fn new(peripheral: Ref<'_, corebluetooth::Peripheral>) -> Self {
+        let identifier = peripheral.identifier();
+        Device(DeviceImpl {
+            identifier,
+            peripheral: peripheral.retain(),
+        })
     }
 }
 
 impl DeviceImpl {
     /// This device's unique identifier
     pub fn id(&self) -> DeviceId {
-        super::DeviceId(self.peripheral.lock(|peripheral, _| peripheral.identifier()))
+        super::DeviceId(self.identifier)
     }
 
     /// The local name for this device, if available
@@ -61,7 +69,7 @@ impl DeviceImpl {
     /// This can either be a name advertised or read from the device, or a name assigned to the device by the OS.
     pub fn name(&self) -> Result<String> {
         self.peripheral
-            .lock(|peripheral, _| peripheral.name())
+            .barrier_sync(|peripheral| peripheral.name())
             .ok_or(ErrorKind::NotFound.into())
     }
 
@@ -74,7 +82,7 @@ impl DeviceImpl {
 
     /// The connection status for this device
     pub async fn is_connected(&self) -> bool {
-        self.peripheral.lock(|peripheral, _| peripheral.state()) == CBPeripheralState::Connected
+        self.peripheral.barrier_sync(|peripheral| peripheral.state()) == CBPeripheralState::Connected
     }
 
     /// The pairing status for this device
@@ -119,14 +127,14 @@ impl DeviceImpl {
     }
 
     async fn discover_services_inner(&self, uuid: Option<Uuid>) -> Result<Vec<Service>> {
-        let mut receiver = self.peripheral.lock(|peripheral, _| {
+        let mut receiver = self.peripheral.barrier_sync(|peripheral| {
             if peripheral.state() != CBPeripheralState::Connected {
                 return Err(Error::from(ErrorKind::NotConnected));
             }
 
             peripheral.discover_services(uuid.map(BluetoothUuid::from).as_ref().map(std::slice::from_ref));
 
-            let receiver = subscribe_peripheral(peripheral.delegate());
+            let receiver = peripheral_delegate(&peripheral).subscribe();
             Ok(receiver)
         })?;
 
@@ -137,7 +145,7 @@ impl DeviceImpl {
                     break;
                 }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(error.into());
+                    return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                 }
                 _ => (),
             }
@@ -157,10 +165,14 @@ impl DeviceImpl {
     }
 
     fn services_inner(&self) -> Result<Vec<Service>> {
-        self.peripheral.lock(|peripheral, executor| {
+        self.peripheral.barrier_sync(|peripheral| {
             peripheral
                 .services()
-                .map(|s| s.into_iter().map(|x| Service::new(executor.handle(x))).collect())
+                .map(|s| {
+                    s.into_iter()
+                        .map(|x| Service::new(x.borrow(peripheral.scope()), peripheral.retain()))
+                        .collect()
+                })
                 .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no services have been discovered"))
         })
     }
@@ -169,28 +181,30 @@ impl DeviceImpl {
     pub async fn service_changed_indications(
         &self,
     ) -> Result<impl Stream<Item = Result<ServicesChanged>> + Send + Unpin + '_> {
-        let receiver = self.peripheral.lock(|peripheral, _| {
+        let receiver = self.peripheral.barrier_sync(|peripheral| {
             if peripheral.state() != CBPeripheralState::Connected {
                 return Err(Error::from(ErrorKind::NotConnected));
             }
 
-            Ok(subscribe_peripheral(peripheral.delegate()))
+            Ok(peripheral_delegate(&peripheral).subscribe())
         })?;
 
         Ok(receiver.filter_map(|ev| match ev {
             PeripheralEvent::ServicesChanged { invalidated_services } => {
                 Some(Ok(ServicesChanged(ServicesChangedImpl(invalidated_services))))
             }
-            PeripheralEvent::Disconnected { error } => Some(Err(error.into())),
+            PeripheralEvent::Disconnected { error } => {
+                Some(Err(Error::from_kind_and_error(ErrorKind::NotConnected, error)))
+            }
             _ => None,
         }))
     }
 
     /// Get the current signal strength from the device in dBm.
     pub async fn rssi(&self) -> Result<i16> {
-        let mut receiver = self.peripheral.lock(|peripheral, _| {
+        let mut receiver = self.peripheral.barrier_sync(|peripheral| {
             peripheral.read_rssi();
-            subscribe_peripheral(peripheral.delegate())
+            peripheral_delegate(&peripheral).subscribe()
         });
 
         loop {
@@ -207,40 +221,50 @@ impl DeviceImpl {
     pub async fn open_l2cap_channel(&self, psm: u16, _secure: bool) -> Result<super::l2cap_channel::L2capChannel> {
         use tracing::{debug, info};
 
-        let mut receiver = self.peripheral.lock(|peripheral, _| {
+        use crate::corebluetooth::delegates::peripheral_delegate;
+
+        let receiver = self.peripheral.barrier_sync(|peripheral| {
             if peripheral.state() != CBPeripheralState::Connected {
                 return Err(Error::from(ErrorKind::NotConnected));
             }
 
+            let delegate = peripheral_delegate(&peripheral);
+            let receiver = {
+                let mut pending = delegate.pending_l2cap_connection.lock().unwrap();
+                if pending.is_some() {
+                    return Err(Error::new(
+                        ErrorKind::NotReady,
+                        None,
+                        "L2CAP connection already in progress",
+                    ));
+                } else {
+                    let (sender, receiver) = oneshot::channel();
+                    *pending = Some(sender);
+                    receiver
+                }
+            };
+
             info!("starting open_l2cap_channel on {}", psm);
             peripheral.open_l2cap_channel(psm);
 
-            Ok(subscribe_peripheral(peripheral.delegate()))
+            Ok(receiver)
         })?;
 
-        let l2capchannel;
-        loop {
-            match receiver.recv().await? {
-                PeripheralEvent::L2CAPChannelOpened { result } => {
-                    l2capchannel = result?;
-                    break;
-                }
-                PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from(error));
-                }
-                o => {
-                    info!("Other event: {:?}", o);
-                }
-            }
-        }
-        debug!("open_l2cap_channel success {:?}", self.peripheral);
+        let l2capchannel = receiver.await??;
+        debug!("open_l2cap_channel success {:?}", self.identifier);
 
         Ok(l2capchannel)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ServicesChangedImpl(Vec<Handle<corebluetooth::Service>>);
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct ServicesChangedImpl(Vec<DispatchCell<corebluetooth::Service>>);
+
+impl fmt::Debug for ServicesChangedImpl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} services changed", self.0.len())
+    }
+}
 
 impl ServicesChangedImpl {
     pub fn was_invalidated(&self, service: &Service) -> bool {

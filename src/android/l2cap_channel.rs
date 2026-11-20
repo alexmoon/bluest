@@ -2,8 +2,7 @@
 
 use std::io::{Read, Write};
 use std::sync::Arc;
-use std::task::{Context, Poll};
-use std::{fmt, pin, slice, thread};
+use std::{fmt, slice, thread};
 
 use futures_lite::io::{AsyncRead, AsyncWrite, BlockOn};
 use java_spaghetti::{ByteArray, Global, Local, PrimitiveArray};
@@ -152,6 +151,12 @@ impl Drop for L2capCloser {
 pub struct L2capChannel {
     pub(super) reader: L2capChannelReader,
     pub(super) writer: L2capChannelWriter,
+}
+
+impl fmt::Debug for L2capChannel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("L2capChannel")
+    }
 }
 
 impl L2capChannel {

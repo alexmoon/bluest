@@ -11,6 +11,12 @@ use crate::l2cap_channel::{derive_async_read, derive_async_write};
 
 pub struct L2capChannel(pub(super) Compat<Stream>);
 
+impl Debug for L2capChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self.0.get_ref(), f)
+    }
+}
+
 impl L2capChannel {
     pub fn split(self) -> (L2capChannelReader, L2capChannelWriter) {
         let (reader, writer) = self.0.into_inner().into_split();

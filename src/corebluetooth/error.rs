@@ -1,6 +1,14 @@
+use std::io;
+
 use corebluetooth::error::{CBATTError, CBError};
 
 use crate::error::{AttError, ErrorKind};
+
+impl crate::Error {
+    pub(crate) fn from_kind_and_error(kind: ErrorKind, error: corebluetooth::Error) -> Self {
+        crate::Error::new(kind, Some(Box::new(error)), String::new())
+    }
+}
 
 impl From<async_broadcast::RecvError> for crate::Error {
     fn from(err: async_broadcast::RecvError) -> Self {
@@ -8,9 +16,22 @@ impl From<async_broadcast::RecvError> for crate::Error {
     }
 }
 
+#[cfg(feature = "l2cap")]
+impl From<oneshot::RecvError> for crate::Error {
+    fn from(_: oneshot::RecvError) -> Self {
+        crate::Error::new(ErrorKind::Internal, None, "receiving L2CAP connection event")
+    }
+}
+
 impl From<corebluetooth::Error> for crate::Error {
     fn from(err: corebluetooth::Error) -> Self {
         crate::Error::new(err.kind().into(), Some(Box::new(err)), String::new())
+    }
+}
+
+impl From<io::Error> for crate::Error {
+    fn from(err: io::Error) -> Self {
+        crate::Error::new(ErrorKind::Other, Some(Box::new(err)), String::new())
     }
 }
 

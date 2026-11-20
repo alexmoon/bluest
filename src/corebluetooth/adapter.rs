@@ -3,12 +3,13 @@
 use btuuid::BluetoothUuid;
 use corebluetooth::dispatch::DispatchQoS;
 use corebluetooth::{CBManagerAuthorization, CBManagerState, CentralManager};
-use dispatch_executor::Handle;
+use dispatch_executor::DispatchCell;
 use futures_core::Stream;
 use futures_lite::{StreamExt, stream};
 use tracing::{debug, error, info, warn};
 
-use super::delegates::{self, CentralDelegate, CentralEvent, subscribe_central};
+use super::delegates::{self, CentralDelegate, CentralEvent};
+use crate::corebluetooth::delegates::central_delegate;
 use crate::error::ErrorKind;
 use crate::util::defer;
 use crate::{AdapterEvent, AdvertisingDevice, ConnectionEvent, Device, DeviceId, Error, Result, Uuid};
@@ -24,7 +25,7 @@ pub struct AdapterConfig {
 /// The default adapter for the system may be accessed with the [`Adapter::default()`] method.
 #[derive(Clone)]
 pub struct AdapterImpl {
-    central: Handle<corebluetooth::CentralManager>,
+    central: DispatchCell<corebluetooth::CentralManager>,
     #[cfg(not(target_os = "macos"))]
     registered_connection_events: std::sync::Arc<std::sync::Mutex<std::collections::HashMap<Uuid, usize>>>,
 }
@@ -45,7 +46,7 @@ impl std::hash::Hash for AdapterImpl {
 
 impl std::fmt::Debug for AdapterImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Adapter").field(&self.central).finish()
+        f.write_str("CoreBluetoothAdapter")
     }
 }
 
@@ -63,11 +64,10 @@ impl AdapterImpl {
         }
 
         let central = CentralManager::background(
-            DispatchQoS::new(dispatch2::DispatchQoS::Default, 0),
-            |executor| Box::new(CentralDelegate::new(executor.clone())),
+            DispatchQoS::new(dispatch_executor::DispatchQoS::Default, 0),
+            Box::new(CentralDelegate::new()),
             config.show_power_alert,
             None,
-            |central, executor| executor.handle(central),
         );
 
         Ok(AdapterImpl {
@@ -79,7 +79,9 @@ impl AdapterImpl {
 
     /// A stream of [`AdapterEvent`] which allows the application to identify when the adapter is enabled or disabled.
     pub async fn events(&self) -> Result<impl Stream<Item = Result<AdapterEvent>> + Send + Unpin + '_> {
-        let receiver = self.central.lock(|central, _| subscribe_central(central.delegate()));
+        let receiver = self
+            .central
+            .barrier_sync(|central| central_delegate(&central).subscribe());
         Ok(receiver.filter_map(|x| {
             match x {
                 delegates::CentralEvent::StateChanged(state) => {
@@ -97,9 +99,9 @@ impl AdapterImpl {
 
     /// Asynchronously blocks until the adapter is available
     pub async fn wait_available(&self) -> Result<()> {
-        let receiver = self.central.lock(|central, _| {
+        let receiver = self.central.barrier_sync(|central| {
             if central.state() != CBManagerState::PoweredOn {
-                Some(subscribe_central(central.delegate()))
+                Some(central_delegate(&central).subscribe())
             } else {
                 None
             }
@@ -119,18 +121,18 @@ impl AdapterImpl {
     pub async fn is_available(&self) -> Result<bool> {
         Ok(self
             .central
-            .lock(|central, _| central.state() == CBManagerState::PoweredOn))
+            .barrier_sync(|central| central.state() == CBManagerState::PoweredOn))
     }
 
     /// Attempts to create the device identified by `id`
     pub async fn open_device(&self, id: &DeviceId) -> Result<Device> {
-        self.central.lock(|central, executor| {
+        self.central.barrier_sync(|central| {
             let peripherals = central.retrieve_peripherals(&[id.0]);
 
             peripherals
                 .into_iter()
                 .next()
-                .map(|x| Device::new(executor.handle(x)))
+                .map(|peripheral| Device::new(peripheral.borrow(central.scope())))
                 .ok_or_else(|| Error::new(ErrorKind::NotFound, None, "opening device"))
         })
     }
@@ -150,11 +152,11 @@ impl AdapterImpl {
         assert!(!services.is_empty());
 
         let services = services.iter().map(|x| BluetoothUuid::from(*x)).collect::<Vec<_>>();
-        self.central.lock(|central, executor| {
+        self.central.barrier_sync(|central| {
             let peripherals = central.retrieve_connected_peripherals(&services);
             Ok(peripherals
                 .into_iter()
-                .map(|x| Device::new(executor.handle(x)))
+                .map(|peripheral| Device::new(peripheral.borrow(central.scope())))
                 .collect())
         })
     }
@@ -171,7 +173,7 @@ impl AdapterImpl {
         &'a self,
         services: &'a [Uuid],
     ) -> Result<impl Stream<Item = AdvertisingDevice> + Send + Unpin + 'a> {
-        let receiver = self.central.lock(|central, _| {
+        let receiver = self.central.barrier_sync(|central| {
             if central.state() != CBManagerState::PoweredOn {
                 return Err(Error::from(ErrorKind::AdapterUnavailable));
             }
@@ -181,33 +183,39 @@ impl AdapterImpl {
             }
 
             let services = services.iter().copied().map(BluetoothUuid::from).collect::<Vec<_>>();
-            central.scan(Some(&services), false, None);
+            let services = (!services.is_empty()).then_some(services.as_slice());
+            central.scan(services, false, None);
 
-            Ok(subscribe_central(central.delegate()))
+            Ok(central_delegate(&central).subscribe())
         })?;
 
-        let guard = defer(|| {
-            self.central.lock(|central, _| central.stop_scan());
-        });
+        let mut guard = Some(defer(|| {
+            self.central.barrier_sync(|central| central.stop_scan());
+        }));
 
         let events = receiver
-            .take_while(|x| !matches!(x, CentralEvent::StateChanged(state) if state != &CBManagerState::PoweredOn))
-            .filter_map(move |x| {
-                let _guard = &guard;
-                match x {
-                    delegates::CentralEvent::Discovered {
-                        peripheral,
-                        advertisement_data,
-                        rssi,
-                    } => peripheral.lock(|peripheral, executor| {
-                        Some(AdvertisingDevice {
-                            device: Device::new(executor.handle(peripheral.clone())),
-                            adv_data: advertisement_data,
-                            rssi: Some(rssi),
-                        })
-                    }),
-                    _ => None,
+            .take_while(move |x| match x {
+                CentralEvent::StateChanged(state) if state != &CBManagerState::PoweredOn => {
+                    if let Some(guard) = guard.take() {
+                        guard.defuse();
+                    }
+                    false
                 }
+                _ => true,
+            })
+            .filter_map(|x| match x {
+                delegates::CentralEvent::Discovered {
+                    peripheral,
+                    advertisement_data,
+                    rssi,
+                } => peripheral.barrier_sync(|peripheral| {
+                    Some(AdvertisingDevice {
+                        device: Device::new(peripheral),
+                        adv_data: advertisement_data,
+                        rssi: Some(rssi),
+                    })
+                }),
+                _ => None,
             });
 
         Ok(events)
@@ -244,23 +252,21 @@ impl AdapterImpl {
     /// exist) and the application can then interact with the device. This connection will be maintained until either
     /// [`disconnect_device`][Self::disconnect_device] is called or the `Adapter` is dropped.
     pub async fn connect_device(&self, device: &Device) -> Result<()> {
-        let mut receiver = self
-            .central
-            .zip(&device.0.peripheral)
-            .lock(|(central, peripheral), _| {
-                if central.state() != CBManagerState::PoweredOn {
-                    return Err(Error::from(ErrorKind::AdapterUnavailable));
-                }
+        let mut receiver = self.central.barrier_sync(|central| {
+            let peripheral = device.0.peripheral.borrow(central.scope());
+            if central.state() != CBManagerState::PoweredOn {
+                return Err(Error::from(ErrorKind::AdapterUnavailable));
+            }
 
-                debug!("Connecting to {:?}", device);
-                central.connect(peripheral);
+            debug!("Connecting to {:?}", device);
+            central.connect(&peripheral);
 
-                Ok(subscribe_central(central.delegate()))
-            })?;
+            Ok(central_delegate(&central).subscribe())
+        })?;
 
         let drop = defer(|| {
-            self.central.zip(&device.0.peripheral).lock(|(central, peripheral), _| {
-                central.cancel_peripheral_connection(peripheral);
+            self.central.barrier_sync(|central| {
+                central.cancel_peripheral_connection(&device.0.peripheral.borrow(central.scope()));
             })
         });
 
@@ -270,11 +276,11 @@ impl AdapterImpl {
                     drop.defuse();
                     return Err(ErrorKind::AdapterUnavailable.into());
                 }
-                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::Connect { peripheral_id } if peripheral_id == device.id().0 => {
                     drop.defuse();
                     return Ok(());
                 }
-                delegates::CentralEvent::ConnectFailed { peripheral, error } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::ConnectFailed { peripheral_id, error } if peripheral_id == device.id().0 => {
                     drop.defuse();
                     return Err(Error::from(error));
                 }
@@ -291,33 +297,31 @@ impl AdapterImpl {
     /// which would require a connection will fail. If no other application has a connection to the same device,
     /// the underlying Bluetooth connection will be closed.
     pub async fn disconnect_device(&self, device: &Device) -> Result<()> {
-        let mut events = self
-            .central
-            .zip(&device.0.peripheral)
-            .lock(|(central, peripheral), _| {
-                if central.state() != CBManagerState::PoweredOn {
-                    return Err(Error::from(ErrorKind::AdapterUnavailable));
-                }
+        let mut events = self.central.barrier_sync(|central| {
+            if central.state() != CBManagerState::PoweredOn {
+                return Err(Error::from(ErrorKind::AdapterUnavailable));
+            }
 
-                debug!("Disconnecting from {:?}", device);
-                central.cancel_peripheral_connection(peripheral);
+            debug!("Disconnecting from {:?}", device);
+            let peripheral = device.0.peripheral.borrow(central.scope());
+            central.cancel_peripheral_connection(&peripheral);
 
-                Ok(subscribe_central(central.delegate()))
-            })?;
+            Ok(central_delegate(&central).subscribe())
+        })?;
 
         while let Some(event) = events.next().await {
             match event {
-                CentralEvent::StateChanged(state) if state != CBManagerState::PoweredOff => {
+                CentralEvent::StateChanged(state) if state != CBManagerState::PoweredOn => {
                     return Err(ErrorKind::AdapterUnavailable.into());
                 }
                 CentralEvent::Disconnect {
-                    peripheral,
+                    peripheral_id,
                     error: None,
-                } if peripheral == device.0.peripheral => return Ok(()),
+                } if peripheral_id == device.id().0 => return Ok(()),
                 CentralEvent::Disconnect {
-                    peripheral,
+                    peripheral_id,
                     error: Some(err),
-                } if peripheral == device.0.peripheral => return Err(Error::from(err)),
+                } if peripheral_id == device.id().0 => return Err(Error::from(err)),
                 _ => (),
             }
         }
@@ -326,7 +330,7 @@ impl AdapterImpl {
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn register_connection_events(&self, central: &CentralManager, identifier: Uuid) -> impl Drop + '_ {
+    fn register_connection_events(&self, central: &CentralManager, identifier: Uuid) -> impl Drop + use<'_> {
         {
             let mut registrations = self.registered_connection_events.lock().unwrap();
             match registrations.entry(identifier) {
@@ -342,7 +346,7 @@ impl AdapterImpl {
         }
 
         defer(move || {
-            self.central.lock(|central, _| {
+            self.central.barrier_sync(|central| {
                 let mut registrations = self.registered_connection_events.lock().unwrap();
                 match registrations.entry(identifier) {
                     std::collections::hash_map::Entry::Occupied(mut entry) => {
@@ -371,30 +375,27 @@ impl AdapterImpl {
         &'a self,
         device: &'a Device,
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
-        let (guard, events) = self
-            .central
-            .zip(&device.0.peripheral)
-            .lock(|(central, peripheral), _| {
-                if central.state() != CBManagerState::PoweredOn {
-                    return Err(Error::from(ErrorKind::AdapterUnavailable));
-                }
-                let guard = self.register_connection_events(central, peripheral.identifier());
-                Ok((guard, subscribe_central(central.delegate())))
-            })?;
+        let (guard, events) = self.central.barrier_sync(|central| {
+            if central.state() != CBManagerState::PoweredOn {
+                return Err(Error::from(ErrorKind::AdapterUnavailable));
+            }
+            let guard = self.register_connection_events(&central, device.id().0);
+            Ok((guard, central_delegate(&central).subscribe()))
+        })?;
 
         Ok(events
             .take_while(|x| !matches!(x, CentralEvent::StateChanged(state) if state != &CBManagerState::PoweredOn))
             .filter_map(move |x| {
                 let _guard = &guard;
                 match x {
-                    delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
+                    delegates::CentralEvent::Connect { peripheral_id } if peripheral_id == device.id().0 => {
                         Some(ConnectionEvent::Connected)
                     }
-                    delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
+                    delegates::CentralEvent::Disconnect { peripheral_id, .. } if peripheral_id == device.id().0 => {
                         Some(ConnectionEvent::Disconnected)
                     }
-                    delegates::CentralEvent::ConnectionEvent { peripheral, event }
-                        if peripheral == device.0.peripheral =>
+                    delegates::CentralEvent::ConnectionEvent { peripheral_id, event }
+                        if peripheral_id == device.id().0 =>
                     {
                         Some(event)
                     }
@@ -415,20 +416,20 @@ impl AdapterImpl {
         &'a self,
         device: &'a Device,
     ) -> Result<impl Stream<Item = ConnectionEvent> + Send + Unpin + 'a> {
-        let events = self.central.lock(|central, _| {
+        let events = self.central.barrier_sync(|central| {
             if central.state() != CBManagerState::PoweredOn {
                 return Err(Error::from(ErrorKind::AdapterUnavailable));
             }
-            Ok(subscribe_central(central.delegate()))
+            Ok(central_delegate(&central).subscribe())
         })?;
 
         Ok(events
             .take_while(|x| !matches!(x, CentralEvent::StateChanged(state) if state != &CBManagerState::PoweredOn))
             .filter_map(move |x| match x {
-                delegates::CentralEvent::Connect { peripheral } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::Connect { peripheral_id } if peripheral_id == device.id().0 => {
                     Some(ConnectionEvent::Connected)
                 }
-                delegates::CentralEvent::Disconnect { peripheral, .. } if peripheral == device.0.peripheral => {
+                delegates::CentralEvent::Disconnect { peripheral_id, .. } if peripheral_id == device.id().0 => {
                     Some(ConnectionEvent::Disconnected)
                 }
                 _ => None,

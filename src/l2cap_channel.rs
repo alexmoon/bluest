@@ -65,10 +65,11 @@ macro_rules! derive_async_write {
     };
 }
 
-pub(crate) use derive_async_read;
-pub(crate) use derive_async_write;
+#[allow(unused)]
+pub(crate) use {derive_async_read, derive_async_write};
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
+#[derive(Debug)]
 pub struct L2capChannel(pub(super) sys::l2cap_channel::L2capChannel);
 
 impl L2capChannel {
