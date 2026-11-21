@@ -1,29 +1,41 @@
+use std::fmt;
+
+use btuuid::BluetoothUuid;
+use corebluetooth::{CBCharacteristicProperties, CBPeripheralState, CharacteristicWriteType};
+use dispatch_executor::{DispatchCell, Ref};
 use futures_core::Stream;
 use futures_lite::StreamExt;
-use objc2::rc::Retained;
-use objc2_core_bluetooth::{
-    CBCharacteristic, CBCharacteristicProperties, CBCharacteristicWriteType, CBPeripheralState,
-};
-use objc2_foundation::NSData;
 
-use super::delegates::{PeripheralDelegate, PeripheralEvent};
-use super::dispatch::Dispatched;
+use super::delegates::PeripheralEvent;
+use crate::corebluetooth::delegates::peripheral_delegate;
 use crate::error::ErrorKind;
 use crate::util::defer;
-use crate::{BluetoothUuidExt, Characteristic, CharacteristicProperties, Descriptor, Error, Result, Uuid};
+use crate::{Characteristic, CharacteristicProperties, Descriptor, Error, Result, Uuid};
 
 /// A Bluetooth GATT characteristic
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct CharacteristicImpl {
-    inner: Dispatched<CBCharacteristic>,
-    delegate: Retained<PeripheralDelegate>,
+    inner: DispatchCell<corebluetooth::Characteristic>,
+    peripheral: DispatchCell<corebluetooth::Peripheral>,
+    uuid: BluetoothUuid,
+}
+
+impl fmt::Debug for CharacteristicImpl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.uuid.fmt(f)
+    }
 }
 
 impl Characteristic {
-    pub(super) fn new(characteristic: Retained<CBCharacteristic>, delegate: Retained<PeripheralDelegate>) -> Self {
+    pub(super) fn new(
+        inner: Ref<'_, corebluetooth::Characteristic>,
+        peripheral: DispatchCell<corebluetooth::Peripheral>,
+    ) -> Self {
+        let uuid = inner.uuid();
         Characteristic(CharacteristicImpl {
-            inner: unsafe { Dispatched::new(characteristic) },
-            delegate,
+            inner: inner.retain(),
+            peripheral,
+            uuid,
         })
     }
 }
@@ -31,9 +43,7 @@ impl Characteristic {
 impl CharacteristicImpl {
     /// The [`Uuid`] identifying the type of this GATT characteristic
     pub fn uuid(&self) -> Uuid {
-        self.inner.dispatch(|characteristic| unsafe {
-            Uuid::from_bluetooth_bytes(characteristic.UUID().data().as_bytes_unchecked())
-        })
+        self.uuid.into()
     }
 
     /// The [`Uuid`] identifying the type of this GATT characteristic
@@ -46,9 +56,7 @@ impl CharacteristicImpl {
     /// Characteristic properties indicate which operations (e.g. read, write, notify, etc) may be performed on this
     /// characteristic.
     pub async fn properties(&self) -> Result<CharacteristicProperties> {
-        let cb_props = self
-            .inner
-            .dispatch(|characteristic| unsafe { characteristic.properties() });
+        let cb_props = self.inner.barrier_sync(|characteristic| characteristic.properties());
 
         let mut props = CharacteristicProperties::default();
         if cb_props.contains(CBCharacteristicProperties::Broadcast) {
@@ -83,46 +91,35 @@ impl CharacteristicImpl {
     ///
     /// If the value has not yet been read, this method may either return an error or perform a read of the value.
     pub async fn value(&self) -> Result<Vec<u8>> {
-        self.inner.dispatch(|characteristic| unsafe {
-            characteristic
-                .value()
-                .map(|val| val.as_bytes_unchecked().to_vec())
-                .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "the characteristic value has not been read"))
-        })
+        self.inner
+            .barrier_sync(|characteristic| characteristic.value())
+            .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "the characteristic value has not been read"))
     }
 
     /// Read the value of this characteristic from the device
     pub async fn read(&self) -> Result<Vec<u8>> {
-        let mut receiver = self.delegate.sender().new_receiver();
-        let service = self.inner.dispatch(|characteristic| {
-            let service = unsafe { characteristic.service() }.ok_or(Error::new(
-                ErrorKind::NotFound,
-                None,
-                "service not found",
-            ))?;
-            let peripheral =
-                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
+        let (service, mut receiver) = self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, service| {
+                if peripheral.state() != CBPeripheralState::Connected {
+                    return Err(Error::from(ErrorKind::NotConnected));
+                }
 
-            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
-                return Err(Error::from(ErrorKind::NotConnected));
-            }
+                peripheral.read_characteristic_value(&characteristic);
 
-            unsafe { peripheral.readValueForCharacteristic(characteristic) };
-            Ok(unsafe { Dispatched::new(service) })
+                let receiver = peripheral_delegate(&peripheral).subscribe();
+                Ok((service.retain(), receiver))
+            })
         })?;
 
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::CharacteristicValueUpdate {
-                    characteristic,
-                    data,
-                    error,
-                } if characteristic == self.inner => match error {
-                    Some(err) => return Err(Error::from_nserror(err)),
-                    None => return Ok(data),
-                },
+            match receiver.recv().await? {
+                PeripheralEvent::CharacteristicValueUpdate { characteristic, result }
+                    if characteristic == self.inner =>
+                {
+                    return result.map_err(Into::into);
+                }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -134,46 +131,35 @@ impl CharacteristicImpl {
         }
     }
 
-    /// Write the value of this descriptor on the device to `value` and request the device return a response indicating
+    /// Write the value of this characteristic on the device to `value` and request the device return a response indicating
     /// a successful write.
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        let mut receiver = self.delegate.sender().new_receiver();
-        let service = self.inner.dispatch(|characteristic| {
-            let service = unsafe { characteristic.service() }.ok_or(Error::new(
-                ErrorKind::NotFound,
-                None,
-                "service not found",
-            ))?;
-            let peripheral =
-                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
+        let (service, mut receiver) = self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, service| {
+                if peripheral.state() != CBPeripheralState::Connected {
+                    return Err(Error::from(ErrorKind::NotConnected));
+                }
 
-            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
-                return Err(Error::from(ErrorKind::NotConnected));
-            }
+                peripheral.write_characteristic_value(
+                    &characteristic,
+                    value.to_vec(),
+                    CharacteristicWriteType::WithResponse,
+                );
 
-            let data = NSData::with_bytes(value);
-
-            unsafe {
-                peripheral.writeValue_forCharacteristic_type(
-                    &data,
-                    characteristic,
-                    CBCharacteristicWriteType::WithResponse,
-                )
-            };
-
-            Ok(unsafe { Dispatched::new(service) })
+                let receiver = peripheral_delegate(&peripheral).subscribe();
+                Ok((service.retain(), receiver))
+            })
         })?;
 
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::CharacteristicValueWrite { characteristic, error } if characteristic == self.inner => {
-                    match error {
-                        Some(err) => return Err(Error::from_nserror(err)),
-                        None => return Ok(()),
-                    }
+            match receiver.recv().await? {
+                PeripheralEvent::CharacteristicValueWrite { characteristic, result }
+                    if characteristic == self.inner =>
+                {
+                    return result.map_err(Into::into);
                 }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -187,35 +173,29 @@ impl CharacteristicImpl {
 
     /// Write the value of this descriptor on the device to `value` without requesting a response.
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
-        let mut receiver = self.delegate.sender().new_receiver();
-        loop {
-            let service = self.inner.dispatch(|characteristic| {
-                let service = unsafe { characteristic.service() }.ok_or(Error::new(
-                    ErrorKind::NotFound,
-                    None,
-                    "service not found",
-                ))?;
-                let peripheral = unsafe { service.peripheral() }.ok_or(Error::new(
-                    ErrorKind::NotFound,
-                    None,
-                    "peripheral not found",
-                ))?;
+        let mut receiver = self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, _| {
+                let receiver = peripheral_delegate(&peripheral).subscribe();
+                Result::<_, Error>::Ok(receiver)
+            })
+        })?;
 
-                if unsafe { peripheral.state() } != CBPeripheralState::Connected {
-                    Err(Error::from(ErrorKind::NotConnected))
-                } else if unsafe { peripheral.canSendWriteWithoutResponse() } {
-                    let data = NSData::with_bytes(value);
-                    unsafe {
-                        peripheral.writeValue_forCharacteristic_type(
-                            &data,
-                            characteristic,
-                            CBCharacteristicWriteType::WithoutResponse,
-                        )
-                    };
-                    Ok(None)
-                } else {
-                    Ok(Some(unsafe { Dispatched::new(service) }))
-                }
+        loop {
+            let service = self.inner.barrier_sync(|characteristic| {
+                with_peripheral_and_service(characteristic, |peripheral, service| {
+                    if peripheral.state() != CBPeripheralState::Connected {
+                        Err(Error::from(ErrorKind::NotConnected))
+                    } else if peripheral.can_send_write_without_repsonse() {
+                        peripheral.write_characteristic_value(
+                            &characteristic,
+                            value.to_vec(),
+                            CharacteristicWriteType::WithoutResponse,
+                        );
+                        Ok(None)
+                    } else {
+                        Ok(Some(service.retain()))
+                    }
+                })
             })?;
 
             if let Some(service) = service {
@@ -223,7 +203,7 @@ impl CharacteristicImpl {
                     match evt {
                         PeripheralEvent::ReadyToWrite => break,
                         PeripheralEvent::Disconnected { error } => {
-                            return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                            return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                         }
                         PeripheralEvent::ServicesChanged { invalidated_services }
                             if invalidated_services.contains(&service) =>
@@ -241,13 +221,10 @@ impl CharacteristicImpl {
 
     /// Get the maximum amount of data that can be written in a single packet for this characteristic.
     pub fn max_write_len(&self) -> Result<usize> {
-        self.inner.dispatch(|characteristic| {
-            let peripheral = unsafe { characteristic.service().and_then(|x| x.peripheral()) }.ok_or(Error::new(
-                ErrorKind::NotFound,
-                None,
-                "peripheral not found",
-            ))?;
-            unsafe { Ok(peripheral.maximumWriteValueLengthForType(CBCharacteristicWriteType::WithoutResponse)) }
+        self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, _| {
+                Ok(peripheral.max_write_value_len(CharacteristicWriteType::WithoutResponse))
+            })
         })
     }
 
@@ -269,47 +246,38 @@ impl CharacteristicImpl {
             ));
         };
 
-        let mut receiver = self.delegate.sender().new_receiver();
-        let service = self.inner.dispatch(|characteristic| {
-            let service = unsafe { characteristic.service() }.ok_or(Error::new(
-                ErrorKind::NotFound,
-                None,
-                "service not found",
-            ))?;
-            let peripheral =
-                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
+        let (service, mut receiver) = self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, service| {
+                if peripheral.state() != CBPeripheralState::Connected {
+                    return Err(Error::from(ErrorKind::NotConnected));
+                }
 
-            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
-                return Err(Error::from(ErrorKind::NotConnected));
-            }
+                peripheral.set_notify(&characteristic, true);
 
-            unsafe { peripheral.setNotifyValue_forCharacteristic(true, characteristic) };
-
-            Ok(unsafe { Dispatched::new(service) })
+                let receiver = peripheral_delegate(&peripheral).subscribe();
+                Ok((service.retain(), receiver))
+            })
         })?;
 
         let guard = defer(move || {
-            self.inner.dispatch(|characteristic| {
-                if let Some(peripheral) = unsafe { characteristic.service().and_then(|x| x.peripheral()) } {
-                    unsafe {
-                        if peripheral.state() == CBPeripheralState::Connected {
-                            peripheral.setNotifyValue_forCharacteristic(false, characteristic)
-                        }
-                    };
-                }
+            self.inner.barrier_sync(|characteristic| {
+                let _ = with_peripheral_and_service(characteristic, |peripheral, _| {
+                    if peripheral.state() == CBPeripheralState::Connected {
+                        peripheral.set_notify(&characteristic, false);
+                    }
+                    Ok(())
+                });
             });
         });
 
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::NotificationStateUpdate { characteristic, error } if characteristic == self.inner => {
-                    match error {
-                        Some(err) => return Err(Error::from_nserror(err)),
-                        None => break,
-                    }
+            match receiver.recv().await? {
+                PeripheralEvent::NotificationStateUpdate { characteristic, result } if characteristic == self.inner => {
+                    result?;
+                    break;
                 }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -320,78 +288,57 @@ impl CharacteristicImpl {
             }
         }
 
-        let updates = receiver
-            .filter_map(move |x| {
-                let _guard = &guard;
-                match x {
-                    PeripheralEvent::CharacteristicValueUpdate {
-                        characteristic,
-                        data,
-                        error,
-                    } if characteristic == self.inner => match error {
-                        Some(err) => Some(Err(Error::from_nserror(err))),
-                        None => Some(Ok(data)),
-                    },
-                    PeripheralEvent::Disconnected { error } => {
-                        Some(Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error)))
-                    }
-                    PeripheralEvent::ServicesChanged { invalidated_services }
-                        if invalidated_services.contains(&service) =>
-                    {
-                        Some(Err(ErrorKind::ServiceChanged.into()))
-                    }
-                    _ => None,
+        let updates = receiver.filter_map(move |x| {
+            let _guard = &guard;
+            match x {
+                PeripheralEvent::CharacteristicValueUpdate { characteristic, result }
+                    if characteristic == self.inner =>
+                {
+                    Some(result.map_err(Into::into))
                 }
-            })
-            .then(move |x| {
-                Box::pin(async move {
-                    match x {
-                        Ok(data) => Ok(data),
-                        Err(err) => Err(err),
-                    }
-                })
-            });
+                PeripheralEvent::Disconnected { error } => {
+                    Some(Err(Error::from_kind_and_error(ErrorKind::NotConnected, error)))
+                }
+                PeripheralEvent::ServicesChanged { invalidated_services }
+                    if invalidated_services.contains(&service) =>
+                {
+                    Some(Err(ErrorKind::ServiceChanged.into()))
+                }
+                _ => None,
+            }
+        });
 
         Ok(updates)
     }
 
     /// Is the device currently sending notifications for this characteristic?
     pub async fn is_notifying(&self) -> Result<bool> {
-        Ok(self
-            .inner
-            .dispatch(|characteristic| unsafe { characteristic.isNotifying() }))
+        Ok(self.inner.barrier_sync(|characteristic| characteristic.is_notifying()))
     }
 
     /// Discover the descriptors associated with this characteristic.
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
-        let mut receiver = self.delegate.sender().new_receiver();
-        let service = self.inner.dispatch(|characteristic| {
-            let service = unsafe { characteristic.service() }.ok_or(Error::new(
-                ErrorKind::NotFound,
-                None,
-                "service not found",
-            ))?;
-            let peripheral =
-                unsafe { service.peripheral() }.ok_or(Error::new(ErrorKind::NotFound, None, "peripheral not found"))?;
+        let (service, mut receiver) = self.inner.barrier_sync(|characteristic| {
+            with_peripheral_and_service(characteristic, |peripheral, service| {
+                if peripheral.state() != CBPeripheralState::Connected {
+                    return Err(Error::from(ErrorKind::NotConnected));
+                }
 
-            if unsafe { peripheral.state() } != CBPeripheralState::Connected {
-                return Err(Error::from(ErrorKind::NotConnected));
-            }
+                peripheral.discover_descriptors(&characteristic);
 
-            unsafe { peripheral.discoverDescriptorsForCharacteristic(characteristic) }
-            Ok(unsafe { Dispatched::new(service) })
+                let receiver = peripheral_delegate(&peripheral).subscribe();
+                Ok((service.retain(), receiver))
+            })
         })?;
 
         loop {
-            match receiver.recv().await.map_err(Error::from_recv_error)? {
-                PeripheralEvent::DiscoveredDescriptors { characteristic, error } if characteristic == self.inner => {
-                    match error {
-                        Some(err) => return Err(Error::from_nserror(err)),
-                        None => break,
-                    }
+            match receiver.recv().await? {
+                PeripheralEvent::DiscoveredDescriptors { characteristic, result } if characteristic == self.inner => {
+                    result?;
+                    break;
                 }
                 PeripheralEvent::Disconnected { error } => {
-                    return Err(Error::from_kind_and_nserror(ErrorKind::NotConnected, error));
+                    return Err(Error::from_kind_and_error(ErrorKind::NotConnected, error));
                 }
                 PeripheralEvent::ServicesChanged { invalidated_services }
                     if invalidated_services.contains(&service) =>
@@ -416,10 +363,34 @@ impl CharacteristicImpl {
     }
 
     fn descriptors_inner(&self) -> Result<Vec<Descriptor>> {
-        self.inner.dispatch(|characteristic| {
-            unsafe { characteristic.descriptors() }
-                .map(|s| s.iter().map(|x| Descriptor::new(x, self.delegate.clone())).collect())
+        self.inner.barrier_sync(|characteristic| {
+            characteristic
+                .descriptors()
+                .map(|s| {
+                    s.into_iter()
+                        .map(|x| Descriptor::new(x.borrow(characteristic.scope()), self.peripheral.clone()))
+                        .collect()
+                })
                 .ok_or_else(|| Error::new(ErrorKind::NotReady, None, "no descriptors have been discovered"))
         })
     }
+}
+
+pub(crate) fn with_service<T>(
+    characteristic: Ref<'_, corebluetooth::Characteristic>,
+    f: impl FnOnce(Ref<'_, corebluetooth::Service>) -> Result<T>,
+) -> Result<T> {
+    let service = characteristic
+        .service()
+        .ok_or(Error::new(ErrorKind::NotFound, None, "service not found"))?;
+    f(service.borrow(characteristic.scope()))
+}
+
+pub(crate) fn with_peripheral_and_service<T>(
+    characteristic: Ref<'_, corebluetooth::Characteristic>,
+    f: impl FnOnce(Ref<'_, corebluetooth::Peripheral>, Ref<'_, corebluetooth::Service>) -> Result<T>,
+) -> Result<T> {
+    with_service(characteristic, |service| {
+        super::service::with_peripheral(service, |peripheral| f(peripheral, service))
+    })
 }

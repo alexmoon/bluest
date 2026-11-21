@@ -8,8 +8,8 @@ pub struct ScopeGuard<F: FnOnce()> {
 
 impl<F: FnOnce()> ScopeGuard<F> {
     pub fn defuse(mut self) {
-        unsafe { ManuallyDrop::drop(&mut self.dropfn) }
-        std::mem::forget(self)
+        let mut guard = ManuallyDrop::new(self);
+        unsafe { ManuallyDrop::drop(&mut guard.dropfn) }
     }
 }
 
